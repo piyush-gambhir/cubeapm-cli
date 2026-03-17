@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/internal/cmdutil"
 	"github.com/piyush-gambhir/cubeapm-cli/internal/config"
 	"github.com/piyush-gambhir/cubeapm-cli/internal/output"
+	"github.com/piyush-gambhir/cubeapm-cli/internal/update"
 )
 
 // Build-time variables set via ldflags.
@@ -37,6 +39,13 @@ var (
 	flagVerbose    bool
 )
 
+// Background update check state.
+var (
+	updateInfo     *update.UpdateInfo
+	updateInfoOnce sync.Once
+	updateInfoDone = make(chan struct{})
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "cubeapm",
 	Short: "CubeAPM CLI - Interact with CubeAPM observability platform",
@@ -46,19 +55,43 @@ metrics, and VictoriaLogs-compatible logs APIs.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Start a background update check for commands that should show
+		// the update notice. Skip for "update" and "version" commands.
+		cmdName := cmd.Name()
+		parentName := ""
+		if cmd.Parent() != nil {
+			parentName = cmd.Parent().Name()
+		}
+		if cmdName != "update" && cmdName != "version" {
+			startBackgroundUpdateCheck()
+		}
+
 		// Skip client setup for commands that don't need it
-		if cmd.Name() == "version" || cmd.Name() == "help" {
+		if cmdName == "version" || cmdName == "help" || cmdName == "update" {
 			return nil
 		}
 		// Config commands don't need a client
-		if cmd.Parent() != nil && cmd.Parent().Name() == "config" {
+		if parentName == "config" {
 			return loadConfigOnly()
 		}
-		if cmd.Parent() != nil && cmd.Parent().Name() == "profiles" {
+		if parentName == "profiles" {
 			return loadConfigOnly()
 		}
 
 		return setupClient(cmd)
+	},
+	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		// Wait for the background update check and print a notice if available.
+		// Skip for "update" and "version" commands.
+		cmdName := cmd.Name()
+		if cmdName == "update" || cmdName == "version" {
+			return nil
+		}
+		<-updateInfoDone
+		if updateInfo != nil {
+			update.PrintUpdateNotice(os.Stderr, updateInfo)
+		}
+		return nil
 	},
 }
 
@@ -122,6 +155,21 @@ func setupClient(cmd *cobra.Command) error {
 	return nil
 }
 
+// startBackgroundUpdateCheck kicks off a goroutine to check for CLI updates.
+// The result is stored in updateInfo and updateInfoDone is closed when finished.
+func startBackgroundUpdateCheck() {
+	updateInfoOnce.Do(func() {
+		go func() {
+			defer close(updateInfoDone)
+			info, err := update.CheckForUpdate(Version, updateRepo, config.ConfigDir())
+			if err != nil {
+				return
+			}
+			updateInfo = info
+		}()
+	})
+}
+
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table, json, yaml")
 	rootCmd.PersistentFlags().StringVar(&flagProfile, "profile", "", "Config profile to use")
@@ -136,6 +184,7 @@ func init() {
 	// Register subcommands
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newLoginCmd())
+	rootCmd.AddCommand(newUpdateCmd())
 	rootCmd.AddCommand(cmdconfig.NewConfigCmd())
 	rootCmd.AddCommand(cmdtraces.NewTracesCmd())
 	rootCmd.AddCommand(cmdmetrics.NewMetricsCmd())
