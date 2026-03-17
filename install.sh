@@ -78,10 +78,12 @@ info "Extracting..."
 tar -xzf "${TMP_DIR}/${ARCHIVE}" -C "$TMP_DIR"
 
 # Install
+mkdir -p "$INSTALL_DIR" 2>/dev/null || true
 if [ -w "$INSTALL_DIR" ]; then
     mv "${TMP_DIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
 else
     info "Elevated permissions required to install to ${INSTALL_DIR}"
+    sudo mkdir -p "$INSTALL_DIR"
     sudo mv "${TMP_DIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
 fi
 chmod +x "${INSTALL_DIR}/${BINARY}"
