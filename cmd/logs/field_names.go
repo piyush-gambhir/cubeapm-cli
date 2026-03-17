@@ -24,9 +24,41 @@ func newFieldNamesCmd() *cobra.Command {
 		Short: "Discover available log fields",
 		Long: `List all log field names and their hit counts.
 
+Returns the names of all fields present in matching log entries, along with
+the count of entries containing each field. This is useful for schema
+discovery - understanding what structured data is available in your logs
+before constructing queries.
+
+Standard fields include:
+  _time     - timestamp
+  _msg      - log message body
+  _stream   - stream identifier (labels like host, container)
+
+Additional fields depend on your log format (e.g., level, service, trace_id,
+http.method, http.status_code, etc.).
+
+Optionally filter by a LogsQL query to see fields only within matching entries.
+
+Time ranges can be specified as:
+  - Relative:   --last 1h  (also: 30m, 2d)
+  - RFC3339:    --from 2024-01-15T00:00:00Z
+  - Default:    last 1 hour if no time flags are provided
+
 Examples:
+  # List all field names in the last hour
   cubeapm logs field-names --last 1h
-  cubeapm logs field-names --query 'service:api' --last 24h`,
+
+  # List fields present in logs for a specific service
+  cubeapm logs field-names --query 'service:api' --last 24h
+
+  # List fields in error logs
+  cubeapm logs field-names --query 'level:error' --last 1h
+
+  # Use the short alias
+  cubeapm logs fields --last 1h
+
+  # Output as JSON
+  cubeapm logs field-names --last 1h -o json`,
 		Aliases: []string{"fields"},
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

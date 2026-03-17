@@ -1,6 +1,7 @@
 package client
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -12,13 +13,17 @@ import (
 const tracesBasePath = "/api/traces/api/v1"
 
 // SearchTraces searches for traces matching the given criteria.
-func (c *Client) SearchTraces(service, env, query string, from, to time.Time, limit int, spanKind string) ([]types.TraceSearchResult, error) {
+func (c *Client) SearchTraces(service string, tags map[string]string, query string, from, to time.Time, limit int, spanKind, minDuration, maxDuration string) ([]types.TraceSearchResult, error) {
 	params := url.Values{}
 	if service != "" {
 		params.Set("service", service)
 	}
-	if env != "" {
-		params.Set("tags", fmt.Sprintf(`{"environment":"%s"}`, env))
+	if len(tags) > 0 {
+		tagsJSON, err := json.Marshal(tags)
+		if err != nil {
+			return nil, fmt.Errorf("encoding tags: %w", err)
+		}
+		params.Set("tags", string(tagsJSON))
 	}
 	if query != "" {
 		params.Set("operation", query)
@@ -34,6 +39,12 @@ func (c *Client) SearchTraces(service, env, query string, from, to time.Time, li
 	}
 	if spanKind != "" {
 		params.Set("spanKind", spanKind)
+	}
+	if minDuration != "" {
+		params.Set("minDuration", minDuration)
+	}
+	if maxDuration != "" {
+		params.Set("maxDuration", maxDuration)
 	}
 
 	var resp types.JaegerSearchResponse

@@ -108,7 +108,7 @@ func (c *Client) GetLabelValues(label string, from, to time.Time) ([]string, err
 }
 
 // GetSeries returns matching time series.
-func (c *Client) GetSeries(match []string, from, to time.Time) ([]map[string]string, error) {
+func (c *Client) GetSeries(match []string, from, to time.Time, limit int) ([]map[string]string, error) {
 	params := url.Values{}
 	for _, m := range match {
 		params.Add("match[]", m)
@@ -118,6 +118,9 @@ func (c *Client) GetSeries(match []string, from, to time.Time) ([]map[string]str
 	}
 	if !to.IsZero() {
 		params.Set("end", strconv.FormatFloat(float64(to.Unix()), 'f', 0, 64))
+	}
+	if limit > 0 {
+		params.Set("limit", strconv.Itoa(limit))
 	}
 
 	var resp types.PromSeriesResponse

@@ -25,8 +25,35 @@ func newGetCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get <trace-id>",
 		Short: "Get a trace by ID",
-		Long:  "Retrieve and display a trace. In table mode, renders a waterfall view of spans.",
-		Args:  cobra.ExactArgs(1),
+		Long: `Retrieve and display a specific trace by its trace ID.
+
+In table mode (default), renders a visual waterfall/tree view of all spans
+in the trace, showing the parent-child relationships, service names,
+operation names, durations, and status codes.
+
+In JSON or YAML mode, returns the full Jaeger-format trace data including
+all spans, tags, logs, and process information.
+
+The trace ID is a hex string (typically 32 characters) that uniquely
+identifies a distributed trace. You can obtain trace IDs from the
+'cubeapm traces search' command output.
+
+Time range flags are optional and help narrow the search window when the
+trace store is very large.
+
+Examples:
+  # Get a trace and display the waterfall view
+  cubeapm traces get abc123def456789
+
+  # Get a trace as raw JSON (for scripting or debugging)
+  cubeapm traces get abc123def456789 -o json
+
+  # Get a trace as YAML
+  cubeapm traces get abc123def456789 -o yaml
+
+  # Narrow the time range to speed up lookup
+  cubeapm traces get abc123def456789 --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			traceID := args[0]
 

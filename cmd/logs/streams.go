@@ -24,9 +24,29 @@ func newStreamsCmd() *cobra.Command {
 		Short: "List log streams",
 		Long: `List log streams and their entry counts.
 
+A log stream in VictoriaLogs is a unique combination of stream-level labels
+(e.g., host, container, pod). Each stream groups related log entries together.
+
+This command returns all streams and the number of log entries in each stream,
+optionally filtered by a LogsQL query.
+
+Time ranges can be specified as:
+  - Relative:   --last 1h  (also: 30m, 2d)
+  - RFC3339:    --from 2024-01-15T00:00:00Z
+  - Default:    last 1 hour if no time flags are provided
+
 Examples:
+  # List all streams in the last hour
   cubeapm logs streams --last 1h
-  cubeapm logs streams --query 'error' --last 24h`,
+
+  # List streams containing errors in the last 24 hours
+  cubeapm logs streams --query 'error' --last 24h
+
+  # List streams for a specific service
+  cubeapm logs streams --query 'service:api-gateway' --last 1h
+
+  # Output as JSON
+  cubeapm logs streams --last 1h -o json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			start, end, err := timeflag.ResolveTimeRange(from, to, last)

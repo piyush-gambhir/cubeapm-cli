@@ -25,9 +25,36 @@ func newFieldValuesCmd() *cobra.Command {
 		Short: "List values for a log field",
 		Long: `List values for a specific log field and their hit counts.
 
+Returns all unique values for the given field name, along with the count
+of log entries containing each value. This is useful for exploring the
+cardinality of a field or understanding the distribution of values.
+
+The <field> argument is the field name to query. Use 'cubeapm logs field-names'
+to discover available field names.
+
+Optionally filter by a LogsQL query to see values only within matching entries.
+Use --limit to cap the number of values returned (default: 100).
+
+Time ranges can be specified as:
+  - Relative:   --last 1h  (also: 30m, 2d)
+  - RFC3339:    --from 2024-01-15T00:00:00Z
+  - Default:    last 1 hour if no time flags are provided
+
 Examples:
+  # List all values for the "status" field
   cubeapm logs field-values status --last 1h
-  cubeapm logs field-values host --query 'error' --limit 50`,
+
+  # List hosts in error logs
+  cubeapm logs field-values host --query 'error' --limit 50
+
+  # List log levels
+  cubeapm logs field-values level --last 24h
+
+  # List services
+  cubeapm logs field-values service --last 1h
+
+  # Output as JSON
+  cubeapm logs field-values status --last 1h -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			field := args[0]

@@ -25,9 +25,31 @@ func newHitsCmd() *cobra.Command {
 		Short: "Show log volume over time",
 		Long: `Show the number of log entries matching a query over time buckets.
 
+Queries the VictoriaLogs-compatible hits endpoint to return a histogram
+of log entry counts over time. This is useful for understanding log volume
+patterns, identifying spikes, or visualizing error rates.
+
+The --query flag accepts a LogsQL expression (default: '*' to match all logs).
+The --step flag controls the time bucket size (e.g., 5m, 1h). If not set,
+the server auto-selects an appropriate bucket size.
+
+Time ranges can be specified as:
+  - Relative:   --last 1h  (also: 30m, 2d)
+  - RFC3339:    --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z
+  - Default:    last 1 hour if no time flags are provided
+
 Examples:
-  cubeapm logs hits --query 'error' --last 1h --step 5m
-  cubeapm logs hits --query '*' --last 24h --step 1h`,
+  # Show all log volume over the last hour in 5-minute buckets
+  cubeapm logs hits --query '*' --last 1h --step 5m
+
+  # Show error log volume over the last 24 hours in 1-hour buckets
+  cubeapm logs hits --query 'error' --last 24h --step 1h
+
+  # Show volume for a specific service
+  cubeapm logs hits --query 'service:api-gateway' --last 6h --step 15m
+
+  # Output as JSON for graphing
+  cubeapm logs hits --query 'error' --last 24h --step 1h -o json`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if query == "" {

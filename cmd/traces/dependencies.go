@@ -22,9 +22,40 @@ func newDependenciesCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:     "dependencies",
-		Short:   "Show service dependencies",
-		Long:    "Display dependency graph between services. Supports --dot for Graphviz DOT format.",
+		Use:   "dependencies",
+		Short: "Show service dependencies",
+		Long: `Display the dependency graph between services.
+
+Queries the Jaeger-compatible dependencies API to compute the service
+dependency graph within a time range. Each row shows a parent service,
+a child service it calls, and the number of calls.
+
+Use --dot to output in Graphviz DOT format, which can be rendered into
+a visual graph using 'dot', 'neato', or other Graphviz tools.
+
+Time ranges can be specified as:
+  - Relative:   --last 24h  (also: 1h, 30m, 7d)
+  - RFC3339:    --from 2024-01-15T00:00:00Z --to 2024-01-16T00:00:00Z
+  - Default:    last 1 hour if no time flags are provided
+
+Examples:
+  # Show dependencies for the last hour
+  cubeapm traces dependencies
+
+  # Show dependencies for the last 24 hours
+  cubeapm traces dependencies --last 24h
+
+  # Export as Graphviz DOT and render to PNG
+  cubeapm traces dependencies --last 24h --dot | dot -Tpng -o deps.png
+
+  # Export as Graphviz DOT and render to SVG
+  cubeapm traces dependencies --last 7d --dot > deps.dot
+
+  # Output as JSON for scripting
+  cubeapm traces dependencies --last 24h -o json
+
+  # Use the short alias
+  cubeapm traces deps --last 1h`,
 		Aliases: []string{"deps"},
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

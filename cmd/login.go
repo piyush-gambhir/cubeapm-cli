@@ -17,8 +17,29 @@ func newLoginCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "login",
 		Short: "Interactively configure a CubeAPM connection profile",
-		Long: `Prompts for server address, token, and profile name.
-Tests the connection by querying the services endpoint, then saves the profile.`,
+		Long: `Interactively configure a CubeAPM connection profile.
+
+Prompts for:
+  1. Profile name (default: "default")
+  2. Server address (hostname or IP)
+  3. API token (optional, for authenticated instances)
+  4. Query port (default: 3140)
+  5. Ingest port (default: 3130)
+  6. Admin port (default: 3199)
+
+After collecting the information, tests the connection by querying the
+services endpoint. If successful, saves the profile to the config file
+(~/.config/cubeapm/config.yaml).
+
+You can have multiple profiles for different CubeAPM instances and switch
+between them with 'cubeapm config profiles use <name>'.
+
+Examples:
+  # Start interactive login
+  cubeapm login
+
+  # Login with a preset server (will still prompt for other fields)
+  cubeapm login --server cubeapm.example.com`,
 		Args: cobra.NoArgs,
 		RunE: runLogin,
 	}

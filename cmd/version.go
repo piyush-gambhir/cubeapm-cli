@@ -10,7 +10,11 @@ func newVersionCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
 		Short: "Print the CLI version",
-		Args:  cobra.NoArgs,
+		Long: `Print the CubeAPM CLI version, commit hash, and build date.
+
+Examples:
+  cubeapm version`,
+		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Printf("cubeapm version %s\n", Version)
 			fmt.Printf("  commit:     %s\n", Commit)

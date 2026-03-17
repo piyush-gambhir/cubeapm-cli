@@ -12,11 +12,32 @@ func newGetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "get <key>",
 		Short: "Get a configuration value from the current profile",
-		Long: `Get a configuration value. Keys: server, token, query_port, ingest_port, admin_port, output, current_profile.
+		Long: `Get a configuration value from the current profile.
+
+Reads the value from the resolved configuration (profile defaults applied).
+Token values are masked for security (first 4 and last 4 characters shown).
+
+Valid keys:
+  server           CubeAPM server address
+  token            Authentication token (masked in output)
+  query_port       Query API port
+  ingest_port      Ingest API port
+  admin_port       Admin API port
+  output           Default output format
+  current_profile  Name of the currently active profile
 
 Examples:
+  # Get the server address
   cubeapm config get server
-  cubeapm config get output`,
+
+  # Get the default output format
+  cubeapm config get output
+
+  # Get the currently active profile name
+  cubeapm config get current_profile
+
+  # Get the query port
+  cubeapm config get query_port`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]

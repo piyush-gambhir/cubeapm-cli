@@ -21,12 +21,36 @@ func newIngestMetricsCmd() *cobra.Command {
 		Short: "Push metrics data to CubeAPM",
 		Long: `Push metrics data in supported formats to the CubeAPM ingest endpoint.
 
+Reads metrics data from a file or stdin and sends it to the CubeAPM ingest
+port (default: 3130). The data must be in one of the supported formats.
+
 Supported formats:
-  prometheus  - Prometheus exposition format
-  otlp        - OpenTelemetry Protocol (protobuf)
+  prometheus  - Prometheus exposition/text format (default)
+                Lines like: http_requests_total{method="GET"} 1234 1705312800000
+  otlp        - OpenTelemetry Protocol (protobuf binary)
+
+Data source:
+  --file <path>  Read from a file
+  --file -       Read from stdin (default)
+  (no --file)    Read from stdin (pipe or redirect required)
+
+The ingest endpoint URL is: http://<server>:<ingest-port>/api/v1/import/prometheus
+for Prometheus format, or http://<server>:<ingest-port>/v1/metrics for OTLP.
 
 Examples:
+  # Ingest metrics from a file (Prometheus format)
   cubeapm ingest metrics --format prometheus --file metrics.txt
+
+  # Pipe metrics from stdin
+  cat metrics.txt | cubeapm ingest metrics --format prometheus
+
+  # Pipe from a curl command
+  curl -s http://localhost:9090/metrics | cubeapm ingest metrics --format prometheus
+
+  # Ingest OTLP protobuf data
+  cubeapm ingest metrics --format otlp --file metrics.pb
+
+  # Use explicit stdin marker
   cat metrics.txt | cubeapm ingest metrics --format prometheus --file -`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			var reader io.Reader

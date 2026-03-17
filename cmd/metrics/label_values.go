@@ -23,9 +23,35 @@ func newLabelValuesCmd() *cobra.Command {
 		Short: "List values for a metric label",
 		Long: `List all values for a specific metric label.
 
+Queries the Prometheus-compatible /api/v1/label/<label>/values endpoint
+to return a sorted list of all values seen for the given label name.
+
+The <label> argument is the label name to query. Use 'cubeapm metrics labels'
+to discover available label names.
+
+Common uses:
+  - List all job names:       cubeapm metrics label-values job
+  - List all instances:       cubeapm metrics label-values instance
+  - List all metric names:    cubeapm metrics label-values __name__
+  - List all services:        cubeapm metrics label-values service
+
+Time ranges can be specified to limit the scope:
+  - Relative:   --last 24h
+  - RFC3339:    --from 2024-01-15T00:00:00Z
+  - Default:    last 1 hour if no time flags are provided
+
 Examples:
+  # List all values for the "job" label
   cubeapm metrics label-values job
-  cubeapm metrics label-values instance --last 24h`,
+
+  # List all instances seen in the last 24 hours
+  cubeapm metrics label-values instance --last 24h
+
+  # List all metric names
+  cubeapm metrics label-values __name__
+
+  # Output as JSON
+  cubeapm metrics label-values job -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			label := args[0]

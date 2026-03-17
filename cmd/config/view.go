@@ -14,7 +14,15 @@ func newViewCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "view",
 		Short: "Show the current resolved configuration",
-		Args:  cobra.NoArgs,
+		Long: `Show the full resolved configuration in YAML format.
+
+Displays the configuration file path and the contents of the config file,
+including all profiles and the currently active profile.
+
+Examples:
+  # View the current configuration
+  cubeapm config view`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
 			if err != nil {

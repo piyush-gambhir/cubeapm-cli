@@ -22,10 +22,44 @@ func newQueryCmd() *cobra.Command {
 		Short: "Execute an instant PromQL query",
 		Long: `Execute an instant PromQL query and display the results.
 
+Evaluates a PromQL expression at a single point in time (default: now).
+Returns the current value of each matching time series.
+
+The <promql> argument is a PromQL expression. Common PromQL patterns:
+  - Simple metric:       'up'
+  - Rate of counter:     'rate(http_requests_total[5m])'
+  - Aggregation:         'sum by (service) (rate(requests_total[5m]))'
+  - Label filtering:     'http_requests_total{method="GET", status="200"}'
+  - Math operations:     'rate(errors_total[5m]) / rate(requests_total[5m])'
+  - Histogram quantile:  'histogram_quantile(0.99, rate(http_duration_seconds_bucket[5m]))'
+
+The --time flag specifies the evaluation timestamp. If omitted, "now" is used.
+Supported time formats: RFC3339, Unix timestamp, or relative (now-1h, -30m).
+
+In table mode (default), displays metric labels, value, and timestamp.
+In JSON/YAML mode, returns the raw Prometheus API response.
+
 Examples:
+  # Check which targets are up
   cubeapm metrics query 'up'
-  cubeapm metrics query 'rate(http_requests_total[5m])' --time now-1h
-  cubeapm metrics query 'sum by (service) (rate(requests_total[5m]))'`,
+
+  # Compute request rate per service
+  cubeapm metrics query 'sum by (service) (rate(http_requests_total[5m]))'
+
+  # Query at a specific time in the past
+  cubeapm metrics query 'up' --time now-1h
+
+  # Query at an exact RFC3339 timestamp
+  cubeapm metrics query 'up' --time 2024-01-15T10:00:00Z
+
+  # Get error rate as a percentage
+  cubeapm metrics query 'rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) * 100'
+
+  # Output as JSON for scripting
+  cubeapm metrics query 'up' -o json
+
+  # Compute p99 latency
+  cubeapm metrics query 'histogram_quantile(0.99, sum by (le) (rate(http_duration_seconds_bucket[5m])))'`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			promql := args[0]

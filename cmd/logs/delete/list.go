@@ -11,8 +11,27 @@ import (
 
 func newListCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "list",
-		Short:   "List active log deletion tasks",
+		Use:   "list",
+		Short: "List active log deletion tasks",
+		Long: `List all active (in-progress) log deletion tasks.
+
+Returns a table of currently running deletion tasks, showing:
+  - TASK_ID:   unique identifier for the task
+  - FILTER:    the LogsQL filter expression used
+  - STATUS:    current status (running, completed, etc.)
+  - PROGRESS:  completion percentage or progress indicator
+
+This command uses the admin API port (default: 3199).
+
+Examples:
+  # List active deletion tasks
+  cubeapm logs delete list
+
+  # Use the short alias
+  cubeapm logs delete ls
+
+  # Output as JSON
+  cubeapm logs delete list -o json`,
 		Aliases: []string{"ls"},
 		Args:    cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {

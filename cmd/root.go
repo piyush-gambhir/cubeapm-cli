@@ -51,7 +51,36 @@ var rootCmd = &cobra.Command{
 	Short: "CubeAPM CLI - Interact with CubeAPM observability platform",
 	Long: `CubeAPM CLI provides a command-line interface for querying traces, metrics,
 and logs from CubeAPM. It supports Jaeger-compatible traces, Prometheus-compatible
-metrics, and VictoriaLogs-compatible logs APIs.`,
+metrics (PromQL), and VictoriaLogs-compatible logs (LogsQL) APIs.
+
+Command groups:
+  traces   Search, view, and analyze distributed traces (Jaeger API)
+  metrics  Query and explore Prometheus-compatible metrics (PromQL)
+  logs     Query and manage logs (VictoriaLogs / LogsQL)
+  ingest   Push metrics and log data to CubeAPM
+  config   Manage CLI configuration and connection profiles
+  login    Interactively set up a connection profile
+  version  Print CLI version information
+  update   Check for and install CLI updates
+
+Global flags (apply to all commands):
+  -o, --output <format>   Output format: table (default), json, yaml
+  --server <addr>         Override server address
+  --token <token>         Override authentication token
+  --profile <name>        Use a specific connection profile
+  --query-port <port>     Override query port (default: 3140)
+  --ingest-port <port>    Override ingest port (default: 3130)
+  --admin-port <port>     Override admin port (default: 3199)
+  --no-color              Disable colored output
+  --verbose               Enable verbose HTTP request logging
+
+Quick start:
+  cubeapm login                                          # Configure connection
+  cubeapm traces services                                # List services
+  cubeapm traces search --service api-gateway --last 1h  # Search traces
+  cubeapm traces get <trace-id>                          # View a trace
+  cubeapm metrics query 'up'                             # Query metrics
+  cubeapm logs query 'error' --last 30m                  # Query logs`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {

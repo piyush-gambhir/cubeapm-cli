@@ -13,12 +13,30 @@ func newSetCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "set <key> <value>",
 		Short: "Set a configuration value in the current profile",
-		Long: `Set a configuration value. Keys: server, token, query_port, ingest_port, admin_port, output.
+		Long: `Set a configuration value in the current profile.
+
+Saves the value to the config file (~/.config/cubeapm/config.yaml).
+
+Valid keys:
+  server       CubeAPM server address (hostname or IP)
+  token        Authentication token for API requests
+  query_port   Query API port (default: 3140)
+  ingest_port  Ingest API port (default: 3130)
+  admin_port   Admin API port (default: 3199)
+  output       Default output format: table, json, or yaml
 
 Examples:
-  cubeapm config set server localhost
+  # Set the server address
+  cubeapm config set server cubeapm.example.com
+
+  # Set the default output format to JSON
   cubeapm config set output json
-  cubeapm config set query_port 3140`,
+
+  # Set a custom query port
+  cubeapm config set query_port 3140
+
+  # Set an authentication token
+  cubeapm config set token my-api-token`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
