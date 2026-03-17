@@ -42,15 +42,3 @@ changelog:
       - "^ci:"
       - "^chore:"
 
-brews:
-  - repository:
-      owner: piyush-gambhir
-      name: homebrew-tap
-    name: cubeapm-cli
-    homepage: "https://github.com/piyush-gambhir/cubeapm-cli"
-    description: "CLI for querying traces, metrics, and logs from CubeAPM"
-    license: "MIT"
-    install: |
-      bin.install "cubeapm"
-    test: |
-      system "#{bin}/cubeapm", "version"
