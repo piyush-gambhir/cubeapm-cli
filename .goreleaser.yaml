@@ -1,0 +1,56 @@
+version: 2
+
+project_name: cubeapm-cli
+
+builds:
+  - binary: cubeapm
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X github.com/piyush-gambhir/cubeapm-cli/cmd.Version={{.Version}}
+      - -X github.com/piyush-gambhir/cubeapm-cli/cmd.Commit={{.Commit}}
+      - -X github.com/piyush-gambhir/cubeapm-cli/cmd.BuildDate={{.Date}}
+
+archives:
+  - format: tar.gz
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+      - "^chore:"
+
+brews:
+  - repository:
+      owner: piyush-gambhir
+      name: homebrew-tap
+    name: cubeapm-cli
+    homepage: "https://github.com/piyush-gambhir/cubeapm-cli"
+    description: "CLI for querying traces, metrics, and logs from CubeAPM"
+    license: "MIT"
+    install: |
+      bin.install "cubeapm"
+    test: |
+      system "#{bin}/cubeapm", "version"
