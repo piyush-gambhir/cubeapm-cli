@@ -17,8 +17,9 @@ func newIngestLogsCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "logs",
-		Short: "Push log data to CubeAPM",
+		Use:         "logs",
+		Short:       "Push log data to CubeAPM",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Push log data in supported formats to the CubeAPM ingest endpoint.
 
 Reads log data from a file or stdin and sends it to the CubeAPM ingest

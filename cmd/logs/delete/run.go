@@ -10,8 +10,9 @@ import (
 
 func newRunCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "run <filter>",
-		Short: "Start a log deletion task",
+		Use:         "run <filter>",
+		Short:       "Start a log deletion task",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Start a log deletion task with the given filter expression.
 
 Submits a deletion task to the CubeAPM admin API. The task runs asynchronously

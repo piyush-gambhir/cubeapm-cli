@@ -37,6 +37,7 @@ var (
 	flagAdminPort  int
 	flagNoColor    bool
 	flagVerbose    bool
+	flagReadOnly   bool
 )
 
 // Background update check state.
@@ -107,7 +108,20 @@ Quick start:
 			return loadConfigOnly()
 		}
 
-		return setupClient(cmd)
+		if err := setupClient(cmd); err != nil {
+			return err
+		}
+
+		// Enforce read-only mode: flag > resolved config
+		effectiveReadOnly := cmdutil.Resolved.ReadOnly
+		if cmd.Flags().Changed("read-only") {
+			effectiveReadOnly = flagReadOnly
+		}
+		if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
+			return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())
+		}
+
+		return nil
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 		// Wait for the background update check and print a notice if available.
@@ -209,6 +223,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVar(&flagAdminPort, "admin-port", 0, "Admin port (default 3199)")
 	rootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable color output")
 	rootCmd.PersistentFlags().BoolVar(&flagVerbose, "verbose", false, "Enable verbose output")
+	rootCmd.PersistentFlags().BoolVar(&flagReadOnly, "read-only", false, "Block write operations (safety mode for agents)")
 
 	// Register subcommands
 	rootCmd.AddCommand(newVersionCmd())

@@ -17,8 +17,9 @@ func newIngestMetricsCmd() *cobra.Command {
 	)
 
 	cmd := &cobra.Command{
-		Use:   "metrics",
-		Short: "Push metrics data to CubeAPM",
+		Use:         "metrics",
+		Short:       "Push metrics data to CubeAPM",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Push metrics data in supported formats to the CubeAPM ingest endpoint.
 
 Reads metrics data from a file or stdin and sends it to the CubeAPM ingest

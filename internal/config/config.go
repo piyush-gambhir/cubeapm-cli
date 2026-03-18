@@ -29,6 +29,7 @@ type Profile struct {
 	AdminPort  int    `yaml:"admin_port,omitempty"`
 	Token      string `yaml:"token"`
 	Output     string `yaml:"output,omitempty"`
+	ReadOnly   bool   `yaml:"read_only,omitempty"`
 }
 
 // ConfigDir returns the path to the configuration directory.

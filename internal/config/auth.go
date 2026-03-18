@@ -16,6 +16,7 @@ type ResolvedConfig struct {
 	Output     string
 	Verbose    bool
 	NoColor    bool
+	ReadOnly   bool
 }
 
 // FlagOverrides holds values from CLI flags that may override config.
@@ -59,6 +60,7 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 		Output:     profile.Output,
 		Verbose:    flags.Verbose,
 		NoColor:    flags.NoColor,
+		ReadOnly:   profile.ReadOnly,
 	}
 
 	// Layer environment variables
@@ -81,6 +83,11 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 	if v := os.Getenv("CUBEAPM_ADMIN_PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
 			resolved.AdminPort = port
+		}
+	}
+	if v := os.Getenv("CUBEAPM_READ_ONLY"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			resolved.ReadOnly = b
 		}
 	}
 

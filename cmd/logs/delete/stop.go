@@ -10,8 +10,9 @@ import (
 
 func newStopCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "stop <task-id>",
-		Short: "Stop a running log deletion task",
+		Use:         "stop <task-id>",
+		Short:       "Stop a running log deletion task",
+		Annotations: map[string]string{"mutates": "true"},
 		Long: `Stop a running log deletion task by its task ID.
 
 Sends a stop request to the CubeAPM admin API for the specified deletion task.
