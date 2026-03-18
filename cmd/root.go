@@ -132,16 +132,7 @@ Quick start:
 			return err
 		}
 
-		// Enforce read-only mode: flag > resolved config
-		effectiveReadOnly := cmdutil.Resolved.ReadOnly
-		if cmd.Flags().Changed("read-only") {
-			effectiveReadOnly = flagReadOnly
-		}
-		if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
-			return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())
-		}
-
-		return nil
+		return checkPermissions(cmd)
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 		// Wait for the background update check and print a notice if available.
@@ -156,6 +147,26 @@ Quick start:
 		}
 		return nil
 	},
+}
+
+// checkPermissions enforces read-only mode and no-input constraints on the
+// current command based on resolved configuration and flag overrides.
+func checkPermissions(cmd *cobra.Command) error {
+	// Enforce read-only mode: flag > resolved config
+	effectiveReadOnly := cmdutil.Resolved.ReadOnly
+	if cmd.Flags().Changed("read-only") {
+		effectiveReadOnly = flagReadOnly
+	}
+	if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
+		return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())
+	}
+
+	// Enforce no-input mode for commands that require interactive input
+	if cmdutil.NoInput && cmd.Annotations != nil && cmd.Annotations["interactive"] == "true" {
+		return fmt.Errorf("command '%s' requires interactive input but --no-input is set", cmd.CommandPath())
+	}
+
+	return nil
 }
 
 func loadConfigOnly() error {

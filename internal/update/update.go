@@ -4,6 +4,8 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -220,6 +222,18 @@ func SelfUpdate(version, repo string) error {
 		return fmt.Errorf("downloading release: %w", err)
 	}
 
+	// Download and verify SHA256 checksum.
+	checksumsURL := fmt.Sprintf("https://github.com/%s/releases/download/v%s/checksums.txt", repo, version)
+	checksumsPath := filepath.Join(tmpDir, "checksums.txt")
+	if err := downloadFile(checksumsURL, checksumsPath); err != nil {
+		return fmt.Errorf("downloading checksums: %w", err)
+	}
+
+	fmt.Println("Verifying checksum...")
+	if err := verifyChecksum(archivePath, checksumsPath, archive); err != nil {
+		return fmt.Errorf("checksum verification failed: %w", err)
+	}
+
 	// Extract the binary from the tarball.
 	fmt.Println("Extracting...")
 	binaryPath, err := extractBinary(archivePath, tmpDir, "cubeapm")
@@ -354,6 +368,57 @@ func replaceBinary(newBinary, target string) error {
 	if err := os.Rename(tmpPath, target); err != nil {
 		os.Remove(tmpPath)
 		return fmt.Errorf("replacing binary (you may need to use sudo): %w", err)
+	}
+
+	return nil
+}
+
+// verifyChecksum computes the SHA256 hash of the file at filePath and compares
+// it to the expected hash found in the GoReleaser checksums file for the given
+// archive name. The checksums file format is: "<hex-hash>  <filename>\n".
+func verifyChecksum(filePath, checksumsPath, archiveName string) error {
+	// Compute SHA256 of the downloaded file.
+	f, err := os.Open(filePath)
+	if err != nil {
+		return fmt.Errorf("opening file for checksum: %w", err)
+	}
+	defer f.Close()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return fmt.Errorf("computing checksum: %w", err)
+	}
+	actualHash := hex.EncodeToString(h.Sum(nil))
+
+	// Parse checksums.txt for the expected hash.
+	data, err := os.ReadFile(checksumsPath)
+	if err != nil {
+		return fmt.Errorf("reading checksums file: %w", err)
+	}
+
+	var expectedHash string
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// GoReleaser format: "<hash>  <filename>" (two spaces)
+		parts := strings.Fields(line)
+		if len(parts) != 2 {
+			continue
+		}
+		if parts[1] == archiveName {
+			expectedHash = parts[0]
+			break
+		}
+	}
+
+	if expectedHash == "" {
+		return fmt.Errorf("checksum for %q not found in checksums.txt", archiveName)
+	}
+
+	if !strings.EqualFold(actualHash, expectedHash) {
+		return fmt.Errorf("SHA256 mismatch: expected %s, got %s", expectedHash, actualHash)
 	}
 
 	return nil

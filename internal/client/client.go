@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -44,13 +45,25 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 	host := u.Hostname()
 	scheme := u.Scheme
 
+	transport := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:        10,
+		IdleConnTimeout:     30 * time.Second,
+		TLSHandshakeTimeout: 10 * time.Second,
+		DisableKeepAlives:   true,
+	}
+
 	return &Client{
 		queryBaseURL:  fmt.Sprintf("%s://%s:%d", scheme, host, cfg.QueryPort),
 		ingestBaseURL: fmt.Sprintf("%s://%s:%d", scheme, host, cfg.IngestPort),
 		adminBaseURL:  fmt.Sprintf("%s://%s:%d", scheme, host, cfg.AdminPort),
 		token:         cfg.Token,
 		httpClient: &http.Client{
-			Timeout: 60 * time.Second,
+			Timeout:   60 * time.Second,
+			Transport: transport,
 		},
 		verbose: cfg.Verbose,
 	}, nil
@@ -64,6 +77,11 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 
 	if c.verbose {
 		fmt.Printf("> %s %s\n", req.Method, req.URL.String())
+		for name, values := range req.Header {
+			for _, v := range values {
+				fmt.Printf("> %s: %s\n", name, redactAuthHeaders(name, v))
+			}
+		}
 	}
 
 	resp, err := c.httpClient.Do(req)
@@ -73,12 +91,30 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 
 	if c.verbose {
 		fmt.Printf("< %d %s\n", resp.StatusCode, resp.Status)
+		for name, values := range resp.Header {
+			for _, v := range values {
+				fmt.Printf("< %s: %s\n", name, redactAuthHeaders(name, v))
+			}
+		}
 	}
 
 	return resp, nil
 }
 
-// get performs a GET request and returns the response body.
+// redactAuthHeaders returns a redacted value for sensitive headers
+// (Authorization, Cookie, Set-Cookie) and the original value for all others.
+func redactAuthHeaders(headerName, value string) string {
+	lower := strings.ToLower(headerName)
+	switch lower {
+	case "authorization", "cookie", "set-cookie":
+		return "[REDACTED]"
+	default:
+		return value
+	}
+}
+
+// get performs a GET request and returns the response.
+// The caller is responsible for closing the response body.
 func (c *Client) get(baseURL, path string, params url.Values) (*http.Response, error) {
 	u := baseURL + path
 	if len(params) > 0 {
@@ -94,6 +130,7 @@ func (c *Client) get(baseURL, path string, params url.Values) (*http.Response, e
 }
 
 // post performs a POST request with form-encoded body and returns the response.
+// The caller is responsible for closing the response body.
 func (c *Client) post(baseURL, path string, params url.Values) (*http.Response, error) {
 	u := baseURL + path
 
@@ -114,6 +151,7 @@ func (c *Client) post(baseURL, path string, params url.Values) (*http.Response, 
 }
 
 // postRaw performs a POST request with a raw body.
+// The caller is responsible for closing the response body.
 func (c *Client) postRaw(baseURL, path, contentType string, body io.Reader) (*http.Response, error) {
 	u := baseURL + path
 
@@ -164,7 +202,10 @@ func (c *Client) checkResponse(resp *http.Response) error {
 		return nil
 	}
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		body = []byte(fmt.Sprintf("<failed to read response body: %v>", err))
+	}
 
 	switch resp.StatusCode {
 	case http.StatusNotFound:

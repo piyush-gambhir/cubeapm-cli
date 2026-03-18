@@ -59,8 +59,10 @@ func ParseTime(input string) (time.Time, error) {
 	}
 
 	// Try Unix timestamp
+	// Values < 1e12 are treated as seconds (covers dates up to year ~33658).
+	// Values >= 1e12 are treated as milliseconds.
 	if ts, err := strconv.ParseInt(input, 10, 64); err == nil {
-		if ts > 1e12 {
+		if ts >= int64(1e12) {
 			// milliseconds
 			return time.UnixMilli(ts), nil
 		}
@@ -86,6 +88,13 @@ func ParseDuration(input string) (time.Duration, error) {
 		return 0, fmt.Errorf("empty duration string")
 	}
 
+	// Validate the format: must be a sequence of <number><unit> pairs where
+	// unit is one of d, h, m, s, ms, us, or ns. Reject strings with invalid
+	// characters that might be silently ignored.
+	if err := validateDurationFormat(input); err != nil {
+		return 0, err
+	}
+
 	// Check if it contains 'd' for days
 	if strings.Contains(input, "d") {
 		return parseDurationWithDays(input)
@@ -97,6 +106,46 @@ func ParseDuration(input string) (time.Duration, error) {
 		return 0, fmt.Errorf("parsing duration %q: %w", input, err)
 	}
 	return d, nil
+}
+
+// validateDurationFormat checks that the input is a valid sequence of
+// <number><unit> tokens. Returns an error if extra or invalid characters
+// are present (e.g., "1x2h" or "abc").
+func validateDurationFormat(input string) error {
+	remaining := input
+	found := false
+	for remaining != "" {
+		// Skip leading number (digits and optional decimal point).
+		i := 0
+		for i < len(remaining) && (remaining[i] >= '0' && remaining[i] <= '9' || remaining[i] == '.') {
+			i++
+		}
+		if i == 0 {
+			return fmt.Errorf("invalid duration %q: unexpected character %q", input, string(remaining[0]))
+		}
+		if i >= len(remaining) {
+			return fmt.Errorf("invalid duration %q: missing unit suffix", input)
+		}
+
+		// Match unit suffix.
+		rest := remaining[i:]
+		matched := false
+		for _, unit := range []string{"ms", "us", "ns", "d", "h", "m", "s"} {
+			if strings.HasPrefix(rest, unit) {
+				remaining = rest[len(unit):]
+				matched = true
+				found = true
+				break
+			}
+		}
+		if !matched {
+			return fmt.Errorf("invalid duration %q: unknown unit starting at %q", input, rest)
+		}
+	}
+	if !found {
+		return fmt.Errorf("invalid duration %q", input)
+	}
+	return nil
 }
 
 func parseDurationWithDays(input string) (time.Duration, error) {

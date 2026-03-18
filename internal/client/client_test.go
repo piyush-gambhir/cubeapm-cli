@@ -189,6 +189,141 @@ func TestErrorHandling_401(t *testing.T) {
 	}
 }
 
+// --- Multi-port URL extraction tests ---
+
+func TestNewClient_ServerWithPort_ExtractsHostname(t *testing.T) {
+	cfg := config.ResolvedConfig{
+		Server:     "https://my-server:9443",
+		QueryPort:  3140,
+		IngestPort: 3130,
+		AdminPort:  3199,
+	}
+
+	c, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+
+	wantQuery := "https://my-server:3140"
+	wantIngest := "https://my-server:3130"
+	wantAdmin := "https://my-server:3199"
+
+	if c.queryBaseURL != wantQuery {
+		t.Errorf("queryBaseURL = %q, want %q", c.queryBaseURL, wantQuery)
+	}
+	if c.ingestBaseURL != wantIngest {
+		t.Errorf("ingestBaseURL = %q, want %q", c.ingestBaseURL, wantIngest)
+	}
+	if c.adminBaseURL != wantAdmin {
+		t.Errorf("adminBaseURL = %q, want %q", c.adminBaseURL, wantAdmin)
+	}
+}
+
+func TestNewClient_ServerWithSchemeNoPort(t *testing.T) {
+	cfg := config.ResolvedConfig{
+		Server:     "https://secure.example.com",
+		QueryPort:  3140,
+		IngestPort: 3130,
+		AdminPort:  3199,
+	}
+
+	c, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+
+	if c.queryBaseURL != "https://secure.example.com:3140" {
+		t.Errorf("queryBaseURL = %q, want %q", c.queryBaseURL, "https://secure.example.com:3140")
+	}
+}
+
+func TestNewClient_ServerBareHostname(t *testing.T) {
+	cfg := config.ResolvedConfig{
+		Server:     "my-server",
+		QueryPort:  3140,
+		IngestPort: 3130,
+		AdminPort:  3199,
+	}
+
+	c, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+
+	if c.queryBaseURL != "http://my-server:3140" {
+		t.Errorf("queryBaseURL = %q, want %q", c.queryBaseURL, "http://my-server:3140")
+	}
+}
+
+func TestNewClient_ServerBareHostnameWithPort(t *testing.T) {
+	cfg := config.ResolvedConfig{
+		Server:     "my-server:3140",
+		QueryPort:  3140,
+		IngestPort: 3130,
+		AdminPort:  3199,
+	}
+
+	c, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient() error = %v", err)
+	}
+
+	// Port in the server address should be stripped; configured ports are used.
+	if c.queryBaseURL != "http://my-server:3140" {
+		t.Errorf("queryBaseURL = %q, want %q", c.queryBaseURL, "http://my-server:3140")
+	}
+	if c.ingestBaseURL != "http://my-server:3130" {
+		t.Errorf("ingestBaseURL = %q, want %q", c.ingestBaseURL, "http://my-server:3130")
+	}
+}
+
+// --- Token redaction tests ---
+
+func TestRedactAuthHeaders(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{"Authorization", "Bearer secret-token", "[REDACTED]"},
+		{"authorization", "Bearer secret-token", "[REDACTED]"},
+		{"Cookie", "session=abc123", "[REDACTED]"},
+		{"Set-Cookie", "session=abc123; Path=/", "[REDACTED]"},
+		{"Content-Type", "application/json", "application/json"},
+		{"X-Request-Id", "req-123", "req-123"},
+	}
+
+	for _, tt := range tests {
+		got := redactAuthHeaders(tt.name, tt.value)
+		if got != tt.want {
+			t.Errorf("redactAuthHeaders(%q, %q) = %q, want %q", tt.name, tt.value, got, tt.want)
+		}
+	}
+}
+
+func TestVerboseOutput_RedactsAuth(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{}`))
+	}))
+	defer ts.Close()
+
+	c := &Client{
+		queryBaseURL:  ts.URL,
+		ingestBaseURL: ts.URL,
+		adminBaseURL:  ts.URL,
+		token:         "super-secret",
+		httpClient:    ts.Client(),
+		verbose:       true,
+	}
+
+	// Just verify it doesn't panic with verbose mode on.
+	_, err := c.get(c.queryBaseURL, "/test", nil)
+	if err != nil {
+		t.Fatalf("get() error = %v", err)
+	}
+}
+
 func TestErrorHandling_500(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)

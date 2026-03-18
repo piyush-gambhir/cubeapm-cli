@@ -213,6 +213,100 @@ func TestResolveTimeRange_Default(t *testing.T) {
 	}
 }
 
+// --- Boundary tests for seconds vs milliseconds ---
+
+func TestParseTime_BoundaryBelowE12_Seconds(t *testing.T) {
+	// 999999999999 is just below 1e12, should be treated as seconds.
+	result, err := ParseTime("999999999999")
+	if err != nil {
+		t.Fatalf("ParseTime() error = %v", err)
+	}
+	expected := time.Unix(999999999999, 0)
+	if !result.Equal(expected) {
+		t.Errorf("ParseTime(999999999999) = %v, want %v (seconds)", result, expected)
+	}
+}
+
+func TestParseTime_BoundaryAtE12_Millis(t *testing.T) {
+	// 1000000000000 is exactly 1e12, should be treated as milliseconds.
+	result, err := ParseTime("1000000000000")
+	if err != nil {
+		t.Fatalf("ParseTime() error = %v", err)
+	}
+	expected := time.UnixMilli(1000000000000)
+	if !result.Equal(expected) {
+		t.Errorf("ParseTime(1000000000000) = %v, want %v (millis)", result, expected)
+	}
+}
+
+func TestParseTime_BoundaryAt1e10_Seconds(t *testing.T) {
+	// 10000000000 (1e10) should still be treated as seconds.
+	result, err := ParseTime("10000000000")
+	if err != nil {
+		t.Fatalf("ParseTime() error = %v", err)
+	}
+	expected := time.Unix(10000000000, 0)
+	if !result.Equal(expected) {
+		t.Errorf("ParseTime(10000000000) = %v, want %v (seconds)", result, expected)
+	}
+}
+
+// --- Duration validation tests ---
+
+func TestParseDuration_InvalidPrefix(t *testing.T) {
+	_, err := ParseDuration("1x2h")
+	if err == nil {
+		t.Fatal("ParseDuration(1x2h) expected error, got nil")
+	}
+}
+
+func TestParseDuration_InvalidSuffix(t *testing.T) {
+	_, err := ParseDuration("abc")
+	if err == nil {
+		t.Fatal("ParseDuration(abc) expected error, got nil")
+	}
+}
+
+func TestParseDuration_ValidCompound(t *testing.T) {
+	d, err := ParseDuration("1h30m")
+	if err != nil {
+		t.Fatalf("ParseDuration(1h30m) error = %v", err)
+	}
+	expected := 1*time.Hour + 30*time.Minute
+	if d != expected {
+		t.Errorf("ParseDuration(1h30m) = %v, want %v", d, expected)
+	}
+}
+
+func TestParseDuration_ValidDaysAndHours(t *testing.T) {
+	d, err := ParseDuration("2d12h")
+	if err != nil {
+		t.Fatalf("ParseDuration(2d12h) error = %v", err)
+	}
+	expected := 2*24*time.Hour + 12*time.Hour
+	if d != expected {
+		t.Errorf("ParseDuration(2d12h) = %v, want %v", d, expected)
+	}
+}
+
+func TestParseDuration_TrailingGarbage(t *testing.T) {
+	_, err := ParseDuration("1hxyz")
+	if err == nil {
+		t.Fatal("ParseDuration(1hxyz) expected error, got nil")
+	}
+}
+
+func TestParseDuration_ValidMilliseconds(t *testing.T) {
+	d, err := ParseDuration("500ms")
+	if err != nil {
+		t.Fatalf("ParseDuration(500ms) error = %v", err)
+	}
+	expected := 500 * time.Millisecond
+	if d != expected {
+		t.Errorf("ParseDuration(500ms) = %v, want %v", d, expected)
+	}
+}
+
 func TestResolveTimeRange_LastOverridesFromTo(t *testing.T) {
 	before := time.Now()
 	start, end, err := ResolveTimeRange("2024-01-01T00:00:00Z", "2024-12-31T23:59:59Z", "30m")
