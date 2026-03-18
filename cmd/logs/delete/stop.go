@@ -2,6 +2,7 @@ package delete
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -9,7 +10,9 @@ import (
 )
 
 func newStopCmd() *cobra.Command {
-	return &cobra.Command{
+	var ifExists bool
+
+	cmd := &cobra.Command{
 		Use:         "stop <task-id>",
 		Short:       "Stop a running log deletion task",
 		Annotations: map[string]string{"mutates": "true"},
@@ -22,9 +25,15 @@ Note: Entries already deleted before the stop request will not be restored.
 
 This command uses the admin API port (default: 3199).
 
+Flags:
+  --if-exists  Succeed silently if the task does not exist (idempotent mode)
+
 Examples:
   # Stop a deletion task
   cubeapm logs delete stop abc123-def456
+
+  # Stop idempotently (no error if task doesn't exist)
+  cubeapm logs delete stop --if-exists abc123-def456
 
   # Workflow: list tasks, then stop one
   cubeapm logs delete list
@@ -34,11 +43,32 @@ Examples:
 			taskID := args[0]
 
 			if err := cmdutil.APIClient.DeleteLogsStop(taskID); err != nil {
+				if ifExists && isNotFoundError(err) {
+					if !cmdutil.Quiet {
+						fmt.Printf("Delete task %s not found (ignored due to --if-exists).\n", taskID)
+					}
+					return nil
+				}
 				return err
 			}
 
-			fmt.Printf("Delete task %s stopped.\n", taskID)
+			if !cmdutil.Quiet {
+				fmt.Printf("Delete task %s stopped.\n", taskID)
+			}
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&ifExists, "if-exists", false, "Succeed silently if the task does not exist")
+
+	return cmd
+}
+
+// isNotFoundError checks if the error indicates a 404 / not-found condition.
+func isNotFoundError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "404") || strings.Contains(msg, "not found")
 }

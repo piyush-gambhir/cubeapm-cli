@@ -12,4 +12,6 @@ var (
 	Resolved     config.ResolvedConfig
 	APIClient    *client.Client
 	OutputFormat output.Format
+	NoInput      bool // Disable interactive prompts (for CI/agent use)
+	Quiet        bool // Suppress informational output
 )

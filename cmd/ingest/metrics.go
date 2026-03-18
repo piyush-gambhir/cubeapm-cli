@@ -75,7 +75,9 @@ Examples:
 				return err
 			}
 
-			fmt.Println("Metrics ingested successfully.")
+			if !cmdutil.Quiet {
+				fmt.Println("Metrics ingested successfully.")
+			}
 			return nil
 		},
 	}

@@ -46,6 +46,10 @@ Examples:
 }
 
 func runLogin(cmd *cobra.Command, args []string) error {
+	if cmdutil.NoInput {
+		return fmt.Errorf("login requires interactive prompts; cannot run with --no-input (use 'cubeapm config set' or environment variables instead)")
+	}
+
 	reader := bufio.NewReader(os.Stdin)
 
 	// Prompt for profile name
@@ -105,7 +109,9 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	}
 
 	// Test connection
-	fmt.Print("\nTesting connection... ")
+	if !cmdutil.Quiet {
+		fmt.Print("\nTesting connection... ")
+	}
 	testCfg := config.ResolvedConfig{
 		Server:     server,
 		QueryPort:  queryPort,
@@ -120,10 +126,14 @@ func runLogin(cmd *cobra.Command, args []string) error {
 
 	services, err := testClient.GetServices()
 	if err != nil {
-		fmt.Println("FAILED")
+		if !cmdutil.Quiet {
+			fmt.Println("FAILED")
+		}
 		return fmt.Errorf("connection test failed: %w", err)
 	}
-	fmt.Printf("OK (%d services found)\n", len(services))
+	if !cmdutil.Quiet {
+		fmt.Printf("OK (%d services found)\n", len(services))
+	}
 
 	// Save profile
 	profile := config.Profile{
@@ -143,12 +153,14 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("saving config: %w", err)
 	}
 
-	fmt.Printf("\nProfile %q saved", profileName)
-	if cmdutil.AppConfig.CurrentProfile == profileName {
-		fmt.Print(" (active)")
+	if !cmdutil.Quiet {
+		fmt.Printf("\nProfile %q saved", profileName)
+		if cmdutil.AppConfig.CurrentProfile == profileName {
+			fmt.Print(" (active)")
+		}
+		fmt.Println()
+		fmt.Printf("Config written to %s\n", config.ConfigPath())
 	}
-	fmt.Println()
-	fmt.Printf("Config written to %s\n", config.ConfigPath())
 
 	return nil
 }

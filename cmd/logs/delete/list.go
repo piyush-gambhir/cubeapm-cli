@@ -41,7 +41,9 @@ Examples:
 			}
 
 			if len(tasks) == 0 {
-				fmt.Println("No active deletion tasks.")
+				if !cmdutil.Quiet {
+					fmt.Println("No active deletion tasks.")
+				}
 				return nil
 			}
 

@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/piyush-gambhir/cubeapm-cli/internal/cmdutil"
 	"github.com/piyush-gambhir/cubeapm-cli/internal/config"
 	"github.com/piyush-gambhir/cubeapm-cli/internal/update"
 )
@@ -36,8 +37,10 @@ func runUpdate(checkOnly bool) error {
 		return fmt.Errorf("cannot check for updates: running a development build")
 	}
 
-	fmt.Printf("Current version: v%s\n", currentVersion)
-	fmt.Println("Checking for updates...")
+	if !cmdutil.Quiet {
+		fmt.Printf("Current version: v%s\n", currentVersion)
+		fmt.Println("Checking for updates...")
+	}
 
 	info, err := update.CheckForUpdateFresh(currentVersion, updateRepo, config.ConfigDir())
 	if err != nil {
@@ -45,19 +48,29 @@ func runUpdate(checkOnly bool) error {
 	}
 
 	if !info.Available {
-		fmt.Printf("Already up to date (v%s)\n", currentVersion)
+		if !cmdutil.Quiet {
+			fmt.Printf("Already up to date (v%s)\n", currentVersion)
+		}
 		return nil
 	}
 
-	fmt.Printf("\nNew version available: v%s -> v%s\n", info.CurrentVersion, info.LatestVersion)
-	if info.PublishedAt != "" {
-		fmt.Printf("Published: %s\n", info.PublishedAt)
+	if !cmdutil.Quiet {
+		fmt.Printf("\nNew version available: v%s -> v%s\n", info.CurrentVersion, info.LatestVersion)
+		if info.PublishedAt != "" {
+			fmt.Printf("Published: %s\n", info.PublishedAt)
+		}
+		fmt.Printf("Release:   %s\n", info.ReleaseURL)
 	}
-	fmt.Printf("Release:   %s\n", info.ReleaseURL)
 
 	if checkOnly {
-		fmt.Printf("\nRun `cubeapm update` to install the update.\n")
+		if !cmdutil.Quiet {
+			fmt.Printf("\nRun `cubeapm update` to install the update.\n")
+		}
 		return nil
+	}
+
+	if cmdutil.NoInput {
+		return fmt.Errorf("update requires confirmation; cannot run with --no-input (use --check to check only)")
 	}
 
 	fmt.Println()

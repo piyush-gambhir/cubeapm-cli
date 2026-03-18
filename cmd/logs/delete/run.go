@@ -46,8 +46,10 @@ Examples:
 				return err
 			}
 
-			fmt.Printf("Delete task started: %s\n", taskID)
-			fmt.Println("Use 'cubeapm logs delete list' to check progress.")
+			if !cmdutil.Quiet {
+				fmt.Printf("Delete task started: %s\n", taskID)
+				fmt.Println("Use 'cubeapm logs delete list' to check progress.")
+			}
 			return nil
 		},
 	}

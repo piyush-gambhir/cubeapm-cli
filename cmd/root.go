@@ -38,6 +38,8 @@ var (
 	flagNoColor    bool
 	flagVerbose    bool
 	flagReadOnly   bool
+	flagNoInput    bool
+	flagQuiet      bool
 )
 
 // Background update check state.
@@ -74,6 +76,8 @@ Global flags (apply to all commands):
   --admin-port <port>     Override admin port (default: 3199)
   --no-color              Disable colored output
   --verbose               Enable verbose HTTP request logging
+  --no-input              Disable all interactive prompts (for CI/agent use)
+  -q, --quiet             Suppress informational output
 
 Quick start:
   cubeapm login                                          # Configure connection
@@ -85,6 +89,22 @@ Quick start:
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Resolve --no-input: flag > env var
+		if !cmd.Flags().Changed("no-input") {
+			if v := os.Getenv("CUBEAPM_NO_INPUT"); v == "1" || v == "true" {
+				flagNoInput = true
+			}
+		}
+		cmdutil.NoInput = flagNoInput
+
+		// Resolve --quiet: flag > env var
+		if !cmd.Flags().Changed("quiet") {
+			if v := os.Getenv("CUBEAPM_QUIET"); v == "1" || v == "true" {
+				flagQuiet = true
+			}
+		}
+		cmdutil.Quiet = flagQuiet
+
 		// Start a background update check for commands that should show
 		// the update notice. Skip for "update" and "version" commands.
 		cmdName := cmd.Name()
@@ -125,13 +145,13 @@ Quick start:
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
 		// Wait for the background update check and print a notice if available.
-		// Skip for "update" and "version" commands.
+		// Skip for "update" and "version" commands, and when --quiet is set.
 		cmdName := cmd.Name()
 		if cmdName == "update" || cmdName == "version" {
 			return nil
 		}
 		<-updateInfoDone
-		if updateInfo != nil {
+		if updateInfo != nil && !cmdutil.Quiet {
 			update.PrintUpdateNotice(os.Stderr, updateInfo)
 		}
 		return nil
@@ -224,6 +244,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable color output")
 	rootCmd.PersistentFlags().BoolVar(&flagVerbose, "verbose", false, "Enable verbose output")
 	rootCmd.PersistentFlags().BoolVar(&flagReadOnly, "read-only", false, "Block write operations (safety mode for agents)")
+	rootCmd.PersistentFlags().BoolVar(&flagNoInput, "no-input", false, "Disable all interactive prompts (for CI/agent use)")
+	rootCmd.PersistentFlags().BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress informational output")
 
 	// Register subcommands
 	rootCmd.AddCommand(newVersionCmd())
@@ -239,7 +261,7 @@ func init() {
 // Execute runs the root command.
 func Execute() error {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
+		output.WriteError(os.Stderr, string(cmdutil.OutputFormat), err, 0)
 		return err
 	}
 	return nil

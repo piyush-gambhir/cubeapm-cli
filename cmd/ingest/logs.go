@@ -80,7 +80,9 @@ Examples:
 				return err
 			}
 
-			fmt.Println("Logs ingested successfully.")
+			if !cmdutil.Quiet {
+				fmt.Println("Logs ingested successfully.")
+			}
 			return nil
 		},
 	}

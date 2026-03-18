@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/piyush-gambhir/cubeapm-cli/internal/cmdutil"
 	"github.com/piyush-gambhir/cubeapm-cli/internal/config"
 )
 
@@ -93,7 +94,9 @@ Examples:
 				return fmt.Errorf("saving config: %w", err)
 			}
 
-			fmt.Printf("Set %s = %s (profile: %s)\n", key, value, profileName)
+			if !cmdutil.Quiet {
+				fmt.Printf("Set %s = %s (profile: %s)\n", key, value, profileName)
+			}
 			return nil
 		},
 	}

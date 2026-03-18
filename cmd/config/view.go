@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 
+	"github.com/piyush-gambhir/cubeapm-cli/internal/cmdutil"
 	"github.com/piyush-gambhir/cubeapm-cli/internal/config"
 )
 
@@ -29,7 +30,9 @@ Examples:
 				return fmt.Errorf("loading config: %w", err)
 			}
 
-			fmt.Printf("Config file: %s\n\n", config.ConfigPath())
+			if !cmdutil.Quiet {
+				fmt.Printf("Config file: %s\n\n", config.ConfigPath())
+			}
 
 			data, err := yaml.Marshal(cfg)
 			if err != nil {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/piyush-gambhir/cubeapm-cli/internal/cmdutil"
 	"github.com/piyush-gambhir/cubeapm-cli/internal/config"
 )
 
@@ -116,7 +117,9 @@ Examples:
 				return fmt.Errorf("saving config: %w", err)
 			}
 
-			fmt.Printf("Switched to profile %q\n", name)
+			if !cmdutil.Quiet {
+				fmt.Printf("Switched to profile %q\n", name)
+			}
 			return nil
 		},
 	}
@@ -156,7 +159,9 @@ Examples:
 				return fmt.Errorf("saving config: %w", err)
 			}
 
-			fmt.Printf("Deleted profile %q\n", name)
+			if !cmdutil.Quiet {
+				fmt.Printf("Deleted profile %q\n", name)
+			}
 			return nil
 		},
 	}
