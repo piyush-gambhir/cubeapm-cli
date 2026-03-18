@@ -4,6 +4,20 @@ A command-line interface for querying traces, metrics, and logs from [CubeAPM](h
 
 Designed to be used both interactively and programmatically by scripts and coding agents (LLMs).
 
+[![Go Version](https://img.shields.io/github/go-mod/go-version/piyush-gambhir/cubeapm-cli)](https://go.dev/)
+[![Release](https://img.shields.io/github/v/release/piyush-gambhir/cubeapm-cli)](https://github.com/piyush-gambhir/cubeapm-cli/releases)
+[![License](https://img.shields.io/github/license/piyush-gambhir/cubeapm-cli)](LICENSE)
+[![CI](https://github.com/piyush-gambhir/cubeapm-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/piyush-gambhir/cubeapm-cli/actions/workflows/ci.yml)
+
+## Features
+
+- Full API coverage — every CubeAPM API endpoint accessible from the command line
+- Multiple output formats — table, JSON, YAML (`-o json`)
+- Profile management — multiple instances with `--profile`
+- Auto-update — checks for new versions, `cubeapm update` to self-update
+- Agent-friendly — comprehensive help text, structured output for LLM coding agents
+- Cross-platform — macOS, Linux, Windows (amd64 and arm64)
+
 ## Installation
 
 ### From source (Go 1.21+)
@@ -25,6 +39,20 @@ git clone https://github.com/piyush-gambhir/cubeapm-cli.git
 cd cubeapm-cli
 make build
 # Binary is at ./bin/cubeapm
+```
+
+## Quick Start
+
+```bash
+# Install
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
+
+# Authenticate
+cubeapm login
+
+# Start using
+cubeapm traces services
+cubeapm traces search --service api-gateway --last 1h -o json
 ```
 
 ## Authentication
@@ -1047,6 +1075,20 @@ cubeapm logs hits --query '*' --last 24h --step 1h
 | Query | 3140 | `CUBEAPM_QUERY_PORT` | Traces, metrics, and log queries |
 | Ingest | 3130 | `CUBEAPM_INGEST_PORT` | Metrics and log data ingestion |
 | Admin | 3199 | `CUBEAPM_ADMIN_PORT` | Administrative operations (log deletion) |
+
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Agent Skills
+
+This CLI ships with an agent skill for coding agents (Claude, Cursor, Copilot, etc.):
+
+```bash
+npx skills add piyush-gambhir/cubeapm-cli@cubeapm
+```
+
+Once installed, coding agents automatically know how to use this CLI effectively.
 
 ## License
 
