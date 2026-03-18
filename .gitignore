@@ -1,5 +1,4 @@
 bin/
 dist/
-cubeapm
-cubeapm-cli
+/cubeapm-cli
 *.exe
