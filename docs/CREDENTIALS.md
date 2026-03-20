@@ -152,9 +152,94 @@ CubeAPM authentication is optional. Many internal deployments run without authen
 - You are running CubeAPM locally for development
 - The CubeAPM server does not enforce token validation
 
-**How to configure the token on the server side:**
+**How to configure authentication on the CubeAPM server:**
 
-CubeAPM supports token-based authentication configured in the server's settings. Consult your CubeAPM server documentation or your infrastructure team for the specific token value.
+CubeAPM uses a shared token for API authentication. The token is configured on the server side, and the same token is used by all clients (including this CLI) to authenticate.
+
+**Option A: Set the token via environment variable on the CubeAPM server**
+
+On the machine (or container) running CubeAPM, set the environment variable before starting the server:
+
+```bash
+# On the CubeAPM server host
+export CUBEAPM_AUTH_TOKEN=my-secret-token-here
+cubeapm  # start the server
+```
+
+**Option B: Set the token in the CubeAPM configuration file**
+
+Add the token to the CubeAPM server's configuration file (typically `cubeapm.yml` or via environment):
+
+```yaml
+# cubeapm.yml (on the server)
+auth_token: my-secret-token-here
+```
+
+**Option C: Set the token via command-line flag on the CubeAPM server**
+
+```bash
+cubeapm --auth-token my-secret-token-here
+```
+
+**Option D: Docker deployment**
+
+Pass the token as an environment variable in your `docker-compose.yml`:
+
+```yaml
+services:
+  cubeapm:
+    image: cubeapm/cubeapm:latest
+    environment:
+      - CUBEAPM_AUTH_TOKEN=my-secret-token-here
+    ports:
+      - "3125:3125"
+      - "3130:3130"
+      - "3140:3140"
+      - "3199:3199"
+```
+
+**Option E: Kubernetes deployment**
+
+Store the token in a Kubernetes Secret and reference it in your deployment:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cubeapm-secrets
+type: Opaque
+stringData:
+  auth-token: my-secret-token-here
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cubeapm
+spec:
+  template:
+    spec:
+      containers:
+        - name: cubeapm
+          env:
+            - name: CUBEAPM_AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cubeapm-secrets
+                  key: auth-token
+```
+
+> **Note:** The token you configure on the server is the same token you provide to the CLI. There is no separate "token generation" step — you choose a token value, configure it on the server, and then use that same value with the CLI.
+
+**Verifying authentication is enabled:**
+
+```bash
+# If auth is enabled, this will fail with 401 Unauthorized
+curl http://your-cubeapm-server:3140/api/v1/services
+
+# With the token, it should succeed
+curl -H "Authorization: Bearer my-secret-token-here" \
+  http://your-cubeapm-server:3140/api/v1/services
+```
 
 **Using the token with the CLI:**
 
