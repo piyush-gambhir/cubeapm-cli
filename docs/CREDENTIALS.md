@@ -18,13 +18,21 @@ The CLI will walk you through each setting with sensible defaults:
 
 ```
 Profile name [default]:
-CubeAPM server: cubeapm.internal.example.com
-API token (leave empty for no auth):
+CubeAPM server: cube.example.com
+
+Authentication:
+  1. Email/Password
+  2. No authentication
+Choose [1]: 1
+Email: user@example.com
+Password:
+
+Authenticating... OK (session expires 2024-01-16 18:00 UTC)
+Connection verified (12 services found)
+
 Query port [3140]:
 Ingest port [3130]:
 Admin port [3199]:
-
-Testing connection... OK (12 services found)
 
 Profile "default" saved (active)
 Config written to /home/user/.config/cubeapm-cli/config.yaml
@@ -44,8 +52,9 @@ cubeapm logs query 'error' --last 30m
 For non-interactive use (CI pipelines, scripts, coding agents), set environment variables instead:
 
 ```bash
-export CUBEAPM_SERVER=cubeapm.example.com
-export CUBEAPM_TOKEN=your-api-token
+export CUBEAPM_SERVER=cube.example.com
+export CUBEAPM_EMAIL=user@example.com
+export CUBEAPM_PASSWORD=your-password
 
 # Optional: override default ports
 export CUBEAPM_QUERY_PORT=3140
@@ -61,7 +70,7 @@ cubeapm traces services -o json
 Pass credentials directly on the command line for one-off use. Flags override everything else:
 
 ```bash
-cubeapm --server cubeapm.example.com --token my-token traces services
+cubeapm --server cube.example.com --email user@example.com --password secret traces services
 ```
 
 ---
@@ -70,18 +79,15 @@ cubeapm --server cubeapm.example.com --token my-token traces services
 
 ### Step 1: Find Your CubeAPM Server Address
 
-The server address is the hostname or IP where your CubeAPM instance is running. Provide the hostname only -- the CLI adds the `http://` scheme automatically.
+The server address is the hostname or URL where your CubeAPM instance is running.
 
 **Self-hosted (single binary):**
 
 If you installed CubeAPM directly on a server, use that server's hostname or IP:
 
 ```bash
-# Hostname
 cubeapm login
 # CubeAPM server: cubeapm.internal.example.com
-
-# IP address
 # CubeAPM server: 10.0.1.50
 ```
 
@@ -99,950 +105,271 @@ If CubeAPM runs in Docker on the same machine, use `localhost`. If it runs on a 
 
 **Kubernetes deployment:**
 
-Use the Kubernetes Service name (if running in-cluster) or set up port-forwarding for local access:
+Use the Kubernetes service name (if connecting from within the cluster) or the external ingress/load balancer address:
 
 ```bash
-# In-cluster (from another pod)
+# In-cluster
 # CubeAPM server: cubeapm.monitoring.svc.cluster.local
 
-# Local access via port-forward (see Kubernetes Deployment section below)
-# CubeAPM server: localhost
+# External
+# CubeAPM server: cube.example.com
 ```
 
-> **Note:** Provide the hostname only, not a full URL. The CLI constructs URLs internally by combining the scheme, hostname, and the appropriate port for each operation. If you include a scheme (e.g., `https://cubeapm.example.com`), the CLI will parse and use it -- but in most cases, just the hostname is sufficient.
+**Reverse proxy / HTTPS:**
 
-### Step 2: Understand the Port Architecture
-
-CubeAPM exposes multiple ports, each serving a different purpose. This is important because the CLI connects to three of them depending on the operation:
-
-| Port | Purpose | Default | Used For |
-|------|---------|---------|----------|
-| 3125 | Web UI | 3125 | Browser access to the CubeAPM dashboard |
-| 3130 | Ingest | 3130 | Receiving traces, metrics, and logs from agents |
-| 3140 | Query API | 3140 | Querying data (traces, metrics, logs) |
-| 3199 | Admin | 3199 | Administrative operations (log deletion) |
-| 4317 | OTLP gRPC | 4317 | OpenTelemetry gRPC ingestion |
-| 4318 | OTLP HTTP | 4318 | OpenTelemetry HTTP ingestion |
-
-**Which ports does the CLI use?**
-
-The CLI connects to three ports depending on the command:
-
-| CLI Operation | Port Used | Default | Example Commands |
-|---------------|-----------|---------|------------------|
-| Querying traces, metrics, logs | Query port | 3140 | `traces search`, `metrics query`, `logs query` |
-| Pushing data | Ingest port | 3130 | `ingest metrics`, `ingest logs` |
-| Admin operations | Admin port | 3199 | `logs delete run`, `logs delete list` |
-
-If your CubeAPM instance uses the default ports, you do not need to configure them -- the CLI uses the defaults automatically.
-
-### Step 3: Get an API Token (Optional)
-
-CubeAPM authentication is optional. Many internal deployments run without authentication enabled.
-
-**When a token is needed:**
-
-- Your CubeAPM server has authentication enabled in its configuration
-- You are accessing CubeAPM over the public internet
-- Your organization's security policy requires it
-
-**When a token is NOT needed:**
-
-- CubeAPM is deployed on an internal network with no auth configured
-- You are running CubeAPM locally for development
-- The CubeAPM server does not enforce token validation
-
-**How to configure authentication on the CubeAPM server:**
-
-CubeAPM uses a shared token for API authentication. The token is configured on the server side, and the same token is used by all clients (including this CLI) to authenticate.
-
-**Option A: Set the token via environment variable on the CubeAPM server**
-
-On the machine (or container) running CubeAPM, set the environment variable before starting the server:
+If CubeAPM is behind a reverse proxy (like nginx) serving on HTTPS:
 
 ```bash
-# On the CubeAPM server host
-export CUBEAPM_AUTH_TOKEN=my-secret-token-here
-cubeapm  # start the server
+# CubeAPM server: https://cube.example.com
 ```
 
-**Option B: Set the token in the CubeAPM configuration file**
+When using a reverse proxy, all ports (query, ingest, admin) are typically served through the same host on port 443. In this case, use the same port for all three when prompted.
 
-Add the token to the CubeAPM server's configuration file (typically `cubeapm.yml` or via environment):
+### Step 2: Find Your Port Configuration
 
-```yaml
-# cubeapm.yml (on the server)
-auth_token: my-secret-token-here
-```
+CubeAPM uses three ports for different purposes:
 
-**Option C: Set the token via command-line flag on the CubeAPM server**
+| Port | Default | Purpose |
+|------|---------|---------|
+| Query | 3140 | Traces, metrics, and logs queries |
+| Ingest | 3130 | Pushing metrics and logs data |
+| Admin | 3199 | Administrative operations (log deletion) |
 
-```bash
-cubeapm --auth-token my-secret-token-here
-```
+**Standard deployment (direct access):** Use the defaults (3140, 3130, 3199).
 
-**Option D: Docker deployment**
+**Reverse proxy deployment:** If CubeAPM is behind a reverse proxy on HTTPS, you typically don't need custom ports -- the reverse proxy routes everything through port 443. Set all three ports to 443 or leave as defaults if the proxy handles the routing.
 
-Pass the token as an environment variable in your `docker-compose.yml`:
+### Step 3: Get Your Login Credentials
 
-```yaml
-services:
-  cubeapm:
-    image: cubeapm/cubeapm:latest
-    environment:
-      - CUBEAPM_AUTH_TOKEN=my-secret-token-here
-    ports:
-      - "3125:3125"
-      - "3130:3130"
-      - "3140:3140"
-      - "3199:3199"
-```
+CubeAPM uses email and password authentication (powered by Ory Kratos). You need the email and password of a user account on your CubeAPM instance.
 
-**Option E: Kubernetes deployment**
+**If authentication is enabled (most production deployments):**
 
-Store the token in a Kubernetes Secret and reference it in your deployment:
+1. Open your CubeAPM web UI in a browser
+2. Log in with your email and password
+3. Use the same email and password for the CLI
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: cubeapm-secrets
-type: Opaque
-stringData:
-  auth-token: my-secret-token-here
+**If authentication is disabled (local/dev instances):**
+
+Some CubeAPM instances (especially local development setups) run without authentication. Choose "No authentication" during `cubeapm login`.
+
+**Getting an account:**
+
+If you don't have an account:
+- Ask your CubeAPM administrator to create one
+- Or self-register at the CubeAPM web UI (if self-service signup is enabled)
+
 ---
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cubeapm
-spec:
-  template:
-    spec:
-      containers:
-        - name: cubeapm
-          env:
-            - name: CUBEAPM_AUTH_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: cubeapm-secrets
-                  key: auth-token
-```
 
-> **Note:** The token you configure on the server is the same token you provide to the CLI. There is no separate "token generation" step — you choose a token value, configure it on the server, and then use that same value with the CLI.
+## Authentication Methods
 
-**Verifying authentication is enabled:**
+### Email/Password Authentication
+
+This is the primary authentication method for CubeAPM instances with authentication enabled. The CLI performs the full login flow:
+
+1. Initiates a login session with the CubeAPM server
+2. Submits your email and password
+3. Receives a session cookie (valid for 24 hours by default)
+4. Caches the session cookie for subsequent commands
+5. Automatically re-authenticates when the session expires
 
 ```bash
-# If auth is enabled, this will fail with 401 Unauthorized
-curl http://your-cubeapm-server:3140/api/v1/services
-
-# With the token, it should succeed
-curl -H "Authorization: Bearer my-secret-token-here" \
-  http://your-cubeapm-server:3140/api/v1/services
-```
-
-**Using the token with the CLI:**
-
-```bash
-# During interactive login
+# Interactive
 cubeapm login
-# API token (leave empty for no auth): your-api-token-here
+# Choose: 1. Email/Password
+# Enter email and password
 
-# Via environment variable
-export CUBEAPM_TOKEN=your-api-token-here
-
-# Via CLI flag
-cubeapm --token your-api-token-here traces services
-
-# Via config file
-cubeapm config set token your-api-token-here
-```
-
-### Step 4: Use with the CLI
-
-Once you have your server address, ports, and (optionally) a token, you can authenticate using any of the three methods:
-
-**Interactive login (saves to config file):**
-
-```bash
-cubeapm login
-```
-
-**Environment variables (for scripts and CI):**
-
-```bash
-export CUBEAPM_SERVER=cubeapm.example.com
-export CUBEAPM_TOKEN=your-api-token
+# Non-interactive (via environment variables)
+export CUBEAPM_SERVER=cube.example.com
+export CUBEAPM_EMAIL=user@example.com
+export CUBEAPM_PASSWORD=your-password
 cubeapm traces services
 ```
 
-**CLI flags (for one-off commands):**
+**Session management:**
 
-```bash
-cubeapm --server cubeapm.example.com --token your-api-token traces services
-```
-
-**Config file set (programmatic, non-interactive):**
-
-```bash
-cubeapm config set server cubeapm.example.com
-cubeapm config set token your-api-token
-cubeapm config set query_port 3140
-cubeapm config set ingest_port 3130
-cubeapm config set admin_port 3199
-```
-
----
-
-## Understanding CubeAPM Authentication
-
-### Token-Based Auth
-
-When CubeAPM has authentication enabled, the CLI sends a Bearer token in the `Authorization` HTTP header with every request:
-
-```
-Authorization: Bearer your-api-token
-```
-
-Key behaviors:
-
-- The token is sent on all requests to the query, ingest, and admin ports
-- If the token is invalid or expired, the server returns HTTP 401 and the CLI displays: `authentication failed (HTTP 401): check your token with 'cubeapm login'`
-- If the token lacks permissions for a specific operation, the server returns HTTP 403 and the CLI displays: `access denied (HTTP 403): your token may not have sufficient permissions`
-- When `--verbose` mode is enabled, the CLI logs request and response headers but redacts the `Authorization` header value to `[REDACTED]` for security
+- Sessions are cached in the config file and reused across CLI invocations
+- When a session expires, the CLI automatically re-authenticates using stored credentials
+- You can force re-authentication by running `cubeapm login` again
 
 ### No Authentication
 
-CubeAPM can run without any authentication. In this case, simply leave the token empty:
+For CubeAPM instances running without authentication (common in development or internal networks with network-level access control):
 
 ```bash
-# Interactive login
 cubeapm login
-# API token (leave empty for no auth): <press Enter>
-
-# Environment variable (just don't set CUBEAPM_TOKEN)
-export CUBEAPM_SERVER=cubeapm.example.com
-cubeapm traces services
-
-# Config file
-cubeapm config set server cubeapm.example.com
-cubeapm config set token ""
+# Choose: 2. No authentication
 ```
 
-**When running without authentication is acceptable:**
-
-- Development and testing environments
-- Internal networks with network-level access controls (firewalls, VPNs)
-- CubeAPM instances behind an authenticating reverse proxy
-
-**Security implications:**
-
-- Anyone with network access to the CubeAPM ports can read all observability data
-- Anyone with access to the admin port (3199) can delete logs
-- Anyone with access to the ingest port (3130) can push arbitrary data
+No credentials are needed. The CLI connects directly to the CubeAPM API ports.
 
 ---
 
-## Configuration
+## Configuration Priority
 
-### Configuration Priority
+Settings are resolved in this order (highest priority first):
 
-Settings are resolved in this order, with the highest-priority source winning:
+1. **CLI flags** (`--server`, `--email`, `--password`, `--query-port`, etc.)
+2. **Environment variables** (`CUBEAPM_SERVER`, `CUBEAPM_EMAIL`, `CUBEAPM_PASSWORD`, etc.)
+3. **Profile configuration** (`~/.config/cubeapm-cli/config.yaml`)
 
-```
-1. CLI flags          (--server, --token, --query-port, etc.)    ← highest
-2. Environment vars   (CUBEAPM_SERVER, CUBEAPM_TOKEN, etc.)
-3. Profile config     (~/.config/cubeapm-cli/config.yaml)        ← lowest
-```
+### Configuration File
 
-This means you can set a baseline in your config file, override per-environment with env vars, and override for a single command with flags.
+Location: `~/.config/cubeapm-cli/config.yaml` (or `$XDG_CONFIG_HOME/cubeapm-cli/config.yaml`)
 
-### Config File
-
-The CLI stores configuration at `~/.config/cubeapm-cli/config.yaml` (or `$XDG_CONFIG_HOME/cubeapm-cli/config.yaml` if `XDG_CONFIG_HOME` is set).
-
-**Full config file structure:**
-
-```yaml
-current_profile: default
-profiles:
-  default:
-    server: cubeapm.example.com
-    query_port: 3140
-    ingest_port: 3130
-    admin_port: 3199
-    token: your-api-token
-    output: table
-    read_only: false
-```
-
-**Field reference:**
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `current_profile` | string | `""` | Name of the active profile |
-| `profiles.<name>.server` | string | `""` | CubeAPM server hostname or IP |
-| `profiles.<name>.query_port` | int | `3140` | Port for trace/metric/log queries |
-| `profiles.<name>.ingest_port` | int | `3130` | Port for data ingestion |
-| `profiles.<name>.admin_port` | int | `3199` | Port for admin operations |
-| `profiles.<name>.token` | string | `""` | API authentication token |
-| `profiles.<name>.output` | string | `table` | Default output format: `table`, `json`, `yaml` |
-| `profiles.<name>.read_only` | bool | `false` | Block write/delete operations (safety mode) |
-
-**File permissions:** The config file is created with `0600` permissions (owner read/write only) and the config directory with `0700` permissions. This protects tokens from being readable by other users on the system.
-
-**View the current config:**
-
-```bash
-cubeapm config view
-```
-
-**Set individual values:**
-
-```bash
-cubeapm config set server cubeapm.example.com
-cubeapm config set token my-api-token
-cubeapm config set output json
-cubeapm config set query_port 3140
-cubeapm config set ingest_port 3130
-cubeapm config set admin_port 3199
-```
-
-**Read individual values:**
-
-```bash
-cubeapm config get server
-cubeapm config get token
-cubeapm config get current_profile
-```
-
-### Environment Variables
-
-All settings can be provided or overridden via environment variables. These take precedence over the config file but are overridden by CLI flags.
-
-| Environment Variable | Type | Default | Description |
-|---------------------|------|---------|-------------|
-| `CUBEAPM_SERVER` | string | | CubeAPM server hostname or IP |
-| `CUBEAPM_TOKEN` | string | | API authentication token |
-| `CUBEAPM_QUERY_PORT` | int | `3140` | Query API port |
-| `CUBEAPM_INGEST_PORT` | int | `3130` | Ingest API port |
-| `CUBEAPM_ADMIN_PORT` | int | `3199` | Admin API port |
-| `CUBEAPM_READ_ONLY` | bool | `false` | Block write/delete operations |
-| `CUBEAPM_NO_INPUT` | bool | `false` | Disable interactive prompts |
-| `CUBEAPM_QUIET` | bool | `false` | Suppress informational output |
-
-**Example: setting up a shell profile for persistent access:**
-
-```bash
-# Add to ~/.bashrc or ~/.zshrc
-export CUBEAPM_SERVER=cubeapm.example.com
-export CUBEAPM_TOKEN=your-api-token
-```
-
-**Example: CI pipeline snippet (GitHub Actions):**
-
-```yaml
-env:
-  CUBEAPM_SERVER: ${{ secrets.CUBEAPM_SERVER }}
-  CUBEAPM_TOKEN: ${{ secrets.CUBEAPM_TOKEN }}
-
-steps:
-  - name: Check service health
-    run: cubeapm traces services -o json
-```
-
-**Example: CI pipeline snippet (GitLab CI):**
-
-```yaml
-variables:
-  CUBEAPM_SERVER: $CUBEAPM_SERVER
-  CUBEAPM_TOKEN: $CUBEAPM_TOKEN
-
-check-services:
-  script:
-    - cubeapm traces services -o json
-```
-
-### Multiple Profiles
-
-You can configure multiple profiles for different CubeAPM instances (e.g., development, staging, production) and switch between them.
-
-**Create profiles with interactive login:**
-
-```bash
-# Create a "dev" profile
-cubeapm login
-# Profile name [default]: dev
-# CubeAPM server: localhost
-# API token (leave empty for no auth):
-# ...
-
-# Create a "staging" profile
-cubeapm login
-# Profile name [default]: staging
-# CubeAPM server: cubeapm.staging.example.com
-# API token (leave empty for no auth): staging-token
-# ...
-
-# Create a "production" profile
-cubeapm login
-# Profile name [default]: production
-# CubeAPM server: cubeapm.prod.example.com
-# API token (leave empty for no auth): prod-token
-# ...
-```
-
-**List all profiles:**
-
-```bash
-cubeapm config profiles list
-```
-
-Output shows the active profile marked with `*`:
-
-```
-  dev
-  staging
-* production
-```
-
-**Switch the active profile:**
-
-```bash
-cubeapm config profiles use staging
-```
-
-**Use a specific profile for a single command (without switching):**
-
-```bash
-cubeapm --profile production traces services
-cubeapm --profile dev logs query 'error' --last 1h
-```
-
-**Delete a profile:**
-
-```bash
-cubeapm config profiles delete staging
-```
-
-**Resulting config file with multiple profiles:**
+Example:
 
 ```yaml
 current_profile: production
 profiles:
-  dev:
-    server: localhost
-    output: table
-  staging:
-    server: cubeapm.staging.example.com
-    token: staging-token
-    output: json
   production:
-    server: cubeapm.prod.example.com
+    server: cube.example.com
+    auth_method: kratos
+    email: admin@example.com
+    password: your-password
+    session_cookie: "ory_kratos_session=..."
+    session_expiry: "2024-01-16T18:00:00Z"
     query_port: 3140
     ingest_port: 3130
     admin_port: 3199
-    token: prod-token
-    output: table
-    read_only: true
+  local:
+    server: localhost
+    auth_method: none
+    query_port: 3140
+    ingest_port: 3130
+    admin_port: 3199
+```
+
+The config file is created with `0600` permissions (owner read/write only) to protect stored credentials.
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `CUBEAPM_SERVER` | CubeAPM server address |
+| `CUBEAPM_EMAIL` | Login email |
+| `CUBEAPM_PASSWORD` | Login password |
+| `CUBEAPM_QUERY_PORT` | Query API port (default: 3140) |
+| `CUBEAPM_INGEST_PORT` | Ingest API port (default: 3130) |
+| `CUBEAPM_ADMIN_PORT` | Admin API port (default: 3199) |
+| `CUBEAPM_READ_ONLY` | Block write/delete operations (`true`/`false`) |
+| `CUBEAPM_NO_INPUT` | Disable interactive prompts (`true`/`false`) |
+| `CUBEAPM_QUIET` | Suppress informational output (`true`/`false`) |
+
+### CLI Flags
+
+| Flag | Description |
+|------|-------------|
+| `--server <addr>` | CubeAPM server address |
+| `--email <email>` | Login email |
+| `--password <password>` | Login password |
+| `--query-port <port>` | Query port (default: 3140) |
+| `--ingest-port <port>` | Ingest port (default: 3130) |
+| `--admin-port <port>` | Admin port (default: 3199) |
+| `--profile <name>` | Use a specific connection profile |
+| `--verbose` | Enable verbose HTTP request logging |
+| `--read-only` | Block write/delete operations |
+
+---
+
+## Multiple Profiles
+
+Profiles let you manage connections to multiple CubeAPM instances:
+
+```bash
+# Create profiles via login
+cubeapm login                                 # saves as "default"
+cubeapm login --server cube-staging.example.com  # saves as another profile
+
+# List all profiles
+cubeapm config profiles list
+
+# Switch active profile
+cubeapm config profiles use staging
+
+# Use a profile for a single command
+cubeapm traces services --profile production
+
+# Delete a profile
+cubeapm config profiles delete old-profile
 ```
 
 ---
 
-## Deployment Scenarios
+## CI/CD & Automation
 
-### Self-Hosted (Single Binary)
-
-When CubeAPM is installed directly on a server as a single binary, the CLI connects directly to the server's address and ports.
-
-**Setup:**
-
-```bash
-cubeapm login
-# CubeAPM server: cubeapm.internal.example.com
-# API token (leave empty for no auth): your-token
-# Query port [3140]: 3140
-# Ingest port [3130]: 3130
-# Admin port [3199]: 3199
-```
-
-**Port configuration considerations:**
-
-If CubeAPM is configured with non-default ports, you need to specify them during login or via config:
-
-```bash
-cubeapm config set query_port 8080
-cubeapm config set ingest_port 8081
-cubeapm config set admin_port 8082
-```
-
-**Firewall considerations:**
-
-Ensure the following ports are open between the CLI host and the CubeAPM server:
-
-```bash
-# Minimum for read-only access
-# TCP: server:3140 (query)
-
-# For data ingestion
-# TCP: server:3130 (ingest)
-
-# For admin operations (log deletion)
-# TCP: server:3199 (admin)
-```
-
-### Docker Deployment
-
-When CubeAPM runs in Docker, you need to account for port mapping between the container and the host.
-
-**Standard docker-compose setup:**
+### GitHub Actions
 
 ```yaml
-# docker-compose.yml
-services:
-  cubeapm:
-    image: cubeapm/cubeapm:latest
-    ports:
-      - "3125:3125"   # Web UI
-      - "3130:3130"   # Ingest
-      - "3140:3140"   # Query API
-      - "3199:3199"   # Admin
-      - "4317:4317"   # OTLP gRPC
-      - "4318:4318"   # OTLP HTTP
+- name: Check service health
+  env:
+    CUBEAPM_SERVER: cube.example.com
+    CUBEAPM_EMAIL: ${{ secrets.CUBEAPM_EMAIL }}
+    CUBEAPM_PASSWORD: ${{ secrets.CUBEAPM_PASSWORD }}
+  run: |
+    cubeapm traces services -o json
+    cubeapm metrics query 'up' -o json
 ```
 
-**CLI configuration (from the Docker host):**
+### Non-Interactive Mode
+
+Use `--no-input` (or `CUBEAPM_NO_INPUT=true`) to disable all interactive prompts. The CLI will fail with an error if credentials are missing rather than prompting:
 
 ```bash
-cubeapm login
-# CubeAPM server: localhost
-# Query port [3140]: 3140
-# Ingest port [3130]: 3130
-# Admin port [3199]: 3199
-```
-
-**Custom port mapping:**
-
-If you map CubeAPM ports to different host ports:
-
-```yaml
-# docker-compose.yml
-services:
-  cubeapm:
-    image: cubeapm/cubeapm:latest
-    ports:
-      - "9140:3140"   # Query API mapped to host port 9140
-      - "9130:3130"   # Ingest mapped to host port 9130
-      - "9199:3199"   # Admin mapped to host port 9199
-```
-
-Configure the CLI to use the host-side ports:
-
-```bash
-cubeapm login
-# CubeAPM server: localhost
-# Query port [3140]: 9140
-# Ingest port [3130]: 9130
-# Admin port [3199]: 9199
-```
-
-**Accessing from a remote machine:**
-
-If CubeAPM runs in Docker on a remote server, use that server's hostname:
-
-```bash
-cubeapm login
-# CubeAPM server: docker-host.example.com
-# Query port [3140]: 3140
-```
-
-**Docker network considerations:**
-
-If the CLI runs inside another container on the same Docker network, use the service name:
-
-```bash
-export CUBEAPM_SERVER=cubeapm
-export CUBEAPM_QUERY_PORT=3140
-```
-
-### Kubernetes Deployment
-
-When CubeAPM runs in Kubernetes, there are several ways to connect the CLI.
-
-**Option A: Port-forward for local CLI access (recommended for ad-hoc use)**
-
-Forward the three ports the CLI needs:
-
-```bash
-# Forward query port
-kubectl port-forward -n monitoring svc/cubeapm 3140:3140 &
-
-# Forward ingest port (if you need to push data)
-kubectl port-forward -n monitoring svc/cubeapm 3130:3130 &
-
-# Forward admin port (if you need log deletion)
-kubectl port-forward -n monitoring svc/cubeapm 3199:3199 &
-
-# Configure CLI to use localhost
-cubeapm login
-# CubeAPM server: localhost
-```
-
-To forward all three ports in a single command:
-
-```bash
-kubectl port-forward -n monitoring svc/cubeapm 3140:3140 3130:3130 3199:3199
-```
-
-**Option B: In-cluster access (from a pod)**
-
-If the CLI runs inside a pod in the same cluster, use the Kubernetes Service DNS name:
-
-```bash
-export CUBEAPM_SERVER=cubeapm.monitoring.svc.cluster.local
-cubeapm traces services
-```
-
-**Option C: Via Ingress or LoadBalancer**
-
-If CubeAPM is exposed via an Ingress or LoadBalancer, configure the CLI to use the external address. Note that the Ingress/LoadBalancer may route all ports through a single address, or expose them on different ports (see the Load Balancer section below).
-
-```bash
-cubeapm login
-# CubeAPM server: cubeapm.example.com
-# Query port [3140]: 443    # if behind HTTPS ingress
-```
-
-**Useful kubectl commands for discovering CubeAPM:**
-
-```bash
-# Find CubeAPM pods
-kubectl get pods -n monitoring -l app=cubeapm
-
-# Find CubeAPM services and their ports
-kubectl get svc -n monitoring -l app=cubeapm
-
-# Check CubeAPM pod logs for port configuration
-kubectl logs -n monitoring deployment/cubeapm | head -20
-
-# Describe the service to see port mappings
-kubectl describe svc -n monitoring cubeapm
+export CUBEAPM_NO_INPUT=true
+export CUBEAPM_SERVER=cube.example.com
+export CUBEAPM_EMAIL=ci-user@example.com
+export CUBEAPM_PASSWORD=ci-password
+cubeapm traces services -o json
 ```
 
 ---
 
-## Edge Cases & Troubleshooting
-
-### Custom Ports
-
-If your CubeAPM instance uses non-default ports, you must configure them in the CLI.
-
-**How to discover current ports:**
-
-Check the CubeAPM server startup logs or configuration:
-
-```bash
-# If running as a binary, check the process
-ps aux | grep cubeapm
-# or check the config file used to start CubeAPM
-
-# If running in Docker
-docker logs cubeapm 2>&1 | head -20
-
-# If running in Kubernetes
-kubectl logs -n monitoring deployment/cubeapm 2>&1 | head -20
-```
-
-**How to configure custom ports in the CLI:**
-
-```bash
-# During login
-cubeapm login
-# Query port [3140]: 8080
-# Ingest port [3130]: 8081
-# Admin port [3199]: 8082
-
-# Via config set
-cubeapm config set query_port 8080
-cubeapm config set ingest_port 8081
-cubeapm config set admin_port 8082
-
-# Via environment variables
-export CUBEAPM_QUERY_PORT=8080
-export CUBEAPM_INGEST_PORT=8081
-export CUBEAPM_ADMIN_PORT=8082
-
-# Via CLI flags (per-command)
-cubeapm --query-port 8080 traces services
-cubeapm --ingest-port 8081 ingest metrics --file metrics.txt
-cubeapm --admin-port 8082 logs delete list
-```
-
-### CubeAPM Behind a Load Balancer
-
-When CubeAPM sits behind a load balancer or reverse proxy, port mapping may differ from the defaults.
-
-**Single entry point with port routing:**
-
-If the load balancer maps different external ports to CubeAPM's internal ports:
-
-```bash
-# Load balancer at lb.example.com
-# External port 443 → CubeAPM 3140 (query)
-# External port 8443 → CubeAPM 3130 (ingest)
-# External port 9443 → CubeAPM 3199 (admin)
-
-cubeapm login
-# CubeAPM server: lb.example.com
-# Query port [3140]: 443
-# Ingest port [3130]: 8443
-# Admin port [3199]: 9443
-```
-
-**Health check configuration:**
-
-If your load balancer needs a health check endpoint, CubeAPM's query port serves the API and can be used for health checks:
-
-```bash
-# Health check URL for the query API
-curl -s http://cubeapm.example.com:3140/api/services | head -1
-```
-
-**Multiple CubeAPM instances behind a load balancer:**
-
-The CLI treats the load balancer address as the server. All requests go through the load balancer, which distributes them to backend CubeAPM instances:
-
-```bash
-export CUBEAPM_SERVER=cubeapm-lb.example.com
-cubeapm traces services
-```
-
-### Network Issues
-
-**Testing connectivity to each port independently:**
-
-Use `curl` to verify that each port is reachable before troubleshooting the CLI:
-
-```bash
-# Test query port (should return JSON with services list)
-curl -s -o /dev/null -w "%{http_code}" http://cubeapm.example.com:3140/api/services
-# Expected: 200
-
-# Test ingest port
-curl -s -o /dev/null -w "%{http_code}" http://cubeapm.example.com:3130/
-# Expected: 200 or 404 (server is reachable)
-
-# Test admin port
-curl -s -o /dev/null -w "%{http_code}" http://cubeapm.example.com:3199/
-# Expected: 200 or 404 (server is reachable)
-
-# Test with authentication token
-curl -s -H "Authorization: Bearer your-token" http://cubeapm.example.com:3140/api/services
-```
-
-**Firewall blocking ports:**
-
-If `curl` times out or refuses connection, check firewall rules:
-
-```bash
-# Check if the port is open (macOS/Linux)
-nc -zv cubeapm.example.com 3140
-
-# Check with timeout
-timeout 5 bash -c 'echo > /dev/tcp/cubeapm.example.com/3140' && echo "Open" || echo "Closed"
-```
-
-**DNS resolution issues:**
-
-```bash
-# Verify DNS resolves
-nslookup cubeapm.example.com
-# or
-dig cubeapm.example.com
-```
-
-**Using verbose mode for debugging:**
-
-The CLI's `--verbose` flag logs every HTTP request and response, which is invaluable for diagnosing connection issues:
-
-```bash
-cubeapm --verbose traces services
-```
-
-Output:
-
-```
-> GET http://cubeapm.example.com:3140/api/services
-> Authorization: [REDACTED]
-< 200 200 OK
-< Content-Type: application/json
-```
+## Troubleshooting
 
 ### Common Errors
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| `server address not configured; run 'cubeapm login' or set CUBEAPM_SERVER` | No server configured in any source | Run `cubeapm login` or `export CUBEAPM_SERVER=...` |
-| `authentication failed (HTTP 401): check your token with 'cubeapm login'` | Invalid, expired, or missing token when server requires auth | Verify token with `cubeapm config get token`; re-run `cubeapm login` |
-| `access denied (HTTP 403): your token may not have sufficient permissions` | Token is valid but lacks permission for the operation | Use a token with broader permissions |
-| `resource not found (HTTP 404)` | Wrong port, wrong endpoint, or CubeAPM version mismatch | Verify you are connecting to the correct port for the operation |
-| `request failed: dial tcp ...: connect: connection refused` | CubeAPM is not running or wrong server/port | Verify server address and that CubeAPM is running; test with `curl` |
-| `request failed: dial tcp ...: i/o timeout` | Firewall blocking the port or wrong address | Check firewall rules; test connectivity with `nc -zv host port` |
-| `request failed: dial tcp ...: no such host` | DNS cannot resolve the server hostname | Verify the hostname; try using an IP address instead |
-| `login requires interactive prompts; cannot run with --no-input` | Running `cubeapm login` in non-interactive mode | Use `cubeapm config set` or environment variables instead of `login` |
-| `command '...' is blocked in read-only mode` | `read_only: true` is set in the profile or via `--read-only` | Use `--read-only=false` or remove `read_only` from the profile |
-| `invalid server address "..."` | Malformed server address (e.g., contains invalid characters) | Provide a valid hostname or IP address |
-| `profile "..." does not exist` | Trying to use or switch to a profile that has not been created | Run `cubeapm config profiles list` to see available profiles; create one with `cubeapm login` |
-| `no active profile set` | No current profile in config and no env vars/flags set | Run `cubeapm login` or `cubeapm config profiles use <name>` |
+| `authentication failed (HTTP 401)` | Invalid email/password or expired session | Run `cubeapm login` to re-authenticate |
+| `connection refused` | Wrong server address or port | Verify server address and ports with `cubeapm config view` |
+| `connection timeout` | Server unreachable or firewall blocking | Check network connectivity and firewall rules |
+| `server address not configured` | No server set | Run `cubeapm login` or set `CUBEAPM_SERVER` |
+| `login failed: invalid email or password` | Wrong credentials | Double-check email and password at the CubeAPM web UI |
 
-### Timeout and Connection Tuning
+### Debugging
 
-The CLI uses these default timeouts (not user-configurable):
+Use `--verbose` to see the full HTTP request/response cycle (auth headers are redacted):
 
-| Timeout | Value | Description |
-|---------|-------|-------------|
-| Connection dial | 10 seconds | Time to establish TCP connection |
-| TLS handshake | 10 seconds | Time for TLS negotiation (HTTPS) |
-| Request total | 60 seconds | Maximum time for an entire HTTP request |
-| Keep-alive probe | 30 seconds | TCP keep-alive interval |
+```bash
+cubeapm traces services --verbose
+```
 
-If you experience timeouts, the issue is likely network-related (firewall, routing) rather than a CLI configuration problem.
+Check your current configuration:
+
+```bash
+cubeapm config view
+cubeapm config get server
+cubeapm config get email
+cubeapm config get auth_method
+```
+
+### Testing Connectivity
+
+```bash
+# Verify the server is reachable
+curl -s -o /dev/null -w "%{http_code}" https://cube.example.com/
+
+# Verify the query API port
+curl -s https://cube.example.com:3140/api/traces/api/v1/services
+```
 
 ---
 
 ## Security Best Practices
 
-### Protect Your Tokens
-
-**Store tokens in environment variables, not in scripts or command history:**
-
-```bash
-# Good: environment variable (set in .bashrc/.zshrc or CI secrets)
-export CUBEAPM_TOKEN=your-token
-
-# Good: the config file is created with 0600 permissions
-cubeapm login
-
-# Bad: token visible in command history
-cubeapm --token my-secret-token traces services  # avoid in production
-
-# Bad: token hardcoded in a script
-TOKEN="my-secret-token"  # avoid this
-```
-
-**In CI/CD, use your platform's secrets management:**
-
-```yaml
-# GitHub Actions
-env:
-  CUBEAPM_TOKEN: ${{ secrets.CUBEAPM_TOKEN }}
-
-# GitLab CI - use protected/masked variables
-variables:
-  CUBEAPM_TOKEN: $CUBEAPM_TOKEN_SECRET
-```
-
-### Use Read-Only Mode for Safety
-
-Enable `read_only` mode to prevent accidental data modification or deletion. This is especially recommended for:
-
-- Automated scripts that should only query data
-- Profiles used by coding agents (LLMs)
-- Shared team profiles
-
-```bash
-# Set read-only in the profile
-cubeapm config set read_only true
-
-# Or via environment variable
-export CUBEAPM_READ_ONLY=true
-
-# Or via CLI flag for a single command
-cubeapm --read-only traces services
-```
-
-When read-only mode is active, write operations like `ingest metrics`, `ingest logs`, and `logs delete run` are blocked with an error message.
-
-### Restrict Admin Port Access
-
-The admin port (default 3199) provides powerful operations like log deletion. Limit access to this port:
-
-- Only open the admin port to trusted networks or specific IP addresses
-- Use a separate profile with admin access and keep it distinct from day-to-day profiles
-- Consider not configuring the admin port in profiles used by automated systems
-
-```yaml
-# Day-to-day profile (no admin access needed)
-profiles:
-  daily:
-    server: cubeapm.example.com
-    token: read-token
-    read_only: true
-
-  # Admin profile (restricted use)
-  admin:
-    server: cubeapm.example.com
-    token: admin-token
-    admin_port: 3199
-```
-
-### Network Segmentation for Ports
-
-Consider restricting network access to each CubeAPM port based on the principle of least privilege:
-
-| Port | Who Needs Access |
-|------|-----------------|
-| 3125 (Web UI) | Developers, SREs (browser) |
-| 3130 (Ingest) | Application servers, agents, CI pipelines |
-| 3140 (Query) | Developers, SREs, dashboards, CLI users |
-| 3199 (Admin) | SRE team leads, on-call engineers only |
-| 4317/4318 (OTLP) | Application servers running OpenTelemetry SDKs |
-
-### Verify Config File Permissions
-
-The CLI creates the config file with secure permissions, but verify periodically:
-
-```bash
-# Check permissions (should be -rw-------)
-ls -la ~/.config/cubeapm-cli/config.yaml
-
-# Fix if needed
-chmod 600 ~/.config/cubeapm-cli/config.yaml
-chmod 700 ~/.config/cubeapm-cli/
-```
-
-### Audit Your Profiles
-
-Periodically review saved profiles and remove unused ones:
-
-```bash
-# List all profiles
-cubeapm config profiles list
-
-# View the full config including tokens
-cubeapm config view
-
-# Remove unused profiles
-cubeapm config profiles delete old-staging
-```
-
----
-
-## Complete CLI Flags Reference
-
-These global flags are available on every command and relate to authentication and connection:
-
-| Flag | Short | Type | Default | Description |
-|------|-------|------|---------|-------------|
-| `--server` | | string | | CubeAPM server address (hostname or IP) |
-| `--token` | | string | | Authentication token |
-| `--query-port` | | int | `3140` | Query API port |
-| `--ingest-port` | | int | `3130` | Ingest API port |
-| `--admin-port` | | int | `3199` | Admin API port |
-| `--profile` | | string | | Use a specific connection profile |
-| `--read-only` | | bool | `false` | Block write/delete operations |
-| `--no-input` | | bool | `false` | Disable interactive prompts (CI/agent use) |
-| `--quiet` | `-q` | bool | `false` | Suppress informational output |
-| `--verbose` | | bool | `false` | Log HTTP requests and responses |
-| `--output` | `-o` | string | `table` | Output format: `table`, `json`, `yaml` |
-| `--no-color` | | bool | `false` | Disable colored output |
+1. **Config file permissions:** The CLI creates the config file with `0600` permissions. Do not loosen these.
+2. **Environment variables in CI:** Store credentials as CI secrets, never in plaintext in pipeline configs.
+3. **Read-only mode:** Use `--read-only` or `CUBEAPM_READ_ONLY=true` for agent/automation contexts to prevent accidental data modifications.
+4. **Password storage:** The password is stored in the config file for automatic session renewal. For higher-security environments, use environment variables instead and don't store the password in the config.
+5. **Avoid CLI flag credentials in shell history:** Prefer `cubeapm login` or environment variables over `--email`/`--password` flags to avoid credentials appearing in shell history.

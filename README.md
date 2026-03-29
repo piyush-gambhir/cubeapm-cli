@@ -63,13 +63,14 @@ cubeapm traces search --service api-gateway --last 1h -o json
 cubeapm login
 ```
 
-This prompts for server address, API token, and port configuration. It tests the connection and saves the profile.
+This prompts for server address, authentication method (email/password or none), and port configuration. It tests the connection and saves the profile.
 
 ### Environment variables
 
 ```bash
 export CUBEAPM_SERVER=cubeapm.example.com
-export CUBEAPM_TOKEN=your-token
+export CUBEAPM_EMAIL=user@example.com
+export CUBEAPM_PASSWORD=your-password
 
 # Custom ports (these are the defaults)
 export CUBEAPM_QUERY_PORT=3140
@@ -80,16 +81,16 @@ export CUBEAPM_ADMIN_PORT=3199
 ### CLI flags (override everything)
 
 ```bash
-cubeapm --server cubeapm.example.com --token your-token traces services
+cubeapm --server cubeapm.example.com --email user@example.com --password secret traces services
 ```
 
 ### Configuration priority
 
 Settings are resolved in this order (highest priority first):
 
-1. CLI flags (`--server`, `--token`, `--query-port`, etc.)
-2. Environment variables (`CUBEAPM_SERVER`, `CUBEAPM_TOKEN`, etc.)
-3. Profile configuration (`~/.config/cubeapm/config.yaml`)
+1. CLI flags (`--server`, `--email`, `--password`, `--query-port`, etc.)
+2. Environment variables (`CUBEAPM_SERVER`, `CUBEAPM_EMAIL`, `CUBEAPM_PASSWORD`, etc.)
+3. Profile configuration (`~/.config/cubeapm-cli/config.yaml`)
 
 ## Time Ranges
 
@@ -172,7 +173,8 @@ These flags apply to all commands:
 |------|-------|------|---------|-------------|
 | `--output` | `-o` | string | `table` | Output format: `table`, `json`, `yaml` |
 | `--server` | | string | | Override CubeAPM server address |
-| `--token` | | string | | Override authentication token |
+| `--email` | | string | | Override login email |
+| `--password` | | string | | Override login password |
 | `--profile` | | string | | Use a specific connection profile |
 | `--query-port` | | int | `3140` | Override query API port |
 | `--ingest-port` | | int | `3130` | Override ingest API port |
@@ -907,7 +909,7 @@ Set a configuration value in the current profile.
 cubeapm config set <key> <value>
 ```
 
-**Valid keys:** `server`, `token`, `query_port`, `ingest_port`, `admin_port`, `output`
+**Valid keys:** `server`, `email`, `password`, `auth_method`, `query_port`, `ingest_port`, `admin_port`, `output`
 
 **Examples:**
 
@@ -915,7 +917,7 @@ cubeapm config set <key> <value>
 cubeapm config set server cubeapm.example.com
 cubeapm config set output json
 cubeapm config set query_port 3140
-cubeapm config set token my-api-token
+cubeapm config set email user@example.com
 ```
 
 #### `config get`
@@ -926,7 +928,7 @@ Get a configuration value from the current profile.
 cubeapm config get <key>
 ```
 
-**Valid keys:** `server`, `token`, `query_port`, `ingest_port`, `admin_port`, `output`, `current_profile`
+**Valid keys:** `server`, `email`, `password`, `auth_method`, `query_port`, `ingest_port`, `admin_port`, `output`, `current_profile`
 
 **Examples:**
 
@@ -983,7 +985,7 @@ Interactively configure a connection profile.
 cubeapm login
 ```
 
-Prompts for profile name, server address, API token, and port configuration. Tests the connection and saves the profile.
+Prompts for profile name, server address, authentication method (email/password or none), and port configuration. Tests the connection and saves the profile.
 
 #### `version`
 

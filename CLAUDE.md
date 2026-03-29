@@ -3,8 +3,8 @@
 ## Quick Reference
 
 - **Binary:** `cubeapm`
-- **Config file:** `~/.config/cubeapm/config.yaml`
-- **Env vars:** `CUBEAPM_SERVER`, `CUBEAPM_TOKEN`, `CUBEAPM_QUERY_PORT`, `CUBEAPM_INGEST_PORT`, `CUBEAPM_ADMIN_PORT`
+- **Config file:** `~/.config/cubeapm-cli/config.yaml`
+- **Env vars:** `CUBEAPM_SERVER`, `CUBEAPM_EMAIL`, `CUBEAPM_PASSWORD`, `CUBEAPM_QUERY_PORT`, `CUBEAPM_INGEST_PORT`, `CUBEAPM_ADMIN_PORT`
 - **Config priority:** CLI flags > environment variables > profile config
 - **Query language:** PromQL (metrics), LogsQL (logs), Jaeger format (traces)
 
@@ -23,12 +23,13 @@ Override via flags (`--query-port`, `--ingest-port`, `--admin-port`), env vars, 
 ## Setup
 
 ```bash
-# Interactive login (prompts for server, token, ports, profile name)
+# Interactive login (prompts for server, auth method, ports, profile name)
 cubeapm login
 
 # Or set environment variables for non-interactive use
 export CUBEAPM_SERVER=cubeapm.example.com
-export CUBEAPM_TOKEN=your-api-token
+export CUBEAPM_EMAIL=user@example.com
+export CUBEAPM_PASSWORD=your-password
 ```
 
 ## Output Formats
@@ -433,7 +434,8 @@ PromQL is the query language for metrics (Prometheus-compatible):
 | `-o, --output <format>` | Output format: table (default), json, yaml |
 | `--profile <name>` | Configuration profile to use |
 | `--server <addr>` | CubeAPM server address override |
-| `--token <token>` | Authentication token override |
+| `--email <email>` | Login email override |
+| `--password <password>` | Login password override |
 | `--query-port <port>` | Query port override (default: 3140) |
 | `--ingest-port <port>` | Ingest port override (default: 3130) |
 | `--admin-port <port>` | Admin port override (default: 3199) |

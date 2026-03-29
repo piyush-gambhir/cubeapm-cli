@@ -26,18 +26,19 @@ make build
 ### Authentication
 
 ```bash
-# Interactive login (prompts for server, token, ports, profile name)
+# Interactive login (prompts for server, auth method, ports, profile name)
 cubeapm login
 
 # Or set environment variables for non-interactive/CI use
 export CUBEAPM_SERVER=cubeapm.example.com
-export CUBEAPM_TOKEN=your-api-token
+export CUBEAPM_EMAIL=user@example.com
+export CUBEAPM_PASSWORD=your-password
 
 # Or use CLI flags (override everything)
-cubeapm --server cubeapm.example.com --token your-token traces services
+cubeapm --server cubeapm.example.com --email user@example.com --password secret traces services
 ```
 
-**Config priority:** CLI flags > environment variables > profile config (`~/.config/cubeapm/config.yaml`).
+**Config priority:** CLI flags > environment variables > profile config (`~/.config/cubeapm-cli/config.yaml`).
 
 ### Multi-Port Architecture
 
@@ -484,7 +485,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 | Command | Description |
 |---------|-------------|
 | `config view` | Show resolved configuration |
-| `config set <key> <value>` | Set config value (keys: server, token, query_port, ingest_port, admin_port, output) |
+| `config set <key> <value>` | Set config value (keys: server, email, password, auth_method, query_port, ingest_port, admin_port, output) |
 | `config get <key>` | Get config value |
 | `config profiles list` | List profiles |
 | `config profiles use <name>` | Switch active profile |
@@ -497,7 +498,8 @@ See [references/commands.md](references/commands.md) for the full command refere
 | `-o, --output` | Output format: `table` (default), `json`, `yaml` |
 | `--profile` | Configuration profile to use |
 | `--server` | Server address override |
-| `--token` | Auth token override |
+| `--email` | Login email override |
+| `--password` | Login password override |
 | `--query-port` | Query port override (default: 3140) |
 | `--ingest-port` | Ingest port override (default: 3130) |
 | `--admin-port` | Admin port override (default: 3199) |
@@ -517,7 +519,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 | PromQL parse error | Shell is interpreting special characters | Use single quotes around the entire PromQL expression. Avoid double quotes. |
 | LogsQL parse error | Pipe character interpreted by shell | Use single quotes: `'error \| stats count() by (service)'` |
 | "dev" version | Binary built from source without version tags | Normal for local builds. Use `cubeapm update` to get a release build. |
-| Auth error / 401 | Missing or invalid token | Run `cubeapm login` to reconfigure, or check `CUBEAPM_TOKEN` env var. |
+| Auth error / 401 | Session expired or invalid credentials | Run `cubeapm login` to re-authenticate, or check `CUBEAPM_EMAIL`/`CUBEAPM_PASSWORD` env vars. |
 | No data for metrics query | Wrong metric name or labels | Use `cubeapm metrics label-values __name__` to discover available metric names. |
 | `logs stats` returns error | Missing stats pipe | The query must contain `\| stats`. Example: `'error \| stats count() by (service)'` |
 | Log deletion not working | Using wrong port | `logs delete` commands use the admin port (3199), not the query port. |

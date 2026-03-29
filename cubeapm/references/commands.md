@@ -12,7 +12,8 @@ These flags apply to all commands:
 |------|-------|------|---------|-------------|
 | `--output` | `-o` | string | `table` | Output format: `table`, `json`, `yaml` |
 | `--server` | | string | | Override CubeAPM server address |
-| `--token` | | string | | Override authentication token |
+| `--email` | | string | | Override login email |
+| `--password` | | string | | Override login password |
 | `--profile` | | string | | Use a specific connection profile |
 | `--query-port` | | int | `3140` | Override query API port |
 | `--ingest-port` | | int | `3130` | Override ingest API port |
@@ -26,7 +27,7 @@ These flags apply to all commands:
 
 ### `cubeapm login`
 
-Interactively configure a connection profile. Prompts for profile name, server address, API token, and port configuration. Tests the connection and saves the profile to `~/.config/cubeapm/config.yaml`.
+Interactively configure a connection profile. Prompts for profile name, server address, authentication method (email/password or none), and port configuration. Tests the connection and saves the profile to `~/.config/cubeapm-cli/config.yaml`.
 
 ```bash
 cubeapm login
@@ -726,7 +727,7 @@ Set a configuration value in the current profile.
 cubeapm config set <key> <value>
 ```
 
-**Valid keys:** `server`, `token`, `query_port`, `ingest_port`, `admin_port`, `output`
+**Valid keys:** `server`, `email`, `password`, `auth_method`, `query_port`, `ingest_port`, `admin_port`, `output`
 
 **Examples:**
 
@@ -734,7 +735,7 @@ cubeapm config set <key> <value>
 cubeapm config set server cubeapm.example.com
 cubeapm config set output json
 cubeapm config set query_port 3140
-cubeapm config set token my-api-token
+cubeapm config set email user@example.com
 ```
 
 ### `config get`
@@ -745,7 +746,7 @@ Get a configuration value from the current profile.
 cubeapm config get <key>
 ```
 
-**Valid keys:** `server`, `token`, `query_port`, `ingest_port`, `admin_port`, `output`, `current_profile`
+**Valid keys:** `server`, `email`, `password`, `auth_method`, `query_port`, `ingest_port`, `admin_port`, `output`, `current_profile`
 
 **Examples:**
 
@@ -835,7 +836,8 @@ Default: if no time flags are provided, the default is the last 1 hour.
 | Variable | Description |
 |----------|-------------|
 | `CUBEAPM_SERVER` | CubeAPM server address |
-| `CUBEAPM_TOKEN` | Authentication token |
+| `CUBEAPM_EMAIL` | Login email |
+| `CUBEAPM_PASSWORD` | Login password |
 | `CUBEAPM_QUERY_PORT` | Query port (default: 3140) |
 | `CUBEAPM_INGEST_PORT` | Ingest port (default: 3130) |
 | `CUBEAPM_ADMIN_PORT` | Admin port (default: 3199) |
