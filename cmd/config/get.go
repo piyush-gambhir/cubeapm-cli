@@ -15,11 +15,14 @@ func newGetCmd() *cobra.Command {
 		Long: `Get a configuration value from the current profile.
 
 Reads the value from the resolved configuration (profile defaults applied).
-Token values are masked for security (first 4 and last 4 characters shown).
+Sensitive values (token, password) are masked for security.
 
 Valid keys:
   server           CubeAPM server address
-  token            Authentication token (masked in output)
+  token            Authentication token (masked)
+  email            Kratos login email
+  password         Kratos login password (masked)
+  auth_method      Authentication method (token or kratos)
   query_port       Query API port
   ingest_port      Ingest API port
   admin_port       Admin API port
@@ -30,14 +33,11 @@ Examples:
   # Get the server address
   cubeapm config get server
 
-  # Get the default output format
-  cubeapm config get output
+  # Get the auth method
+  cubeapm config get auth_method
 
   # Get the currently active profile name
-  cubeapm config get current_profile
-
-  # Get the query port
-  cubeapm config get query_port`,
+  cubeapm config get current_profile`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			key := args[0]
@@ -78,10 +78,28 @@ Examples:
 				fmt.Println(profile.IngestPort)
 			case "admin_port":
 				fmt.Println(profile.AdminPort)
+			case "email":
+				if profile.Email == "" {
+					fmt.Println("(not set)")
+				} else {
+					fmt.Println(profile.Email)
+				}
+			case "password":
+				if profile.Password == "" {
+					fmt.Println("(not set)")
+				} else {
+					fmt.Println("****")
+				}
+			case "auth_method":
+				if profile.AuthMethod == "" {
+					fmt.Println("(auto)")
+				} else {
+					fmt.Println(profile.AuthMethod)
+				}
 			case "output":
 				fmt.Println(profile.Output)
 			default:
-				return fmt.Errorf("unknown config key %q: valid keys are server, token, query_port, ingest_port, admin_port, output, current_profile", key)
+				return fmt.Errorf("unknown config key %q: valid keys are server, token, email, password, auth_method, query_port, ingest_port, admin_port, output, current_profile", key)
 			}
 
 			return nil

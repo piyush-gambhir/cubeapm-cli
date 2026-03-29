@@ -32,6 +32,8 @@ var (
 	flagProfile    string
 	flagServer     string
 	flagToken      string
+	flagEmail      string
+	flagPassword   string
 	flagQueryPort  int
 	flagIngestPort int
 	flagAdminPort  int
@@ -200,6 +202,8 @@ func setupClient(cmd *cobra.Command) error {
 	flags := config.FlagOverrides{
 		Server:     flagServer,
 		Token:      flagToken,
+		Email:      flagEmail,
+		Password:   flagPassword,
 		QueryPort:  flagQueryPort,
 		IngestPort: flagIngestPort,
 		AdminPort:  flagAdminPort,
@@ -226,6 +230,24 @@ func setupClient(cmd *cobra.Command) error {
 		return err
 	}
 
+	// Wire up session refresh callback so re-auth persists the new cookie
+	cmdutil.APIClient.SetOnSessionRefresh(func(cookie, expiry string) error {
+		profileName := cmdutil.AppConfig.CurrentProfile
+		if flagProfile != "" {
+			profileName = flagProfile
+		}
+		if profileName == "" {
+			return nil
+		}
+		if p, ok := cmdutil.AppConfig.Profiles[profileName]; ok {
+			p.SessionCookie = cookie
+			p.SessionExpiry = expiry
+			cmdutil.AppConfig.Profiles[profileName] = p
+			return config.Save(cmdutil.AppConfig)
+		}
+		return nil
+	})
+
 	return nil
 }
 
@@ -249,6 +271,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&flagProfile, "profile", "", "Config profile to use")
 	rootCmd.PersistentFlags().StringVar(&flagServer, "server", "", "CubeAPM server address")
 	rootCmd.PersistentFlags().StringVar(&flagToken, "token", "", "Authentication token")
+	rootCmd.PersistentFlags().StringVar(&flagEmail, "email", "", "Email for Kratos authentication")
+	rootCmd.PersistentFlags().StringVar(&flagPassword, "password", "", "Password for Kratos authentication")
 	rootCmd.PersistentFlags().IntVar(&flagQueryPort, "query-port", 0, "Query port (default 3140)")
 	rootCmd.PersistentFlags().IntVar(&flagIngestPort, "ingest-port", 0, "Ingest port (default 3130)")
 	rootCmd.PersistentFlags().IntVar(&flagAdminPort, "admin-port", 0, "Admin port (default 3199)")

@@ -27,9 +27,16 @@ type Profile struct {
 	QueryPort  int    `yaml:"query_port,omitempty"`
 	IngestPort int    `yaml:"ingest_port,omitempty"`
 	AdminPort  int    `yaml:"admin_port,omitempty"`
-	Token      string `yaml:"token"`
+	Token      string `yaml:"token,omitempty"`
 	Output     string `yaml:"output,omitempty"`
 	ReadOnly   bool   `yaml:"read_only,omitempty"`
+
+	// Kratos (email/password) authentication
+	AuthMethod    string `yaml:"auth_method,omitempty"`    // "token" or "kratos"; empty = auto-detect
+	Email         string `yaml:"email,omitempty"`          // login email for Kratos auth
+	Password      string `yaml:"password,omitempty"`       // login password for Kratos auth (stored for auto-re-auth)
+	SessionCookie string `yaml:"session_cookie,omitempty"` // cached Kratos session cookie
+	SessionExpiry string `yaml:"session_expiry,omitempty"` // RFC3339 when session expires
 }
 
 // ConfigDir returns the path to the configuration directory.

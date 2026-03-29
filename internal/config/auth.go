@@ -17,6 +17,13 @@ type ResolvedConfig struct {
 	Verbose    bool
 	NoColor    bool
 	ReadOnly   bool
+
+	// Kratos auth
+	AuthMethod    string
+	Email         string
+	Password      string
+	SessionCookie string
+	SessionExpiry string
 }
 
 // FlagOverrides holds values from CLI flags that may override config.
@@ -30,6 +37,10 @@ type FlagOverrides struct {
 	Profile    string
 	Verbose    bool
 	NoColor    bool
+
+	// Kratos auth
+	Email    string
+	Password string
 }
 
 // ResolveAuth resolves the final configuration by layering:
@@ -52,15 +63,20 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 	profile = profile.WithDefaults()
 
 	resolved := ResolvedConfig{
-		Server:     profile.Server,
-		QueryPort:  profile.QueryPort,
-		IngestPort: profile.IngestPort,
-		AdminPort:  profile.AdminPort,
-		Token:      profile.Token,
-		Output:     profile.Output,
-		Verbose:    flags.Verbose,
-		NoColor:    flags.NoColor,
-		ReadOnly:   profile.ReadOnly,
+		Server:        profile.Server,
+		QueryPort:     profile.QueryPort,
+		IngestPort:    profile.IngestPort,
+		AdminPort:     profile.AdminPort,
+		Token:         profile.Token,
+		Output:        profile.Output,
+		Verbose:       flags.Verbose,
+		NoColor:       flags.NoColor,
+		ReadOnly:      profile.ReadOnly,
+		AuthMethod:    profile.AuthMethod,
+		Email:         profile.Email,
+		Password:      profile.Password,
+		SessionCookie: profile.SessionCookie,
+		SessionExpiry: profile.SessionExpiry,
 	}
 
 	// Layer environment variables
@@ -90,6 +106,12 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 			resolved.ReadOnly = b
 		}
 	}
+	if v := os.Getenv("CUBEAPM_EMAIL"); v != "" {
+		resolved.Email = v
+	}
+	if v := os.Getenv("CUBEAPM_PASSWORD"); v != "" {
+		resolved.Password = v
+	}
 
 	// Layer flag overrides (highest priority)
 	if flags.Server != "" {
@@ -97,6 +119,12 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 	}
 	if flags.Token != "" {
 		resolved.Token = flags.Token
+	}
+	if flags.Email != "" {
+		resolved.Email = flags.Email
+	}
+	if flags.Password != "" {
+		resolved.Password = flags.Password
 	}
 	if flags.QueryPort != 0 {
 		resolved.QueryPort = flags.QueryPort

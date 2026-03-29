@@ -2,6 +2,7 @@ package client
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/piyush-gambhir/cubeapm-cli/internal/auth"
 	"github.com/piyush-gambhir/cubeapm-cli/internal/config"
 )
 
@@ -19,9 +21,25 @@ type Client struct {
 	queryBaseURL  string // http://server:3140
 	ingestBaseURL string // http://server:3130
 	adminBaseURL  string // http://server:3199
+	serverBaseURL string // original server URL for auth flows (e.g. https://cube.spyne.ai)
 	token         string
 	httpClient    *http.Client
 	verbose       bool
+
+	// Kratos session auth
+	authMethod    string // "token" or "kratos"
+	sessionCookie string
+	email         string
+	password      string
+
+	// Callback to persist updated session after re-auth
+	onSessionRefresh func(cookie string, expiry string) error
+}
+
+// SetOnSessionRefresh sets a callback that is invoked when the client
+// re-authenticates and obtains a new session cookie.
+func (c *Client) SetOnSessionRefresh(fn func(cookie string, expiry string) error) {
+	c.onSessionRefresh = fn
 }
 
 // NewClient creates a new Client from a resolved configuration.
@@ -45,6 +63,12 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 	host := u.Hostname()
 	scheme := u.Scheme
 
+	// serverBaseURL is the original server URL (for Kratos auth flows)
+	serverBaseURL := fmt.Sprintf("%s://%s", scheme, host)
+	if u.Port() != "" {
+		serverBaseURL = fmt.Sprintf("%s://%s:%s", scheme, host, u.Port())
+	}
+
 	transport := &http.Transport{
 		DialContext: (&net.Dialer{
 			Timeout:   10 * time.Second,
@@ -56,24 +80,38 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 		DisableKeepAlives:   true,
 	}
 
+	// Determine auth method
+	authMethod := cfg.AuthMethod
+	if authMethod == "" {
+		if cfg.Email != "" && cfg.Password != "" {
+			authMethod = "kratos"
+		} else {
+			authMethod = "token"
+		}
+	}
+
 	return &Client{
 		queryBaseURL:  fmt.Sprintf("%s://%s:%d", scheme, host, cfg.QueryPort),
 		ingestBaseURL: fmt.Sprintf("%s://%s:%d", scheme, host, cfg.IngestPort),
 		adminBaseURL:  fmt.Sprintf("%s://%s:%d", scheme, host, cfg.AdminPort),
+		serverBaseURL: serverBaseURL,
 		token:         cfg.Token,
 		httpClient: &http.Client{
 			Timeout:   60 * time.Second,
 			Transport: transport,
 		},
-		verbose: cfg.Verbose,
+		verbose:       cfg.Verbose,
+		authMethod:    authMethod,
+		sessionCookie: cfg.SessionCookie,
+		email:         cfg.Email,
+		password:      cfg.Password,
 	}, nil
 }
 
 // doRequest executes an HTTP request with auth and error handling.
+// For Kratos auth, it auto-re-authenticates on 401 and retries once.
 func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
-	if c.token != "" {
-		req.Header.Set("Authorization", "Bearer "+c.token)
-	}
+	c.setAuthHeaders(req)
 
 	if c.verbose {
 		fmt.Printf("> %s %s\n", req.Method, req.URL.String())
@@ -98,7 +136,79 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		}
 	}
 
+	// Auto re-auth on 401 for Kratos auth
+	if resp.StatusCode == http.StatusUnauthorized && c.authMethod == "kratos" && c.email != "" && c.password != "" {
+		resp.Body.Close()
+
+		if c.verbose {
+			fmt.Println("  Session expired, re-authenticating...")
+		}
+
+		if err := c.reAuthenticate(); err != nil {
+			return nil, fmt.Errorf("re-authentication failed: %w", err)
+		}
+
+		// Rebuild the request for retry (body may have been consumed)
+		retryReq, err := cloneRequest(req)
+		if err != nil {
+			return nil, fmt.Errorf("rebuilding request for retry: %w", err)
+		}
+		c.setAuthHeaders(retryReq)
+
+		resp, err = c.httpClient.Do(retryReq)
+		if err != nil {
+			return nil, fmt.Errorf("request failed after re-auth: %w", err)
+		}
+
+		if c.verbose {
+			fmt.Printf("< %d %s (after re-auth)\n", resp.StatusCode, resp.Status)
+		}
+	}
+
 	return resp, nil
+}
+
+// setAuthHeaders applies the appropriate auth header/cookie to the request.
+func (c *Client) setAuthHeaders(req *http.Request) {
+	switch c.authMethod {
+	case "kratos":
+		if c.sessionCookie != "" {
+			req.Header.Set("Cookie", c.sessionCookie)
+		}
+	default:
+		if c.token != "" {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		}
+	}
+}
+
+// reAuthenticate performs a Kratos login and updates the client's session cookie.
+func (c *Client) reAuthenticate() error {
+	session, err := auth.KratosLogin(c.serverBaseURL, c.email, c.password, c.verbose)
+	if err != nil {
+		return err
+	}
+	c.sessionCookie = session.Cookie
+	if c.onSessionRefresh != nil {
+		return c.onSessionRefresh(session.Cookie, session.ExpiresAt.Format(time.RFC3339))
+	}
+	return nil
+}
+
+// cloneRequest creates a copy of the request. If the original request had a body,
+// it is read into a buffer and both the original and clone get a fresh reader.
+func cloneRequest(req *http.Request) (*http.Request, error) {
+	clone := req.Clone(req.Context())
+	if req.Body != nil && req.Body != http.NoBody {
+		if seeker, ok := req.Body.(io.ReadSeeker); ok {
+			seeker.Seek(0, io.SeekStart)
+			clone.Body = io.NopCloser(seeker)
+		}
+		// If body was already consumed and not seekable, it will be empty.
+		// This is acceptable for the retry case since GET requests have no body,
+		// and POST requests in this CLI use bytes.NewReader which is seekable.
+	}
+	return clone, nil
 }
 
 // redactAuthHeaders returns a redacted value for sensitive headers
@@ -134,9 +244,9 @@ func (c *Client) get(baseURL, path string, params url.Values) (*http.Response, e
 func (c *Client) post(baseURL, path string, params url.Values) (*http.Response, error) {
 	u := baseURL + path
 
-	var body io.Reader
+	var body io.ReadSeeker
 	if params != nil {
-		body = strings.NewReader(params.Encode())
+		body = bytes.NewReader([]byte(params.Encode()))
 	}
 
 	req, err := http.NewRequest("POST", u, body)
@@ -155,7 +265,17 @@ func (c *Client) post(baseURL, path string, params url.Values) (*http.Response, 
 func (c *Client) postRaw(baseURL, path, contentType string, body io.Reader) (*http.Response, error) {
 	u := baseURL + path
 
-	req, err := http.NewRequest("POST", u, body)
+	// Buffer the body so it can be replayed on 401 retry
+	var reqBody io.ReadSeeker
+	if body != nil {
+		data, err := io.ReadAll(body)
+		if err != nil {
+			return nil, fmt.Errorf("buffering request body: %w", err)
+		}
+		reqBody = bytes.NewReader(data)
+	}
+
+	req, err := http.NewRequest("POST", u, reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("creating request: %w", err)
 	}
@@ -211,6 +331,9 @@ func (c *Client) checkResponse(resp *http.Response) error {
 	case http.StatusNotFound:
 		return fmt.Errorf("resource not found (HTTP 404): the requested endpoint may not be available on this CubeAPM server. Response: %s", string(body))
 	case http.StatusUnauthorized:
+		if c.authMethod == "kratos" {
+			return fmt.Errorf("authentication failed (HTTP 401): session expired or credentials invalid. Run 'cubeapm login' to re-authenticate")
+		}
 		return fmt.Errorf("authentication failed (HTTP 401): check your token with 'cubeapm login'")
 	case http.StatusForbidden:
 		return fmt.Errorf("access denied (HTTP 403): your token may not have sufficient permissions")

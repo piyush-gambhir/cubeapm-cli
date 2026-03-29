@@ -19,6 +19,7 @@ func newViewCmd() *cobra.Command {
 
 Displays the configuration file path and the contents of the config file,
 including all profiles and the currently active profile.
+Sensitive fields (password, session_cookie) are masked.
 
 Examples:
   # View the current configuration
@@ -34,7 +35,10 @@ Examples:
 				fmt.Printf("Config file: %s\n\n", config.ConfigPath())
 			}
 
-			data, err := yaml.Marshal(cfg)
+			// Mask sensitive fields before displaying
+			sanitized := sanitizeConfig(cfg)
+
+			data, err := yaml.Marshal(sanitized)
 			if err != nil {
 				return fmt.Errorf("marshaling config: %w", err)
 			}
@@ -43,4 +47,26 @@ Examples:
 			return err
 		},
 	}
+}
+
+func sanitizeConfig(cfg *config.Config) *config.Config {
+	out := &config.Config{
+		CurrentProfile: cfg.CurrentProfile,
+		Profiles:       make(map[string]config.Profile, len(cfg.Profiles)),
+	}
+	for name, p := range cfg.Profiles {
+		if p.Password != "" {
+			p.Password = "****"
+		}
+		if p.SessionCookie != "" {
+			p.SessionCookie = "****"
+		}
+		if p.Token != "" && len(p.Token) > 8 {
+			p.Token = p.Token[:4] + "..." + p.Token[len(p.Token)-4:]
+		} else if p.Token != "" {
+			p.Token = "****"
+		}
+		out.Profiles[name] = p
+	}
+	return out
 }
