@@ -61,11 +61,6 @@ func sanitizeConfig(cfg *config.Config) *config.Config {
 		if p.SessionCookie != "" {
 			p.SessionCookie = "****"
 		}
-		if p.Token != "" && len(p.Token) > 8 {
-			p.Token = p.Token[:4] + "..." + p.Token[len(p.Token)-4:]
-		} else if p.Token != "" {
-			p.Token = "****"
-		}
 		out.Profiles[name] = p
 	}
 	return out

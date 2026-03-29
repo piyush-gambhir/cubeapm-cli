@@ -46,7 +46,7 @@ func TestLoadConfig_ExistingFile(t *testing.T) {
 				QueryPort:  3140,
 				IngestPort: 3130,
 				AdminPort:  3199,
-				Token:      "prod-token",
+				Email:      "user@prod.com",
 			},
 		},
 	}
@@ -68,8 +68,8 @@ func TestLoadConfig_ExistingFile(t *testing.T) {
 	if p.Server != "cubeapm.example.com" {
 		t.Errorf("Server = %q, want %q", p.Server, "cubeapm.example.com")
 	}
-	if p.Token != "prod-token" {
-		t.Errorf("Token = %q, want %q", p.Token, "prod-token")
+	if p.Email != "user@prod.com" {
+		t.Errorf("Email = %q, want %q", p.Email, "user@prod.com")
 	}
 }
 
@@ -85,7 +85,7 @@ func TestSaveConfig(t *testing.T) {
 				QueryPort:  3140,
 				IngestPort: 3130,
 				AdminPort:  3199,
-				Token:      "dev-token",
+				Email:      "dev@local.com",
 			},
 		},
 	}
@@ -119,7 +119,7 @@ func TestWithDefaults(t *testing.T) {
 	// Profile with no ports set
 	p := Profile{
 		Server: "example.com",
-		Token:  "tok",
+		Email:  "user@example.com",
 	}
 
 	result := p.WithDefaults()
@@ -167,11 +167,11 @@ func TestGetCurrentProfile(t *testing.T) {
 		Profiles: map[string]Profile{
 			"prod": {
 				Server: "prod.example.com",
-				Token:  "prod-token",
+				Email:  "admin@prod.com",
 			},
 			"dev": {
 				Server: "localhost",
-				Token:  "dev-token",
+				Email:  "admin@dev.com",
 			},
 		},
 	}

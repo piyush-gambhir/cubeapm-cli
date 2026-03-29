@@ -10,7 +10,7 @@ func TestCreateProfile(t *testing.T) {
 		Profiles: make(map[string]Profile),
 	}
 
-	p := Profile{Server: "example.com", Token: "tok"}
+	p := Profile{Server: "example.com", Email: "user@example.com"}
 	err := cfg.CreateProfile("production", p)
 	if err != nil {
 		t.Fatalf("CreateProfile() error = %v", err)
@@ -33,16 +33,16 @@ func TestCreateProfile(t *testing.T) {
 func TestUpdateProfile(t *testing.T) {
 	cfg := &Config{
 		Profiles: map[string]Profile{
-			"dev": {Server: "localhost", Token: "old-token"},
+			"dev": {Server: "localhost", Email: "old@dev.com"},
 		},
 	}
 
-	err := cfg.UpdateProfile("dev", Profile{Server: "localhost", Token: "new-token"})
+	err := cfg.UpdateProfile("dev", Profile{Server: "localhost", Email: "new@dev.com"})
 	if err != nil {
 		t.Fatalf("UpdateProfile() error = %v", err)
 	}
-	if cfg.Profiles["dev"].Token != "new-token" {
-		t.Errorf("Token = %q, want %q", cfg.Profiles["dev"].Token, "new-token")
+	if cfg.Profiles["dev"].Email != "new@dev.com" {
+		t.Errorf("Email = %q, want %q", cfg.Profiles["dev"].Email, "new@dev.com")
 	}
 
 	// Updating a profile that doesn't exist should fail

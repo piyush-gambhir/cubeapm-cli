@@ -15,7 +15,8 @@ func TestNewClient(t *testing.T) {
 		QueryPort:  3140,
 		IngestPort: 3130,
 		AdminPort:  3199,
-		Token:      "test-token",
+		Email:      "user@test.com",
+		Password:   "secret",
 	}
 
 	c, err := NewClient(cfg)
@@ -25,8 +26,11 @@ func TestNewClient(t *testing.T) {
 	if c == nil {
 		t.Fatal("NewClient() returned nil client")
 	}
-	if c.token != "test-token" {
-		t.Errorf("token = %q, want %q", c.token, "test-token")
+	if c.authMethod != "kratos" {
+		t.Errorf("authMethod = %q, want %q", c.authMethod, "kratos")
+	}
+	if c.email != "user@test.com" {
+		t.Errorf("email = %q, want %q", c.email, "user@test.com")
 	}
 }
 
@@ -104,10 +108,10 @@ func TestAdminURL(t *testing.T) {
 	}
 }
 
-func TestBearerAuth_Header(t *testing.T) {
-	var gotAuth string
+func TestKratosAuth_CookieHeader(t *testing.T) {
+	var gotCookie string
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotAuth = r.Header.Get("Authorization")
+		gotCookie = r.Header.Get("Cookie")
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{}`))
 	}))
@@ -117,7 +121,8 @@ func TestBearerAuth_Header(t *testing.T) {
 		queryBaseURL:  ts.URL,
 		ingestBaseURL: ts.URL,
 		adminBaseURL:  ts.URL,
-		token:         "my-secret-token",
+		authMethod:    "kratos",
+		sessionCookie: "ory_kratos_session=abc123",
 		httpClient:    ts.Client(),
 	}
 
@@ -126,9 +131,40 @@ func TestBearerAuth_Header(t *testing.T) {
 		t.Fatalf("get() error = %v", err)
 	}
 
-	want := "Bearer my-secret-token"
-	if gotAuth != want {
-		t.Errorf("Authorization header = %q, want %q", gotAuth, want)
+	want := "ory_kratos_session=abc123"
+	if gotCookie != want {
+		t.Errorf("Cookie header = %q, want %q", gotCookie, want)
+	}
+}
+
+func TestNoAuth_NoHeaders(t *testing.T) {
+	var gotAuth, gotCookie string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		gotCookie = r.Header.Get("Cookie")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{}`))
+	}))
+	defer ts.Close()
+
+	c := &Client{
+		queryBaseURL:  ts.URL,
+		ingestBaseURL: ts.URL,
+		adminBaseURL:  ts.URL,
+		authMethod:    "none",
+		httpClient:    ts.Client(),
+	}
+
+	_, err := c.get(c.queryBaseURL, "/test", nil)
+	if err != nil {
+		t.Fatalf("get() error = %v", err)
+	}
+
+	if gotAuth != "" {
+		t.Errorf("Authorization header = %q, want empty", gotAuth)
+	}
+	if gotCookie != "" {
+		t.Errorf("Cookie header = %q, want empty", gotCookie)
 	}
 }
 
@@ -312,7 +348,8 @@ func TestVerboseOutput_RedactsAuth(t *testing.T) {
 		queryBaseURL:  ts.URL,
 		ingestBaseURL: ts.URL,
 		adminBaseURL:  ts.URL,
-		token:         "super-secret",
+		authMethod:    "kratos",
+		sessionCookie: "ory_kratos_session=super-secret",
 		httpClient:    ts.Client(),
 		verbose:       true,
 	}

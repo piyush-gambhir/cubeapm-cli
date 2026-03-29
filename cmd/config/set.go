@@ -20,10 +20,9 @@ Saves the value to the config file (~/.config/cubeapm-cli/config.yaml).
 
 Valid keys:
   server       CubeAPM server address (hostname or IP)
-  token        Authentication token for API requests
-  email        Email for Kratos (email/password) authentication
-  password     Password for Kratos authentication
-  auth_method  Authentication method: "kratos" or "token"
+  email        Login email
+  password     Login password
+  auth_method  Authentication method: "kratos" or "none"
   query_port   Query API port (default: 3140)
   ingest_port  Ingest API port (default: 3130)
   admin_port   Admin API port (default: 3199)
@@ -59,8 +58,6 @@ Examples:
 			switch key {
 			case "server":
 				profile.Server = value
-			case "token":
-				profile.Token = value
 			case "query_port":
 				port, err := strconv.Atoi(value)
 				if err != nil {
@@ -84,8 +81,8 @@ Examples:
 			case "password":
 				profile.Password = value
 			case "auth_method":
-				if value != "token" && value != "kratos" && value != "" {
-					return fmt.Errorf("invalid auth_method %q: use \"token\" or \"kratos\"", value)
+				if value != "none" && value != "kratos" && value != "" {
+					return fmt.Errorf("invalid auth_method %q: use \"kratos\" or \"none\"", value)
 				}
 				profile.AuthMethod = value
 			case "output":
@@ -94,7 +91,7 @@ Examples:
 				}
 				profile.Output = value
 			default:
-				return fmt.Errorf("unknown config key %q: valid keys are server, token, email, password, auth_method, query_port, ingest_port, admin_port, output", key)
+				return fmt.Errorf("unknown config key %q: valid keys are server, email, password, auth_method, query_port, ingest_port, admin_port, output", key)
 			}
 
 			cfg.SetProfile(profileName, profile)

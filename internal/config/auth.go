@@ -12,13 +12,12 @@ type ResolvedConfig struct {
 	QueryPort  int
 	IngestPort int
 	AdminPort  int
-	Token      string
 	Output     string
 	Verbose    bool
 	NoColor    bool
 	ReadOnly   bool
 
-	// Kratos auth
+	// Auth
 	AuthMethod    string
 	Email         string
 	Password      string
@@ -29,7 +28,6 @@ type ResolvedConfig struct {
 // FlagOverrides holds values from CLI flags that may override config.
 type FlagOverrides struct {
 	Server     string
-	Token      string
 	QueryPort  int
 	IngestPort int
 	AdminPort  int
@@ -67,7 +65,6 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 		QueryPort:     profile.QueryPort,
 		IngestPort:    profile.IngestPort,
 		AdminPort:     profile.AdminPort,
-		Token:         profile.Token,
 		Output:        profile.Output,
 		Verbose:       flags.Verbose,
 		NoColor:       flags.NoColor,
@@ -82,9 +79,6 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 	// Layer environment variables
 	if v := os.Getenv("CUBEAPM_SERVER"); v != "" {
 		resolved.Server = v
-	}
-	if v := os.Getenv("CUBEAPM_TOKEN"); v != "" {
-		resolved.Token = v
 	}
 	if v := os.Getenv("CUBEAPM_QUERY_PORT"); v != "" {
 		if port, err := strconv.Atoi(v); err == nil {
@@ -116,9 +110,6 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 	// Layer flag overrides (highest priority)
 	if flags.Server != "" {
 		resolved.Server = flags.Server
-	}
-	if flags.Token != "" {
-		resolved.Token = flags.Token
 	}
 	if flags.Email != "" {
 		resolved.Email = flags.Email

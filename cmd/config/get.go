@@ -19,10 +19,9 @@ Sensitive values (token, password) are masked for security.
 
 Valid keys:
   server           CubeAPM server address
-  token            Authentication token (masked)
-  email            Kratos login email
-  password         Kratos login password (masked)
-  auth_method      Authentication method (token or kratos)
+  email            Login email
+  password         Login password (masked)
+  auth_method      Authentication method (kratos or none)
   query_port       Query API port
   ingest_port      Ingest API port
   admin_port       Admin API port
@@ -61,17 +60,6 @@ Examples:
 			switch key {
 			case "server":
 				fmt.Println(profile.Server)
-			case "token":
-				if profile.Token == "" {
-					fmt.Println("(not set)")
-				} else {
-					// Mask the token for security
-					if len(profile.Token) > 8 {
-						fmt.Printf("%s...%s\n", profile.Token[:4], profile.Token[len(profile.Token)-4:])
-					} else {
-						fmt.Println("****")
-					}
-				}
 			case "query_port":
 				fmt.Println(profile.QueryPort)
 			case "ingest_port":
@@ -99,7 +87,7 @@ Examples:
 			case "output":
 				fmt.Println(profile.Output)
 			default:
-				return fmt.Errorf("unknown config key %q: valid keys are server, token, email, password, auth_method, query_port, ingest_port, admin_port, output, current_profile", key)
+				return fmt.Errorf("unknown config key %q: valid keys are server, email, password, auth_method, query_port, ingest_port, admin_port, output, current_profile", key)
 			}
 
 			return nil

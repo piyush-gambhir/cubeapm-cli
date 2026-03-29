@@ -31,7 +31,6 @@ var (
 	flagOutput     string
 	flagProfile    string
 	flagServer     string
-	flagToken      string
 	flagEmail      string
 	flagPassword   string
 	flagQueryPort  int
@@ -71,7 +70,8 @@ Command groups:
 Global flags (apply to all commands):
   -o, --output <format>   Output format: table (default), json, yaml
   --server <addr>         Override server address
-  --token <token>         Override authentication token
+  --email <email>         Override login email
+  --password <password>   Override login password
   --profile <name>        Use a specific connection profile
   --query-port <port>     Override query port (default: 3140)
   --ingest-port <port>    Override ingest port (default: 3130)
@@ -201,7 +201,6 @@ func setupClient(cmd *cobra.Command) error {
 
 	flags := config.FlagOverrides{
 		Server:     flagServer,
-		Token:      flagToken,
 		Email:      flagEmail,
 		Password:   flagPassword,
 		QueryPort:  flagQueryPort,
@@ -270,9 +269,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table, json, yaml")
 	rootCmd.PersistentFlags().StringVar(&flagProfile, "profile", "", "Config profile to use")
 	rootCmd.PersistentFlags().StringVar(&flagServer, "server", "", "CubeAPM server address")
-	rootCmd.PersistentFlags().StringVar(&flagToken, "token", "", "Authentication token")
-	rootCmd.PersistentFlags().StringVar(&flagEmail, "email", "", "Email for Kratos authentication")
-	rootCmd.PersistentFlags().StringVar(&flagPassword, "password", "", "Password for Kratos authentication")
+	rootCmd.PersistentFlags().StringVar(&flagEmail, "email", "", "Login email")
+	rootCmd.PersistentFlags().StringVar(&flagPassword, "password", "", "Login password")
 	rootCmd.PersistentFlags().IntVar(&flagQueryPort, "query-port", 0, "Query port (default 3140)")
 	rootCmd.PersistentFlags().IntVar(&flagIngestPort, "ingest-port", 0, "Ingest port (default 3130)")
 	rootCmd.PersistentFlags().IntVar(&flagAdminPort, "admin-port", 0, "Admin port (default 3199)")

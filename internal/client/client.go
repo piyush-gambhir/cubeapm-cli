@@ -22,12 +22,11 @@ type Client struct {
 	ingestBaseURL string // http://server:3130
 	adminBaseURL  string // http://server:3199
 	serverBaseURL string // original server URL for auth flows (e.g. https://cube.spyne.ai)
-	token         string
 	httpClient    *http.Client
 	verbose       bool
 
 	// Kratos session auth
-	authMethod    string // "token" or "kratos"
+	authMethod    string // "kratos" or "none"
 	sessionCookie string
 	email         string
 	password      string
@@ -86,7 +85,7 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 		if cfg.Email != "" && cfg.Password != "" {
 			authMethod = "kratos"
 		} else {
-			authMethod = "token"
+			authMethod = "none"
 		}
 	}
 
@@ -95,7 +94,6 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 		ingestBaseURL: fmt.Sprintf("%s://%s:%d", scheme, host, cfg.IngestPort),
 		adminBaseURL:  fmt.Sprintf("%s://%s:%d", scheme, host, cfg.AdminPort),
 		serverBaseURL: serverBaseURL,
-		token:         cfg.Token,
 		httpClient: &http.Client{
 			Timeout:   60 * time.Second,
 			Transport: transport,
@@ -170,15 +168,8 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 
 // setAuthHeaders applies the appropriate auth header/cookie to the request.
 func (c *Client) setAuthHeaders(req *http.Request) {
-	switch c.authMethod {
-	case "kratos":
-		if c.sessionCookie != "" {
-			req.Header.Set("Cookie", c.sessionCookie)
-		}
-	default:
-		if c.token != "" {
-			req.Header.Set("Authorization", "Bearer "+c.token)
-		}
+	if c.authMethod == "kratos" && c.sessionCookie != "" {
+		req.Header.Set("Cookie", c.sessionCookie)
 	}
 }
 
@@ -334,9 +325,9 @@ func (c *Client) checkResponse(resp *http.Response) error {
 		if c.authMethod == "kratos" {
 			return fmt.Errorf("authentication failed (HTTP 401): session expired or credentials invalid. Run 'cubeapm login' to re-authenticate")
 		}
-		return fmt.Errorf("authentication failed (HTTP 401): check your token with 'cubeapm login'")
+		return fmt.Errorf("authentication failed (HTTP 401): this CubeAPM instance requires authentication. Run 'cubeapm login'")
 	case http.StatusForbidden:
-		return fmt.Errorf("access denied (HTTP 403): your token may not have sufficient permissions")
+		return fmt.Errorf("access denied (HTTP 403): insufficient permissions")
 	default:
 		return fmt.Errorf("API error (HTTP %d): %s", resp.StatusCode, string(body))
 	}

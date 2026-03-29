@@ -25,9 +25,8 @@ Prompts for:
   1. Profile name (default: "default")
   2. Server address (hostname or URL)
   3. Authentication method:
-     - Email/Password (Ory Kratos) -- for CubeAPM instances with user login
-     - API Token -- for instances using bearer token auth
-     - None -- for unauthenticated instances
+     - Email/Password -- for CubeAPM instances with authentication enabled
+     - No authentication -- for unauthenticated instances (direct port access)
   4. Port configuration (query, ingest, admin)
 
 After collecting the information, tests the connection and saves the profile
@@ -76,10 +75,9 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	}
 
 	// Prompt for auth method
-	fmt.Println("\nAuthentication method:")
-	fmt.Println("  1. Email/Password (Ory Kratos)")
-	fmt.Println("  2. API Token")
-	fmt.Println("  3. No authentication")
+	fmt.Println("\nAuthentication:")
+	fmt.Println("  1. Email/Password")
+	fmt.Println("  2. No authentication")
 	fmt.Print("Choose [1]: ")
 	authChoice, _ := reader.ReadString('\n')
 	authChoice = strings.TrimSpace(authChoice)
@@ -91,7 +89,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		authMethod    string
 		email         string
 		password      string
-		token         string
 		sessionCookie string
 		sessionExpiry string
 	)
@@ -152,16 +149,10 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		}
 
 	case "2":
-		authMethod = "token"
-		fmt.Print("API token: ")
-		token, _ = reader.ReadString('\n')
-		token = strings.TrimSpace(token)
-
-	case "3":
-		authMethod = "token" // no auth, just no token set
+		authMethod = "none"
 
 	default:
-		return fmt.Errorf("invalid choice %q: enter 1, 2, or 3", authChoice)
+		return fmt.Errorf("invalid choice %q: enter 1 or 2", authChoice)
 	}
 
 	// Prompt for query port
@@ -201,7 +192,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		QueryPort:     queryPort,
 		IngestPort:    ingestPort,
 		AdminPort:     adminPort,
-		Token:         token,
 		AuthMethod:    authMethod,
 		Email:         email,
 		Password:      password,
@@ -233,7 +223,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		QueryPort:     queryPort,
 		IngestPort:    ingestPort,
 		AdminPort:     adminPort,
-		Token:         token,
 		AuthMethod:    authMethod,
 		Email:         email,
 		Password:      password,

@@ -13,7 +13,9 @@ func TestResolveAuth_ConfigOnly(t *testing.T) {
 				QueryPort:  3140,
 				IngestPort: 3130,
 				AdminPort:  3199,
-				Token:      "prod-token",
+				Email:      "user@example.com",
+				Password:   "secret",
+				AuthMethod: "kratos",
 				Output:     "json",
 			},
 		},
@@ -24,8 +26,14 @@ func TestResolveAuth_ConfigOnly(t *testing.T) {
 	if resolved.Server != "cubeapm.example.com" {
 		t.Errorf("Server = %q, want %q", resolved.Server, "cubeapm.example.com")
 	}
-	if resolved.Token != "prod-token" {
-		t.Errorf("Token = %q, want %q", resolved.Token, "prod-token")
+	if resolved.Email != "user@example.com" {
+		t.Errorf("Email = %q, want %q", resolved.Email, "user@example.com")
+	}
+	if resolved.Password != "secret" {
+		t.Errorf("Password = %q, want %q", resolved.Password, "secret")
+	}
+	if resolved.AuthMethod != "kratos" {
+		t.Errorf("AuthMethod = %q, want %q", resolved.AuthMethod, "kratos")
 	}
 	if resolved.QueryPort != 3140 {
 		t.Errorf("QueryPort = %d, want %d", resolved.QueryPort, 3140)
@@ -47,13 +55,14 @@ func TestResolveAuth_EnvOverrides(t *testing.T) {
 		Profiles: map[string]Profile{
 			"prod": {
 				Server: "config-server.com",
-				Token:  "config-token",
+				Email:  "config@example.com",
 			},
 		},
 	}
 
 	t.Setenv("CUBEAPM_SERVER", "env-server.com")
-	t.Setenv("CUBEAPM_TOKEN", "env-token")
+	t.Setenv("CUBEAPM_EMAIL", "env@example.com")
+	t.Setenv("CUBEAPM_PASSWORD", "env-pass")
 	t.Setenv("CUBEAPM_QUERY_PORT", "4140")
 	t.Setenv("CUBEAPM_INGEST_PORT", "4130")
 	t.Setenv("CUBEAPM_ADMIN_PORT", "4199")
@@ -63,8 +72,11 @@ func TestResolveAuth_EnvOverrides(t *testing.T) {
 	if resolved.Server != "env-server.com" {
 		t.Errorf("Server = %q, want %q (env should override config)", resolved.Server, "env-server.com")
 	}
-	if resolved.Token != "env-token" {
-		t.Errorf("Token = %q, want %q (env should override config)", resolved.Token, "env-token")
+	if resolved.Email != "env@example.com" {
+		t.Errorf("Email = %q, want %q (env should override config)", resolved.Email, "env@example.com")
+	}
+	if resolved.Password != "env-pass" {
+		t.Errorf("Password = %q, want %q (env should override config)", resolved.Password, "env-pass")
 	}
 	if resolved.QueryPort != 4140 {
 		t.Errorf("QueryPort = %d, want %d (env should override config)", resolved.QueryPort, 4140)
@@ -83,17 +95,18 @@ func TestResolveAuth_FlagOverrides(t *testing.T) {
 		Profiles: map[string]Profile{
 			"prod": {
 				Server: "config-server.com",
-				Token:  "config-token",
+				Email:  "config@example.com",
 			},
 		},
 	}
 
 	t.Setenv("CUBEAPM_SERVER", "env-server.com")
-	t.Setenv("CUBEAPM_TOKEN", "env-token")
+	t.Setenv("CUBEAPM_EMAIL", "env@example.com")
 
 	flags := FlagOverrides{
 		Server:     "flag-server.com",
-		Token:      "flag-token",
+		Email:      "flag@example.com",
+		Password:   "flag-pass",
 		QueryPort:  5140,
 		IngestPort: 5130,
 		AdminPort:  5199,
@@ -105,8 +118,11 @@ func TestResolveAuth_FlagOverrides(t *testing.T) {
 	if resolved.Server != "flag-server.com" {
 		t.Errorf("Server = %q, want %q (flags should override env)", resolved.Server, "flag-server.com")
 	}
-	if resolved.Token != "flag-token" {
-		t.Errorf("Token = %q, want %q (flags should override env)", resolved.Token, "flag-token")
+	if resolved.Email != "flag@example.com" {
+		t.Errorf("Email = %q, want %q (flags should override env)", resolved.Email, "flag@example.com")
+	}
+	if resolved.Password != "flag-pass" {
+		t.Errorf("Password = %q, want %q (flags should override env)", resolved.Password, "flag-pass")
 	}
 	if resolved.QueryPort != 5140 {
 		t.Errorf("QueryPort = %d, want %d (flags should override env)", resolved.QueryPort, 5140)
@@ -152,7 +168,8 @@ func TestResolveAuth_CustomPorts(t *testing.T) {
 				QueryPort:  8080,
 				IngestPort: 8081,
 				AdminPort:  8082,
-				Token:      "custom-token",
+				Email:      "admin@example.com",
+				Password:   "pass",
 			},
 		},
 	}

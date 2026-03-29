@@ -27,7 +27,6 @@ type Profile struct {
 	QueryPort  int    `yaml:"query_port,omitempty"`
 	IngestPort int    `yaml:"ingest_port,omitempty"`
 	AdminPort  int    `yaml:"admin_port,omitempty"`
-	Token      string `yaml:"token,omitempty"`
 	Output     string `yaml:"output,omitempty"`
 	ReadOnly   bool   `yaml:"read_only,omitempty"`
 
