@@ -15,7 +15,7 @@ func newGetCmd() *cobra.Command {
 		Long: `Get a configuration value from the current profile.
 
 Reads the value from the resolved configuration (profile defaults applied).
-Sensitive values (token, password) are masked for security.
+Sensitive values (password) are masked for security.
 
 Valid keys:
   server           CubeAPM server address

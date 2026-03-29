@@ -16,7 +16,7 @@ func newProfilesCmd() *cobra.Command {
 		Short: "Manage connection profiles",
 		Long: `Manage connection profiles for different CubeAPM instances.
 
-Profiles store server address, authentication token, and port settings.
+Profiles store server address, authentication credentials, and port settings.
 You can have multiple profiles (e.g., "production", "staging", "local")
 and switch between them.
 
@@ -91,7 +91,7 @@ func newProfilesUseCmd() *cobra.Command {
 		Short: "Set the active profile",
 		Long: `Set the active connection profile.
 
-All subsequent commands will use the settings (server, token, ports)
+All subsequent commands will use the settings (server, credentials, ports)
 from the selected profile unless overridden by flags or environment variables.
 
 Examples:

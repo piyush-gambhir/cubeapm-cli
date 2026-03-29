@@ -31,7 +31,7 @@ type Profile struct {
 	ReadOnly   bool   `yaml:"read_only,omitempty"`
 
 	// Kratos (email/password) authentication
-	AuthMethod    string `yaml:"auth_method,omitempty"`    // "token" or "kratos"; empty = auto-detect
+	AuthMethod    string `yaml:"auth_method,omitempty"`    // "kratos" or "none"; empty = auto-detect
 	Email         string `yaml:"email,omitempty"`          // login email for Kratos auth
 	Password      string `yaml:"password,omitempty"`       // login password for Kratos auth (stored for auto-re-auth)
 	SessionCookie string `yaml:"session_cookie,omitempty"` // cached Kratos session cookie
