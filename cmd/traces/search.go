@@ -26,6 +26,7 @@ func newSearchCmd() *cobra.Command {
 		minDuration string
 		maxDuration string
 		tags        []string
+		index       string
 	)
 
 	cmd := &cobra.Command{
@@ -109,7 +110,7 @@ Examples:
 				}
 			}
 
-			results, err := cmdutil.APIClient.SearchTraces(service, tagsMap, query, start, end, limit, spanKind, minDuration, maxDuration)
+			results, err := cmdutil.APIClient.SearchTraces(service, tagsMap, query, start, end, limit, spanKind, minDuration, maxDuration, index)
 			if err != nil {
 				return err
 			}
@@ -174,11 +175,12 @@ Examples:
 	cmd.Flags().StringVar(&env, "env", "", "Filter by environment (e.g., \"production\", \"staging\")")
 	cmd.Flags().StringVar(&query, "query", "", "Filter by operation name (e.g., \"GET /api/users\")")
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum number of traces to return")
-	cmd.Flags().StringVar(&spanKind, "span-kind", "", "Filter by span kind (client, server, producer, consumer, internal)")
+	cmd.Flags().StringVar(&spanKind, "span-kind", "server", "Filter by span kind (client, server, producer, consumer, internal). Defaults to server because some CubeAPM deployments require a non-empty value.")
 	cmd.Flags().StringVar(&status, "status", "", "Filter by span status: error, ok")
 	cmd.Flags().StringVar(&minDuration, "min-duration", "", "Minimum trace duration (e.g., \"500ms\", \"1s\", \"100us\")")
 	cmd.Flags().StringVar(&maxDuration, "max-duration", "", "Maximum trace duration (e.g., \"5s\", \"10s\")")
 	cmd.Flags().StringArrayVar(&tags, "tags", nil, "Filter by span tag key=value (can be repeated, e.g., --tags \"http.method=POST\")")
+	cmd.Flags().StringVar(&index, "index", "cube:latency", "CubeAPM trace index to query (e.g., cube:latency, cube:error)")
 	timeflag.AddTimeFlags(cmd, &from, &to, &last)
 
 	return cmd

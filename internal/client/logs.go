@@ -150,11 +150,16 @@ func (c *Client) GetLogStats(query string, from, to time.Time) (*types.StatsResu
 }
 
 // GetLogStreams returns log streams.
+//
+// The server rejects empty queries with an opaque "missing query" error,
+// so default to `*` (match-all) when the caller doesn't narrow the query.
+// Callers that genuinely want no filter get what they'd expect anyway.
 func (c *Client) GetLogStreams(query string, from, to time.Time) ([]types.StreamInfo, error) {
 	params := url.Values{}
-	if query != "" {
-		params.Set("query", query)
+	if query == "" {
+		query = "*"
 	}
+	params.Set("query", query)
 	if !from.IsZero() {
 		params.Set("start", from.Format(time.RFC3339Nano))
 	}
@@ -186,11 +191,16 @@ func (c *Client) GetLogStreams(query string, from, to time.Time) ([]types.Stream
 }
 
 // GetLogFieldNames returns available log field names.
+//
+// Default to `*` when the caller doesn't specify a query — the server
+// rejects empty queries, and users generally want "all fields" when they
+// don't narrow the search.
 func (c *Client) GetLogFieldNames(query string, from, to time.Time) ([]types.FieldInfo, error) {
 	params := url.Values{}
-	if query != "" {
-		params.Set("query", query)
+	if query == "" {
+		query = "*"
 	}
+	params.Set("query", query)
 	if !from.IsZero() {
 		params.Set("start", from.Format(time.RFC3339Nano))
 	}
@@ -225,9 +235,10 @@ func (c *Client) GetLogFieldNames(query string, from, to time.Time) ([]types.Fie
 func (c *Client) GetLogFieldValues(field, query string, from, to time.Time, limit int) ([]types.FieldValueInfo, error) {
 	params := url.Values{}
 	params.Set("field", field)
-	if query != "" {
-		params.Set("query", query)
+	if query == "" {
+		query = "*"
 	}
+	params.Set("query", query)
 	if !from.IsZero() {
 		params.Set("start", from.Format(time.RFC3339Nano))
 	}

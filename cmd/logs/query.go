@@ -116,6 +116,14 @@ Examples:
 
 				if len(entries) == 0 {
 					fmt.Println("No logs found.")
+					// When a --service filter is set, a common cause of empty
+					// results is a casing / naming mismatch on the service
+					// field — or the service simply doesn't ship logs. Give
+					// users a fast path to diagnose that rather than silently
+					// showing zero rows.
+					if service != "" {
+						fmt.Fprintf(os.Stderr, "\nHint: the --service filter narrowed by `service:%s`. If you expected results, check spelling with:\n  cubeapm logs field-values service --last 24h\n  cubeapm logs field-values service.name --last 24h\nSome services don't emit logs to CubeAPM at all — verify there.\n", service)
+					}
 					return nil
 				}
 

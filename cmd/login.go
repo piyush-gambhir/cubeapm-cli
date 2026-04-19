@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -202,8 +203,11 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	services, err := testClient.GetServices()
-	if err != nil {
+	// Use the Prometheus-standard labels endpoint for the connection test.
+	// It validates reachability + auth against a stable API contract that
+	// every CubeAPM server exposes, without depending on optional
+	// Jaeger-compatible endpoints like /services.
+	if _, err := testClient.GetLabels(time.Time{}, time.Time{}); err != nil {
 		if !cmdutil.Quiet && authMethod != "kratos" {
 			fmt.Println("FAILED")
 		}
@@ -211,9 +215,9 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	}
 	if !cmdutil.Quiet {
 		if authMethod != "kratos" {
-			fmt.Printf("OK (%d services found)\n", len(services))
+			fmt.Println("OK")
 		} else {
-			fmt.Printf("Connection verified (%d services found)\n", len(services))
+			fmt.Println("Connection verified")
 		}
 	}
 

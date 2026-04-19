@@ -45,19 +45,19 @@ Time ranges can be specified as:
 
 Examples:
   # Count log entries by status in the last hour
-  cubeapm logs stats '_time:1h | stats count() by (status)'
+  cubeapm logs stats '_time:1h | stats by (status) count() as c'
 
   # Count errors by service in the last 24 hours
-  cubeapm logs stats 'error | stats count() by (service)' --last 24h
+  cubeapm logs stats 'error | stats by (service) count() as c' --last 24h
 
   # Count unique users per service
   cubeapm logs stats '* | stats count_uniq(user_id) by (service)' --last 1h
 
   # Get top error messages
-  cubeapm logs stats 'level:error | stats count() by (_msg)' --last 1h
+  cubeapm logs stats 'level:error | stats by (_msg) count() as c' --last 1h
 
   # Output as JSON
-  cubeapm logs stats 'error | stats count() by (service)' --last 24h -o json`,
+  cubeapm logs stats 'error | stats by (service) count() as c' --last 24h -o json`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logsql := args[0]

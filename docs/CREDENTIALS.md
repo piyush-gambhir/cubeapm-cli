@@ -28,11 +28,12 @@ Email: user@example.com
 Password:
 
 Authenticating... OK (session expires 2024-01-16 18:00 UTC)
-Connection verified (12 services found)
 
 Query port [3140]:
 Ingest port [3130]:
 Admin port [3199]:
+
+Connection verified
 
 Profile "default" saved (active)
 Config written to /home/user/.config/cubeapm-cli/config.yaml

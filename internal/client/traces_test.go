@@ -103,7 +103,7 @@ func TestSearchTraces_Minimal(t *testing.T) {
 	defer ts.Close()
 
 	c := newTestClient(ts)
-	results, err := c.SearchTraces("api-gateway", nil, "", time.Time{}, time.Time{}, 0, "", "", "")
+	results, err := c.SearchTraces("api-gateway", nil, "", time.Time{}, time.Time{}, 0, "", "", "", "")
 	if err != nil {
 		t.Fatalf("SearchTraces() error = %v", err)
 	}
@@ -135,7 +135,7 @@ func TestSearchTraces_AllParams(t *testing.T) {
 	to := time.Date(2024, 1, 15, 11, 0, 0, 0, time.UTC)
 	tags := map[string]string{"http.method": "GET"}
 
-	_, err := c.SearchTraces("payments", tags, "POST /orders", from, to, 50, "server", "500ms", "2s")
+	_, err := c.SearchTraces("payments", tags, "POST /orders", from, to, 50, "server", "500ms", "2s", "")
 	if err != nil {
 		t.Fatalf("SearchTraces() error = %v", err)
 	}
@@ -183,7 +183,7 @@ func TestSearchTraces_WithTags(t *testing.T) {
 	c := newTestClient(ts)
 	tags := map[string]string{"http.method": "POST", "http.status_code": "500"}
 
-	_, err := c.SearchTraces("api-gateway", tags, "", time.Time{}, time.Time{}, 0, "", "", "")
+	_, err := c.SearchTraces("api-gateway", tags, "", time.Time{}, time.Time{}, 0, "", "", "", "")
 	if err != nil {
 		t.Fatalf("SearchTraces() error = %v", err)
 	}
@@ -214,7 +214,7 @@ func TestSearchTraces_WithDuration(t *testing.T) {
 	defer ts.Close()
 
 	c := newTestClient(ts)
-	_, err := c.SearchTraces("api-gateway", nil, "", time.Time{}, time.Time{}, 0, "", "100ms", "5s")
+	_, err := c.SearchTraces("api-gateway", nil, "", time.Time{}, time.Time{}, 0, "", "100ms", "5s", "")
 	if err != nil {
 		t.Fatalf("SearchTraces() error = %v", err)
 	}
@@ -345,7 +345,7 @@ func TestSearchTraces_EmptyResult(t *testing.T) {
 	defer ts.Close()
 
 	c := newTestClient(ts)
-	results, err := c.SearchTraces("nonexistent-service", nil, "", time.Time{}, time.Time{}, 0, "", "", "")
+	results, err := c.SearchTraces("nonexistent-service", nil, "", time.Time{}, time.Time{}, 0, "", "", "", "")
 	if err != nil {
 		t.Fatalf("SearchTraces() error = %v", err)
 	}

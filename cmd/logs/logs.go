@@ -29,7 +29,7 @@ Subcommands:
 Examples:
   cubeapm logs query 'error AND service:api' --last 30m
   cubeapm logs hits --query 'error' --last 1h --step 5m
-  cubeapm logs stats 'error | stats count() by (service)' --last 24h
+  cubeapm logs stats 'error | stats by (service) count() as c' --last 24h
   cubeapm logs streams --last 1h
   cubeapm logs field-names --last 1h
   cubeapm logs field-values status --last 1h`,

@@ -218,16 +218,16 @@ cubeapm logs hits --query 'service:api-gateway' --last 6h --step 15m -o json
 
 ```bash
 # Count log entries by service
-cubeapm logs stats 'error | stats count() by (service)' --last 24h -o json
+cubeapm logs stats 'error | stats by (service) count() as c' --last 24h -o json
 
 # Count errors by log level
-cubeapm logs stats '_time:1h | stats count() by (level)' -o json
+cubeapm logs stats '_time:1h | stats by (level) count() as c' -o json
 
 # Count unique users per service
 cubeapm logs stats '* | stats count_uniq(user_id) by (service)' --last 1h -o json
 
 # Get top error messages
-cubeapm logs stats 'level:error | stats count() by (_msg)' --last 1h -o json
+cubeapm logs stats 'level:error | stats by (_msg) count() as c' --last 1h -o json
 ```
 
 ### Explore log schema
@@ -331,7 +331,7 @@ LogsQL is the query language for logs (VictoriaLogs-compatible):
 | `_stream:{host="web-1"}` | Stream filter |
 | `re("pattern")` | Regex match |
 | `_time:1h` | Time filter (inline) |
-| `* \| stats count() by (service)` | Stats pipeline |
+| `* \| stats by (service) count() as c` | Stats pipeline |
 | `* \| stats count_uniq(user_id) by (service)` | Unique count aggregation |
 
 ## PromQL Quick Reference
@@ -359,7 +359,7 @@ PromQL is the query language for metrics (Prometheus-compatible):
 - For metrics, use `query` for current values and `query-range` for time series data.
 - Range queries auto-calculate step if `--step` is omitted (~250 data points).
 - The `--service`, `--level`, and `--stream` flags on `logs query` are convenience shortcuts that prepend filters to the LogsQL expression.
-- Log stats queries must contain a `| stats` pipe (e.g., `'error | stats count() by (service)'`).
+- Log stats queries must contain a `| stats` pipe (e.g., `'error | stats by (service) count() as c'`).
 - Log deletion uses the admin port (default 3199), not the query port.
 - Ingest commands use the ingest port (default 3130), not the query port.
 - The `dependencies --dot` output can be piped to Graphviz tools (`dot`, `neato`) for visualization.
