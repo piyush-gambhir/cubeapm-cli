@@ -3,6 +3,7 @@ package metrics
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -16,6 +17,7 @@ func newLabelValuesCmd() *cobra.Command {
 		from string
 		to   string
 		last string
+		like string
 	)
 
 	cmd := &cobra.Command{
@@ -50,6 +52,9 @@ Examples:
   # List all metric names
   cubeapm metrics label-values __name__
 
+  # Narrow to values containing a substring (case-insensitive)
+  cubeapm metrics label-values service --like media
+
   # Output as JSON
   cubeapm metrics label-values job -o json`,
 		Args: cobra.ExactArgs(1),
@@ -66,8 +71,27 @@ Examples:
 				return err
 			}
 
+			// --like does a case-insensitive substring match. Service
+			// inventories often have case-inconsistent spellings
+			// (MEDIA-SERVICE, Media-Service, media_service) — narrowing to
+			// a family is more useful than eyeballing a long sorted list.
+			if like != "" {
+				needle := strings.ToLower(like)
+				filtered := values[:0]
+				for _, v := range values {
+					if strings.Contains(strings.ToLower(v), needle) {
+						filtered = append(filtered, v)
+					}
+				}
+				values = filtered
+			}
+
 			if len(values) == 0 {
-				fmt.Printf("No values found for label %q.\n", label)
+				if like != "" {
+					fmt.Printf("No values matching %q found for label %q.\n", like, label)
+				} else {
+					fmt.Printf("No values found for label %q.\n", label)
+				}
 				return nil
 			}
 
@@ -84,6 +108,7 @@ Examples:
 		},
 	}
 
+	cmd.Flags().StringVar(&like, "like", "", "Case-insensitive substring filter applied to returned values")
 	timeflag.AddTimeFlags(cmd, &from, &to, &last)
 
 	return cmd

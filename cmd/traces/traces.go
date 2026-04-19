@@ -22,13 +22,15 @@ Subcommands:
   services      List all services that have reported traces
   operations    List operations (endpoints/methods) for a service
   dependencies  Show the service dependency graph
+  callers       Rank services by outbound HTTP call rate to a host/service
 
 Examples:
   cubeapm traces search --service api-gateway --last 1h
   cubeapm traces get abc123def456
   cubeapm traces services
   cubeapm traces operations api-gateway
-  cubeapm traces dependencies --last 24h`,
+  cubeapm traces dependencies --last 24h
+  cubeapm traces callers --host api.example.com --last 1h`,
 		Aliases: []string{"trace"},
 	}
 
@@ -37,6 +39,7 @@ Examples:
 	cmd.AddCommand(newServicesCmd())
 	cmd.AddCommand(newOperationsCmd())
 	cmd.AddCommand(newDependenciesCmd())
+	cmd.AddCommand(newCallersCmd())
 
 	return cmd
 }
