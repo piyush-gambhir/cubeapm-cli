@@ -2,3 +2,6 @@ bin/
 dist/
 /cubeapm-cli
 *.exe
+
+# Cloudflare Pages local cache
+.wrangler/
