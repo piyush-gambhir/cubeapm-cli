@@ -1,0 +1,40 @@
+# Cloudflare Pages deployment for the docs/ landing page.
+#
+# Currently DISABLED for automatic triggers — only fires when manually run from
+# the GitHub UI. To enable on push to docs/, uncomment the `push:` block below.
+
+name: Deploy Docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - development
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'docs/**'
+
+permissions:
+  contents: read
+  deployments: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment || 'production' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy
+        run: bash scripts/deploy-docs.sh "$ENV"
+        env:
+          ENV: ${{ inputs.environment || 'production' }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
