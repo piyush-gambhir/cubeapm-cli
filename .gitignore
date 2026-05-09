@@ -5,3 +5,12 @@ dist/
 
 # Cloudflare Pages local cache
 .wrangler/
+
+# env
+.env
+.env.local
+.env.deploy
+.env.deploy.production
+.env.deploy.development
+!.env.example
+!.env.deploy.example
