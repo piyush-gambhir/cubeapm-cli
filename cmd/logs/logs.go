@@ -20,6 +20,7 @@ stream filtering, regex matching, and statistical aggregations.
 Subcommands:
   query         Query logs using LogsQL syntax
   hits          Show log volume over time (histogram of matches)
+  status        Probe log retention (oldest and newest available buckets)
   stats         Execute a LogsQL stats/aggregation query
   streams       List log streams and their entry counts
   field-names   Discover available log field names
@@ -29,6 +30,7 @@ Subcommands:
 Examples:
   cubeapm logs query 'error AND service:api' --last 30m
   cubeapm logs hits --query 'error' --last 1h --step 5m
+  cubeapm logs status --lookback 30
   cubeapm logs stats 'error | stats by (service) count() as c' --last 24h
   cubeapm logs streams --last 1h
   cubeapm logs field-names --last 1h
@@ -38,6 +40,7 @@ Examples:
 
 	cmd.AddCommand(newQueryCmd())
 	cmd.AddCommand(newHitsCmd())
+	cmd.AddCommand(newStatusCmd())
 	cmd.AddCommand(newStatsCmd())
 	cmd.AddCommand(newStreamsCmd())
 	cmd.AddCommand(newFieldNamesCmd())
