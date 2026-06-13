@@ -86,4 +86,3 @@ func runUpdate(checkOnly bool) error {
 
 	return nil
 }
-

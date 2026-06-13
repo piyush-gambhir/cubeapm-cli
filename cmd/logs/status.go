@@ -13,14 +13,14 @@ import (
 
 // LogsStatus is the structured shape emitted by `cubeapm logs status -o json`.
 type LogsStatus struct {
-	Query                string `json:"query"`
-	LookbackDays         int    `json:"lookbackDays"`
-	HasLogs              bool   `json:"hasLogs"`
+	Query                 string `json:"query"`
+	LookbackDays          int    `json:"lookbackDays"`
+	HasLogs               bool   `json:"hasLogs"`
 	EarliestNonZeroBucket string `json:"earliestNonZeroBucket,omitempty"`
 	LatestNonZeroBucket   string `json:"latestNonZeroBucket,omitempty"`
-	RetentionHours       int    `json:"retentionHours,omitempty"`
-	NonEmptyDays         int    `json:"nonEmptyDays"`
-	Note                 string `json:"note,omitempty"`
+	RetentionHours        int    `json:"retentionHours,omitempty"`
+	NonEmptyDays          int    `json:"nonEmptyDays"`
+	Note                  string `json:"note,omitempty"`
 }
 
 func newStatusCmd() *cobra.Command {

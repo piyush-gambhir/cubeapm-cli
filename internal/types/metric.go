@@ -8,16 +8,16 @@ import (
 
 // MetricsResult represents a Prometheus API response.
 type MetricsResult struct {
-	Status    string          `json:"status"`
-	Data      MetricsData     `json:"data"`
-	ErrorType string          `json:"errorType,omitempty"`
-	Error     string          `json:"error,omitempty"`
-	Warnings  []string        `json:"warnings,omitempty"`
+	Status    string      `json:"status"`
+	Data      MetricsData `json:"data"`
+	ErrorType string      `json:"errorType,omitempty"`
+	Error     string      `json:"error,omitempty"`
+	Warnings  []string    `json:"warnings,omitempty"`
 }
 
 // MetricsData contains the result type and actual data.
 type MetricsData struct {
-	ResultType string       `json:"resultType"` // vector, matrix, scalar, string
+	ResultType string          `json:"resultType"` // vector, matrix, scalar, string
 	Result     json.RawMessage `json:"result"`
 }
 

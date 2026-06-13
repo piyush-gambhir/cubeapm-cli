@@ -30,6 +30,31 @@ func TestParseTime_RFC3339_WithTZ(t *testing.T) {
 	}
 }
 
+func TestParseTime_NaiveDateTime_IsLocal(t *testing.T) {
+	// Timestamps without a timezone must be interpreted as local wall-clock
+	// time, not UTC. Parsing them as UTC shifts the queried window by the
+	// UTC offset, which made narrow --from/--to log queries return nothing.
+	result, err := ParseTime("2024-01-15T10:00:00")
+	if err != nil {
+		t.Fatalf("ParseTime() error = %v", err)
+	}
+	expected := time.Date(2024, 1, 15, 10, 0, 0, 0, time.Local)
+	if !result.Equal(expected) {
+		t.Errorf("ParseTime() = %v, want %v (local time)", result, expected)
+	}
+}
+
+func TestParseTime_NaiveDate_IsLocal(t *testing.T) {
+	result, err := ParseTime("2024-01-15")
+	if err != nil {
+		t.Fatalf("ParseTime() error = %v", err)
+	}
+	expected := time.Date(2024, 1, 15, 0, 0, 0, 0, time.Local)
+	if !result.Equal(expected) {
+		t.Errorf("ParseTime() = %v, want %v (local midnight)", result, expected)
+	}
+}
+
 func TestParseTime_UnixSeconds(t *testing.T) {
 	result, err := ParseTime("1705312800")
 	if err != nil {

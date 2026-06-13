@@ -353,3 +353,55 @@ func TestSearchTraces_EmptyResult(t *testing.T) {
 		t.Errorf("got %d results, want 0", len(results))
 	}
 }
+
+func TestDecodeCubeID(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "32-char hex trace ID passes through",
+			in:   "4bf92f3577b34da6a3ce929d0e0e4736",
+			want: "4bf92f3577b34da6a3ce929d0e0e4736",
+		},
+		{
+			name: "16-char hex span ID passes through",
+			in:   "00f067aa0ba902b7",
+			want: "00f067aa0ba902b7",
+		},
+		{
+			name: "upper-case hex is normalized to lower-case",
+			in:   "4BF92F3577B34DA6A3CE929D0E0E4736",
+			want: "4bf92f3577b34da6a3ce929d0e0e4736",
+		},
+		{
+			name: "standard base64 trace ID decodes to hex",
+			in:   "S/kvNXezTaajzpKdDg5HNg==", // 16 bytes
+			want: "4bf92f3577b34da6a3ce929d0e0e4736",
+		},
+		{
+			name: "raw URL-safe base64 decodes to hex",
+			in:   "S_kvNXezTaajzpKdDg5HNg", // same 16 bytes, no padding
+			want: "4bf92f3577b34da6a3ce929d0e0e4736",
+		},
+		{
+			name: "empty string",
+			in:   "",
+			want: "",
+		},
+		{
+			name: "non-hex non-base64 returned as-is",
+			in:   "not-an-id!",
+			want: "not-an-id!",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := decodeCubeID(tt.in); got != tt.want {
+				t.Errorf("decodeCubeID(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}

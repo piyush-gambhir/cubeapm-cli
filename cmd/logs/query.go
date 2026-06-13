@@ -13,6 +13,25 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/internal/types"
 )
 
+// prependFilters AND-joins convenience filters (--service/--level/--stream)
+// in front of the user's LogsQL query. The user query is parenthesized so a
+// top-level OR keeps its meaning: without parens, `service:x AND a OR b`
+// parses as `(service:x AND a) OR b` and silently matches other services.
+// Queries containing pipes are left unwrapped — LogsQL pipes are top-level
+// and cannot appear inside parentheses; AND binds before `|` anyway. The
+// match-all query `*` is also left bare since wrapping adds nothing.
+func prependFilters(filters []string, logsql string) string {
+	if len(filters) == 0 {
+		return logsql
+	}
+	prefix := strings.Join(filters, " AND ") + " AND "
+	trimmed := strings.TrimSpace(logsql)
+	if trimmed == "*" || strings.Contains(logsql, "|") {
+		return prefix + logsql
+	}
+	return prefix + "(" + trimmed + ")"
+}
+
 func newQueryCmd() *cobra.Command {
 	var (
 		from    string
@@ -98,9 +117,7 @@ Examples:
 			if stream != "" {
 				filters = append(filters, "_stream:"+stream)
 			}
-			if len(filters) > 0 {
-				logsql = strings.Join(filters, " AND ") + " AND " + logsql
-			}
+			logsql = prependFilters(filters, logsql)
 
 			start, end, err := timeflag.ResolveTimeRange(from, to, last)
 			if err != nil {

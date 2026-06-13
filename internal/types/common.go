@@ -35,7 +35,7 @@ type Dependency struct {
 
 // TraceSearchResult represents a trace returned from a search query.
 type TraceSearchResult struct {
-	TraceID   string  `json:"traceID"`
-	Spans     []Span  `json:"spans"`
+	TraceID   string             `json:"traceID"`
+	Spans     []Span             `json:"spans"`
 	Processes map[string]Process `json:"processes"`
 }

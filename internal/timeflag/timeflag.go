@@ -48,13 +48,17 @@ func ParseTime(input string) (time.Time, error) {
 		return t, nil
 	}
 
-	// Try date only
-	if t, err := time.Parse("2006-01-02", input); err == nil {
+	// Try date only. Timezone-less inputs are interpreted as local time:
+	// users typing wall-clock timestamps (e.g. from an incident timeline)
+	// mean their own timezone. Parsing them as UTC silently shifts the
+	// window by the UTC offset, which made narrow --from/--to ranges miss
+	// all data.
+	if t, err := time.ParseInLocation("2006-01-02", input, time.Local); err == nil {
 		return t, nil
 	}
 
-	// Try date+time without timezone
-	if t, err := time.Parse("2006-01-02T15:04:05", input); err == nil {
+	// Try date+time without timezone (local time, see above)
+	if t, err := time.ParseInLocation("2006-01-02T15:04:05", input, time.Local); err == nil {
 		return t, nil
 	}
 
@@ -242,7 +246,7 @@ func ResolveTimeRange(from, to, last string) (start, end time.Time, err error) {
 
 // AddTimeFlags adds --from, --to, and --last flags to a cobra command.
 func AddTimeFlags(cmd *cobra.Command, from, to, last *string) {
-	cmd.Flags().StringVar(from, "from", "", "Start time (RFC3339, Unix timestamp, or relative like -1h)")
-	cmd.Flags().StringVar(to, "to", "", "End time (RFC3339, Unix timestamp, or relative)")
+	cmd.Flags().StringVar(from, "from", "", "Start time (RFC3339, Unix timestamp, or relative like -1h; timestamps without a timezone are local time)")
+	cmd.Flags().StringVar(to, "to", "", "End time (RFC3339, Unix timestamp, or relative; timestamps without a timezone are local time)")
 	cmd.Flags().StringVar(last, "last", "", "Relative duration from now (e.g., 1h, 30m, 2d)")
 }

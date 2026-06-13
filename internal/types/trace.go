@@ -93,14 +93,14 @@ type CubeTrace struct {
 // wire format uses typed keys like v_str/v_int/v_bool rather than the
 // generic {value} field Jaeger uses.
 type CubeSpan struct {
-	TraceID       string            `json:"trace_id"`
-	SpanID        string            `json:"span_id"`
-	OperationName string            `json:"operation_name"`
-	References    []CubeSpanRef     `json:"references,omitempty"`
-	StartTime     string            `json:"start_time"`
-	Duration      int64             `json:"duration"`
-	Tags          []CubeSpanTag     `json:"tags,omitempty"`
-	ProcessID     string            `json:"process_id,omitempty"`
+	TraceID       string        `json:"trace_id"`
+	SpanID        string        `json:"span_id"`
+	OperationName string        `json:"operation_name"`
+	References    []CubeSpanRef `json:"references,omitempty"`
+	StartTime     string        `json:"start_time"`
+	Duration      int64         `json:"duration"`
+	Tags          []CubeSpanTag `json:"tags,omitempty"`
+	ProcessID     string        `json:"process_id,omitempty"`
 }
 
 // CubeSpanRef mirrors Jaeger's SpanRef but with snake_case on the wire.

@@ -147,11 +147,21 @@ func cubeToSearchResults(in types.CubeSearchResultList) []types.TraceSearchResul
 
 // decodeCubeID accepts a trace or span ID in either raw hex, base64, or
 // URL-safe base64 and returns the lower-case hex representation that
-// Jaeger-style tooling expects. If the input doesn't decode cleanly as
-// base64, we assume it was already a hex string.
+// Jaeger-style tooling expects.
+//
+// Hex must be checked first: every 32-char hex trace ID (and 16-char hex
+// span ID) is *also* valid base64 (length divisible by 4, all chars in the
+// base64 alphabet), so trying base64 first silently corrupted hex IDs into
+// garbage. A genuine base64 ID being pure hex characters is astronomically
+// unlikely, so the hex-first order is safe.
 func decodeCubeID(s string) string {
 	if s == "" {
 		return ""
+	}
+	if len(s)%2 == 0 {
+		if b, err := hex.DecodeString(s); err == nil && len(b) > 0 {
+			return hex.EncodeToString(b) // normalizes to lower-case
+		}
 	}
 	// Try standard base64 then URL-safe base64 with padding tolerance.
 	for _, enc := range []*base64.Encoding{base64.StdEncoding, base64.URLEncoding, base64.RawStdEncoding, base64.RawURLEncoding} {
@@ -233,7 +243,6 @@ func (c *Client) getRaw(baseURL, path string, params url.Values) ([]byte, error)
 	}
 	return io.ReadAll(resp.Body)
 }
-
 
 // GetTrace retrieves a trace by its trace ID.
 func (c *Client) GetTrace(traceID string, from, to time.Time) (*types.Trace, error) {
