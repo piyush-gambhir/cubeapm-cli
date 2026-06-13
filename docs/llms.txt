@@ -1,0 +1,864 @@
+# CubeAPM CLI
+
+> Command-line interface for querying distributed traces (Jaeger-compatible), metrics (Prometheus/PromQL), and logs (VictoriaLogs/LogsQL) from a CubeAPM observability server — built to be driven both interactively and programmatically by scripts and coding agents.
+
+`cubeapm` is a single static Go binary that talks to a CubeAPM server's HTTP APIs. It groups its functionality into command groups — `traces`, `metrics`, `logs`, `ingest`, `config` — plus the top-level `login`, `version`, and `update` commands. Every command supports `table` (default), `json`, and `yaml` output via `-o`/`--output`; JSON is the format intended for scripting and agents.
+
+This is an **independent, unofficial** tool. It is not affiliated with, endorsed by, or sponsored by CubeAPM or its makers. "CubeAPM" is the name of the third-party product this CLI connects to.
+
+- Binary name: `cubeapm`
+- Supported platforms: macOS (darwin), Linux, and Windows; on `amd64` and `arm64` (Windows ships `amd64` only). Released as `.tar.gz` archives (`.zip` on Windows).
+- Written in Go (module `github.com/piyush-gambhir/cubeapm-cli`).
+- The CLI itself stores no telemetry; it only sends requests to the CubeAPM server you configure.
+
+## Links
+
+- Home: https://cubeapm-cli.pages.dev/
+- Source: https://github.com/piyush-gambhir/cubeapm-cli
+- Issues: https://github.com/piyush-gambhir/cubeapm-cli/issues
+- Releases: https://github.com/piyush-gambhir/cubeapm-cli/releases
+- Privacy: https://cubeapm-cli.pages.dev/privacy-policy
+- Terms: https://cubeapm-cli.pages.dev/terms-of-service
+- Contact: https://cubeapm-cli.pages.dev/contact
+
+## Install
+
+### Install script (macOS / Linux)
+
+Downloads the latest release binary for your OS/arch and installs it (default `/usr/local/bin`).
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
+```
+
+Install a specific version:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.1.0 sh
+```
+
+Install to a custom directory (e.g. one already on your `PATH`):
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
+```
+
+The script requires `curl` and `tar`. If the install directory is not writable it falls back to `sudo`.
+
+### go install (Go 1.25+)
+
+```bash
+go install github.com/piyush-gambhir/cubeapm-cli@latest
+```
+
+Note: the produced binary is named after the module (`cubeapm-cli`). Symlink or rename it to `cubeapm` if you want the canonical command name used throughout this document.
+
+### Build from source
+
+```bash
+git clone https://github.com/piyush-gambhir/cubeapm-cli.git
+cd cubeapm-cli
+make build
+# Produces the binary ./cubeapm in the repo root
+```
+
+Other Makefile targets: `make install` (`go install` with version ldflags), `make test`, `make lint`, `make fmt`, `make vet`, `make tidy`, `make clean`.
+
+### Prebuilt release archives
+
+Download the archive for your platform from the GitHub Releases page and extract the `cubeapm` binary onto your `PATH`:
+https://github.com/piyush-gambhir/cubeapm-cli/releases
+
+### Self-update
+
+Once a release build is installed, it can update itself in place:
+
+```bash
+cubeapm update           # check and install the latest release
+cubeapm update --check   # only report whether an update is available
+```
+
+Self-update does not work on a `dev` build (one built from source without a version tag) — it errors out and tells you so.
+
+## Authentication
+
+A CubeAPM server may or may not require authentication. The CLI supports exactly two auth methods:
+
+1. **`kratos`** — email + password. CubeAPM fronts its UI/API with Ory Kratos; the CLI performs the full Kratos browser login flow (initiate flow, fetch CSRF token, POST credentials) and receives a session cookie. The cookie (and its expiry) are cached so subsequent invocations reuse it. When a request returns HTTP 401 and credentials are stored, the CLI automatically re-authenticates once and retries, then persists the refreshed cookie back into the active profile.
+2. **`none`** — no authentication. For CubeAPM instances exposed without auth (local dev, or networks with their own access control). The CLI connects directly to the API ports.
+
+Auto-detection: if `auth_method` is unset, the CLI picks `kratos` when both email and password are present, otherwise `none`.
+
+### Log in interactively
+
+`cubeapm login` walks through profile name, server address, auth method, and the three ports, tests the connection (using the Prometheus-standard `/api/v1/labels` endpoint), and saves the profile.
+
+```bash
+cubeapm login
+
+# Preseed the server (still prompts for everything else)
+cubeapm login --server cube.example.com
+```
+
+`login` requires an interactive terminal; it fails under `--no-input` (use `cubeapm config set` or environment variables instead).
+
+### Non-interactive auth (CI / agents)
+
+Provide credentials via environment variables or flags and skip `login` entirely:
+
+```bash
+export CUBEAPM_SERVER=cube.example.com
+export CUBEAPM_EMAIL=user@example.com
+export CUBEAPM_PASSWORD=your-password
+export CUBEAPM_NO_INPUT=true     # fail instead of prompting if anything is missing
+
+cubeapm traces services -o json
+```
+
+Or all on one line (flags beat everything; avoid putting secrets in shell history):
+
+```bash
+cubeapm --server cube.example.com --email user@example.com --password secret traces services
+```
+
+### Config file
+
+- Path: `~/.config/cubeapm-cli/config.yaml`
+- Override the directory with `XDG_CONFIG_HOME` → `$XDG_CONFIG_HOME/cubeapm-cli/config.yaml`
+- Created with `0600` permissions (directory `0700`) because it can hold credentials and a session cookie.
+- Format: YAML. See "Configuration & profiles" below for the schema.
+
+### Resolution precedence
+
+For every setting, values are layered in this order (highest wins):
+
+1. **CLI flags** (`--server`, `--email`, `--password`, `--query-port`, `--ingest-port`, `--admin-port`, `--output`, `--profile`, `--read-only`, `--no-input`, `--quiet`)
+2. **Environment variables** (`CUBEAPM_*`, see below)
+3. **The active profile** in the config file (selected by `--profile`, else `current_profile`)
+
+### Environment variables
+
+| Variable | Effect |
+|----------|--------|
+| `CUBEAPM_SERVER` | Server address (hostname, IP, or full URL) |
+| `CUBEAPM_EMAIL` | Login email (Kratos auth) |
+| `CUBEAPM_PASSWORD` | Login password (Kratos auth) |
+| `CUBEAPM_QUERY_PORT` | Query API port (default `3140`) |
+| `CUBEAPM_INGEST_PORT` | Ingest API port (default `3130`) |
+| `CUBEAPM_ADMIN_PORT` | Admin API port (default `3199`) |
+| `CUBEAPM_READ_ONLY` | Block write/delete commands when `true`/`1` |
+| `CUBEAPM_NO_INPUT` | Disable all interactive prompts when `true`/`1` |
+| `CUBEAPM_QUIET` | Suppress informational output when `true`/`1` |
+| `XDG_CONFIG_HOME` | Relocate the config directory |
+
+There is no environment variable for output format or profile selection — use `-o`/`--output` and `--profile` (or set `output` in the profile via `cubeapm config set output ...`).
+
+## Global flags
+
+These persistent flags apply to every command:
+
+| Flag | Short | Type | Default | Description |
+|------|-------|------|---------|-------------|
+| `--output` | `-o` | string | `table` | Output format: `table`, `json`, or `yaml` |
+| `--profile` | | string | | Connection profile to use (overrides `current_profile`) |
+| `--server` | | string | | CubeAPM server address override |
+| `--email` | | string | | Login email override |
+| `--password` | | string | | Login password override |
+| `--query-port` | | int | `3140` | Query API port override |
+| `--ingest-port` | | int | `3130` | Ingest API port override |
+| `--admin-port` | | int | `3199` | Admin API port override |
+| `--no-color` | | bool | `false` | Disable colored/bold output |
+| `--verbose` | | bool | `false` | Log the full HTTP request/response cycle (auth headers redacted) |
+| `--read-only` | | bool | `false` | Block write/delete operations (safety mode for agents) |
+| `--no-input` | | bool | `false` | Disable all interactive prompts (CI/agent use) |
+| `--quiet` | `-q` | bool | `false` | Suppress informational (non-data) output |
+
+### Ports
+
+CubeAPM exposes three ports. Most commands only use the query port.
+
+| Port | Default | Used by |
+|------|---------|---------|
+| Query | `3140` | all `traces`, `metrics`, and `logs` read commands |
+| Ingest | `3130` | `ingest metrics`, `ingest logs` |
+| Admin | `3199` | `logs delete run`, `logs delete list`, `logs delete stop` |
+
+Behind a reverse proxy on HTTPS, all three are usually the same host on port 443 — set all three ports to the same value (e.g. `443`) or pass the server as a full `https://` URL.
+
+### Time-range flags
+
+Most read commands accept `--from`, `--to`, and `--last`. If none are given, the default window is the **last 1 hour**.
+
+- `--last <dur>` — relative duration from now: `30m`, `1h`, `2d`, `1d12h`, `90s`. Units: `ns`, `us`, `ms`, `s`, `m`, `h`, `d` (note: Go's stdlib lacks `d`, so this CLI adds it). When set, `--last` takes precedence over `--from`/`--to`.
+- `--from`/`--to` — accept RFC3339 (`2024-01-15T10:00:00Z`), date-only (`2024-01-15`), date+time without a zone (`2024-01-15T10:00:00`, interpreted as **local** time), Unix seconds (`1705312800`) or milliseconds (`>= 1e12`), or relative (`-1h`, `now-30m`, `now`).
+- Only `--from` → `--to` defaults to now. Only `--to` → `--from` defaults to one hour before `--to`.
+
+The `metrics query` command uses a single `--time` flag (same accepted formats) for the instant evaluation timestamp instead of a range.
+
+### Read-only mode
+
+When read-only is active (via `--read-only`, or `read_only: true` in the profile, or `CUBEAPM_READ_ONLY=true`), the four mutating commands are blocked with an error: `ingest metrics`, `ingest logs`, `logs delete run`, `logs delete stop`. The flag overrides the profile/env value; use `--read-only=false` to force-enable writes for one invocation.
+
+## Commands
+
+Top-level commands: `traces`, `metrics`, `logs`, `ingest`, `config`, `login`, `version`, `update`. Built-in `help` and `completion` are provided by the CLI framework. Group aliases: `traces`→`trace`, `metrics`→`metric`, `logs`→`log`.
+
+PromQL and LogsQL expressions are passed as **positional arguments**, not flags. Always wrap them in single quotes to protect `{`, `}`, `(`, `)`, `|`, and `*` from the shell.
+
+---
+
+### traces — distributed traces (Jaeger-compatible API)
+
+Search, retrieve, and analyze spans. Group alias: `trace`. Uses the query port.
+
+#### traces search
+
+```
+cubeapm traces search [flags]
+```
+
+Search for traces matching filters. Table output shows the root span per matching trace: `TRACE_ID`, `SERVICE`, `OPERATION`, `DURATION`, `STATUS`, `TIMESTAMP`.
+
+Flags:
+- `--service <name>` — filter by service name (e.g. `api-gateway`)
+- `--env <env>` — filter by environment tag (added as an `environment` tag, e.g. `production`)
+- `--query <op>` — filter by operation name (e.g. `GET /api/users`)
+- `--status <error|ok>` — `error` matches the `error=true` tag; `ok` matches `otel.status_code=OK`
+- `--min-duration <dur>` — only traces slower than this (`500ms`, `1s`, `100us`)
+- `--max-duration <dur>` — only traces faster than this (`5s`, `10s`)
+- `--tags <key=value>` — span tag filter, repeatable (e.g. `--tags http.method=POST --tags http.status_code=500`)
+- `--span-kind <kind>` — `client`, `server`, `producer`, `consumer`, `internal`. **Default `server`** (some CubeAPM deployments require a non-empty value).
+- `--index <name>` — CubeAPM trace index to query (default `cube:latency`; also `cube:error`)
+- `--limit <n>` — max traces to return (default `20`)
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+# Errors slower than 500ms for a service in the last hour
+cubeapm traces search --service payments --status error --min-duration 500ms --last 1h
+
+# Filter by operation and tags, output JSON, extract trace IDs
+cubeapm traces search --service api-gateway --query "GET /api/users" \
+  --tags http.status_code=500 -o json | jq -r '.[].TRACE_ID'
+```
+
+#### traces get
+
+```
+cubeapm traces get <trace-id> [flags]
+```
+
+Retrieve one trace by its (hex) trace ID. In table mode renders a span waterfall tree (service / operation / duration / status, with parent-child indentation). In JSON/YAML returns the full Jaeger-format trace (all spans, tags, logs, processes).
+
+Flags: `--from` / `--to` / `--last` — optional, narrows the lookup window.
+
+```bash
+cubeapm traces get abc123def456789
+cubeapm traces get abc123def456789 -o json
+```
+
+#### traces services
+
+```
+cubeapm traces services
+```
+
+List all services that have reported traces (sorted). Alias: `svc`. Column: `SERVICE`.
+
+```bash
+cubeapm traces services
+cubeapm traces svc -o json
+```
+
+#### traces operations
+
+```
+cubeapm traces operations <service> [flags]
+```
+
+List operations (endpoints/methods) reported by a service. Alias: `ops`. Columns: `OPERATION`, `SPAN_KIND`.
+
+Flags: `--span-kind <kind>` — filter by span kind (no default; empty = all kinds).
+
+```bash
+cubeapm traces operations api-gateway
+cubeapm traces ops api-gateway --span-kind server -o json
+```
+
+#### traces dependencies
+
+```
+cubeapm traces dependencies [flags]
+```
+
+Service dependency graph over a time range. Alias: `deps`. Columns: `PARENT`, `CHILD`, `CALL_COUNT`.
+
+Flags:
+- `--dot` — emit Graphviz DOT instead of a table (pipe to `dot`)
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+cubeapm traces dependencies --last 24h
+cubeapm traces deps --last 24h --dot | dot -Tpng -o deps.png
+```
+
+#### traces callers
+
+```
+cubeapm traces callers [flags]
+```
+
+Rank the services making outbound HTTP calls to a host (or reaching a target service), by call rate. This is a convenience wrapper over the PromQL query `topk(N, sum by (service) (rate(cube_apm_latency_count{group_name="HTTP <host>",span_kind="client"}[<window>])))`. Columns: `CALLER_SERVICE`, `CALLS_PER_SEC`.
+
+Flags:
+- `--host <host>` — target host, matched against the `group_name` label (e.g. `api.spyne.ai`). Either `--host` or `--service` is required.
+- `--service <name>` — restrict to callers of this target service (host is inferred if `--host` is omitted)
+- `--window <dur>` — rate window (default `2m`; shorter = more responsive but noisier)
+- `--topk <n>` — max callers to return (default `10`)
+- `--from` / `--to` / `--last` — time range; the query evaluates instantly at the end of the window (default last 1h)
+
+```bash
+# Who's calling api.spyne.ai right now?
+cubeapm traces callers --host api.spyne.ai --last 1h
+
+# Biggest callers during an incident window, top 20, 5m rate window
+cubeapm traces callers --host api.spyne.ai --window 5m --topk 20 \
+  --from 2026-04-19T13:20:00Z --to 2026-04-19T13:50:00Z
+```
+
+---
+
+### metrics — Prometheus-compatible metrics (PromQL)
+
+Run PromQL and explore label/series metadata. Group alias: `metric`. Uses the query port.
+
+#### metrics query
+
+```
+cubeapm metrics query <promql> [flags]
+```
+
+Instant PromQL query at a single point in time. Table columns for a vector result: `METRIC`, `VALUE`, `TIMESTAMP` (scalar/string results print the value). JSON/YAML returns the raw Prometheus API response.
+
+Flags: `--time <t>` — evaluation timestamp (RFC3339, Unix, or relative like `now-1h`; default now).
+
+```bash
+cubeapm metrics query 'up'
+cubeapm metrics query 'sum by (service) (rate(http_requests_total[5m]))'
+cubeapm metrics query 'histogram_quantile(0.99, sum by (le) (rate(http_duration_seconds_bucket[5m])))' --time now-1h
+```
+
+#### metrics query-range
+
+```
+cubeapm metrics query-range <promql> [flags]
+```
+
+Range PromQL query over a window. Alias: `range`. Table columns: `METRIC`, `SAMPLES`, `VALUES` (a sampled summary). JSON/YAML returns the full matrix.
+
+Flags:
+- `--step <dur>` — resolution between data points (`15s`, `1m`, `5m`, `1h`). If omitted, auto-calculated to ~250 points.
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+cubeapm metrics query-range 'rate(http_requests_total[5m])' --last 1h --step 1m
+cubeapm metrics query-range 'sum by (service) (rate(http_requests_total[5m]))' --last 6h --step 5m -o json
+```
+
+#### metrics labels
+
+```
+cubeapm metrics labels [flags]
+```
+
+List all metric label names (sorted). Column: `LABEL`. Flags: `--from` / `--to` / `--last` (default last 1h).
+
+```bash
+cubeapm metrics labels --last 24h
+```
+
+#### metrics label-values
+
+```
+cubeapm metrics label-values <label> [flags]
+```
+
+List all values for a given label (sorted). Column: `VALUE`.
+
+Flags:
+- `--like <substr>` — case-insensitive substring filter on returned values
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+cubeapm metrics label-values __name__
+cubeapm metrics label-values service --like media --last 24h
+```
+
+#### metrics series
+
+```
+cubeapm metrics series [flags]
+```
+
+Find time series matching one or more selectors. At least one `--match` is required. Column: `SERIES` (rendered as `metric{label="value", ...}`).
+
+Flags:
+- `--match <selector>` — series selector in PromQL label-matching syntax, repeatable (e.g. `up{job="api"}`, `{__name__=~"http_.*"}`)
+- `--limit <n>` — max series (default `0` = unlimited)
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+cubeapm metrics series --match 'http_requests_total' --match 'process_cpu_seconds_total'
+cubeapm metrics series --match '{__name__=~"http_.*"}' --last 24h --limit 50 -o json
+```
+
+---
+
+### logs — logs (VictoriaLogs-compatible, LogsQL)
+
+Query logs with LogsQL, explore fields/streams, probe retention, and manage deletions. Group alias: `log`. Read commands use the query port; `logs delete *` uses the admin port.
+
+LogsQL quick reference: `*` (all), `error` (keyword), `service:api` (field), `error AND service:api`, `error OR warn`, `NOT health_check`, `_stream:{host="web-1"}`, `re("pattern")`, `_time:1h`, `status:>400`, and `... | stats <fn> by (<fields>)` pipelines.
+
+#### logs query
+
+```
+cubeapm logs query <logsql> [flags]
+```
+
+Run a LogsQL query and return matching entries. Table columns: `TIMESTAMP`, `STREAM`, `MESSAGE` (truncated). In JSON/YAML, entries are streamed newline-delimited, each with `_time`, `_stream`, `_msg`, and non-underscore fields.
+
+The `--service`, `--level`, and `--stream` flags are convenience prefixes AND-joined in front of your query (`--service api` → `service:api AND (<your query>)`).
+
+Flags:
+- `--service <name>` — prepend `service:<value>`
+- `--level <level>` — prepend `level:<value>` (`error`, `warn`, `info`, `debug`)
+- `--stream <sel>` — prepend `_stream:<value>` (e.g. `{host="web-1"}`)
+- `--limit <n>` — max entries (default `100`)
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+cubeapm logs query 'error' --service api-gateway --last 30m
+cubeapm logs query 'error AND service:api AND NOT health_check' --last 30m
+cubeapm logs query 'error' -o json | jq '.["_msg"]'
+```
+
+#### logs hits
+
+```
+cubeapm logs hits [flags]
+```
+
+Log-volume histogram (counts per time bucket) for a query. Columns: `TIMESTAMP`, `COUNT`.
+
+Flags:
+- `--query <logsql>` — query to count (default `*`)
+- `--step <dur>` — bucket size (`5m`, `1h`); server auto-selects if omitted
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+cubeapm logs hits --query 'error' --last 24h --step 1h
+cubeapm logs hits --query 'service:api-gateway' --last 6h --step 15m -o json
+```
+
+#### logs status
+
+```
+cubeapm logs status [flags]
+```
+
+Probe effective log retention (CubeAPM does not expose it directly). Samples 24h buckets over the lookback window and reports the oldest/newest non-empty buckets, approximate retention hours, and a note when retention looks shorter than the lookback. JSON fields: `query`, `lookbackDays`, `hasLogs`, `earliestNonZeroBucket`, `latestNonZeroBucket`, `retentionHours`, `nonEmptyDays`, `note`.
+
+Flags:
+- `--query <logsql>` — query to probe (default `*`; e.g. `service.name:MEDIA-SERVICE`)
+- `--lookback <days>` — lookback window in days (default `30`)
+
+```bash
+cubeapm logs status
+cubeapm logs status --query 'service.name:MEDIA-SERVICE' --lookback 60 -o json
+```
+
+#### logs stats
+
+```
+cubeapm logs stats <logsql> [flags]
+```
+
+Run a LogsQL stats/aggregation pipeline (the query must contain a `| stats` pipe). Columns are the aggregation's output fields. Stats functions include `count()`, `count_uniq(f)`, `sum(f)`, `avg(f)`, `min(f)`, `max(f)`, `median(f)`, `quantile(0.99, f)`, `values(f)`.
+
+Flags: `--from` / `--to` / `--last` (default last 1h).
+
+```bash
+cubeapm logs stats 'error | stats by (service) count() as c' --last 24h
+cubeapm logs stats '* | stats count_uniq(user_id) by (service)' --last 1h -o json
+```
+
+#### logs streams
+
+```
+cubeapm logs streams [flags]
+```
+
+List log streams (unique stream-label sets) and their entry counts. Columns: `STREAM`, `ENTRIES`.
+
+Flags:
+- `--query <logsql>` — filter which streams to include
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+cubeapm logs streams --last 1h
+cubeapm logs streams --query 'service:api-gateway' --last 1h -o json
+```
+
+#### logs field-names
+
+```
+cubeapm logs field-names [flags]
+```
+
+Discover available log field names and their hit counts. Alias: `fields`. Columns: `FIELD`, `HITS`.
+
+Flags:
+- `--query <logsql>` — restrict to entries matching this query
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+cubeapm logs field-names --last 1h
+cubeapm logs fields --query 'level:error' --last 1h -o json
+```
+
+#### logs field-values
+
+```
+cubeapm logs field-values <field> [flags]
+```
+
+List values for a specific log field and their hit counts. Columns: `VALUE`, `HITS`.
+
+Flags:
+- `--query <logsql>` — restrict to entries matching this query
+- `--limit <n>` — max values (default `100`)
+- `--from` / `--to` / `--last` — time range (default last 1h)
+
+```bash
+cubeapm logs field-values status --last 1h
+cubeapm logs field-values host --query 'error' --limit 50 -o json
+```
+
+#### logs delete
+
+```
+cubeapm logs delete <run|stop|list>
+```
+
+Manage asynchronous log-deletion tasks via the admin API (port 3199). These are **mutating** commands and are blocked under read-only mode.
+
+##### logs delete run
+
+```
+cubeapm logs delete run <filter>
+```
+
+Start a deletion task with a LogsQL filter. Deletion is **irreversible** — preview with `cubeapm logs query <same filter>` first. Returns a task ID.
+
+```bash
+cubeapm logs delete run '_time:<24h AND service:test'
+cubeapm logs delete run '_stream:{env="staging"}'
+```
+
+##### logs delete list
+
+```
+cubeapm logs delete list
+```
+
+List active deletion tasks. Alias: `ls`. Columns: `TASK_ID`, `FILTER`, `STATUS`, `PROGRESS`.
+
+```bash
+cubeapm logs delete list -o json
+```
+
+##### logs delete stop
+
+```
+cubeapm logs delete stop <task-id> [flags]
+```
+
+Stop a running deletion task. Already-deleted entries are not restored.
+
+Flags: `--if-exists` — succeed silently if the task does not exist (idempotent).
+
+```bash
+cubeapm logs delete stop abc123-def456
+cubeapm logs delete stop --if-exists abc123-def456
+```
+
+---
+
+### ingest — push data to CubeAPM (ingest API, port 3130)
+
+Push metrics or logs read from a file or stdin. Both subcommands are **mutating** (blocked under read-only mode).
+
+#### ingest metrics
+
+```
+cubeapm ingest metrics [flags]
+```
+
+Push metrics. Formats: `prometheus` (exposition/text, default), `otlp` (OpenTelemetry protobuf binary).
+
+Flags:
+- `--format <fmt>` — `prometheus` | `otlp` (default `prometheus`)
+- `--file <path>` — input file; `-` for stdin (default `-`). With no `--file`, stdin must be piped/redirected.
+
+```bash
+cubeapm ingest metrics --format prometheus --file metrics.txt
+curl -s http://localhost:9090/metrics | cubeapm ingest metrics --format prometheus
+cubeapm ingest metrics --format otlp --file metrics.pb
+```
+
+#### ingest logs
+
+```
+cubeapm ingest logs [flags]
+```
+
+Push logs. Formats: `jsonline` (newline-delimited JSON, default), `otlp` (protobuf), `loki` (Loki push JSON), `elastic` (Elasticsearch bulk NDJSON).
+
+Flags:
+- `--format <fmt>` — `jsonline` | `otlp` | `loki` | `elastic` (default `jsonline`)
+- `--file <path>` — input file; `-` for stdin (default `-`)
+
+```bash
+cubeapm ingest logs --format jsonline --file logs.jsonl
+cat logs.jsonl | cubeapm ingest logs --format jsonline
+cubeapm ingest logs --format loki --file loki-push.json
+cubeapm ingest logs --format elastic --file elastic-bulk.ndjson
+```
+
+A jsonline record looks like: `{"_time":"2024-01-15T10:00:00Z","_msg":"request completed","service":"api"}`.
+
+---
+
+### config — configuration & profiles
+
+```
+cubeapm config <view|set|get|profiles>
+```
+
+View and edit configuration and connection profiles. These commands do not contact the server.
+
+#### config view
+
+```
+cubeapm config view
+```
+
+Print the config file path and its full contents as YAML, with `password` and `session_cookie` masked.
+
+#### config set
+
+```
+cubeapm config set <key> <value>
+```
+
+Set a value in the current profile (creating a `default` profile if none is active) and save. Valid keys: `server`, `email`, `password`, `auth_method` (`kratos`|`none`), `query_port`, `ingest_port`, `admin_port`, `output` (`table`|`json`|`yaml`).
+
+```bash
+cubeapm config set server cube.example.com
+cubeapm config set output json
+cubeapm config set auth_method kratos
+```
+
+#### config get
+
+```
+cubeapm config get <key>
+```
+
+Read a value from the resolved current profile (with defaults applied). `password` is masked. Valid keys: `server`, `email`, `password`, `auth_method`, `query_port`, `ingest_port`, `admin_port`, `output`, `current_profile`.
+
+```bash
+cubeapm config get server
+cubeapm config get current_profile
+```
+
+#### config profiles
+
+```
+cubeapm config profiles <list|use|delete>
+```
+
+- `config profiles list` (alias `ls`) — list all profiles; the active one is marked `*`.
+- `config profiles use <name>` — set the active profile.
+- `config profiles delete <name>` (alias `rm`) — delete a profile; clears `current_profile` if it was active.
+
+```bash
+cubeapm config profiles list
+cubeapm config profiles use production
+cubeapm config profiles delete staging
+```
+
+---
+
+### login
+
+```
+cubeapm login [--server <addr>]
+```
+
+Interactively create/update a connection profile: prompts for profile name (default `default`), server, auth method (1 = Email/Password, 2 = No authentication), and the three ports; tests the connection; saves the profile (and makes it active if none was). Requires an interactive terminal — fails under `--no-input`.
+
+### version
+
+```
+cubeapm version
+```
+
+Print the CLI version, commit hash, and build date. (A source build with no tag reports `dev`.)
+
+### update
+
+```
+cubeapm update [--check]
+```
+
+Check for and install the latest release. `--check` only reports availability without installing; without it, prompts for confirmation before replacing the binary. Fails on a `dev` build, and `--check`-less updates fail under `--no-input` (use `--check`).
+
+## Output formats
+
+Select with `-o`/`--output`. Default is `table`.
+
+- **table** — aligned, bold-headed columns for humans (color/bold disabled by `--no-color`).
+- **json** — pretty-printed JSON. Table-style results become a JSON array of objects keyed by the column headers (e.g. `SERVICE`, `TRACE_ID`); raw API responses (e.g. `metrics query`) are returned verbatim. HTML escaping is disabled so query strings stay readable. **This is the format for scripting and agents.**
+- **yaml** — the same data as YAML.
+
+Errors are written to stderr; under `-o json` they are emitted as a structured object `{"error": "...", "status_code": <n>}`.
+
+```bash
+cubeapm traces services                  # table
+cubeapm traces services -o json          # JSON array of {"SERVICE": "..."}
+cubeapm metrics query 'up' -o yaml        # YAML
+```
+
+Set a persistent default in the active profile:
+
+```bash
+cubeapm config set output json
+```
+
+## Configuration & profiles
+
+The config file lives at `~/.config/cubeapm-cli/config.yaml` (or under `$XDG_CONFIG_HOME`). It holds named **profiles** plus the `current_profile` pointer. Pick a profile per-command with `--profile`, or switch the default with `cubeapm config profiles use`.
+
+Schema (fields are omitted when empty/default):
+
+```yaml
+current_profile: production
+profiles:
+  production:
+    server: cube.example.com        # hostname, IP, or full http(s):// URL
+    auth_method: kratos             # "kratos" or "none" (empty = auto-detect)
+    email: admin@example.com        # for kratos auth
+    password: your-password         # stored to enable silent re-auth
+    session_cookie: "ory_kratos_session=..."  # cached after login (masked in `config view`)
+    session_expiry: "2024-01-16T18:00:00Z"     # RFC3339
+    query_port: 3140
+    ingest_port: 3130
+    admin_port: 3199
+    output: table                   # default output format for this profile
+    read_only: false                # block writes when true
+  local:
+    server: localhost
+    auth_method: none
+```
+
+Notes:
+- Profiles are created by `cubeapm login` or by `cubeapm config set` (which seeds a `default` profile if none exists).
+- The session cookie and its expiry are written automatically after a successful Kratos login and refreshed on auto-re-auth.
+- The file is saved with `0600` permissions. Prefer environment variables over storing `password` in the file for higher-security setups.
+
+## Examples / recipes
+
+### Fully non-interactive setup (CI / agent)
+
+```bash
+export CUBEAPM_SERVER=cube.example.com
+export CUBEAPM_EMAIL="$CUBEAPM_EMAIL"
+export CUBEAPM_PASSWORD="$CUBEAPM_PASSWORD"
+export CUBEAPM_NO_INPUT=true       # fail instead of prompting
+export CUBEAPM_READ_ONLY=true      # belt-and-suspenders: block accidental writes
+
+cubeapm traces services -o json
+cubeapm metrics query 'up' -o json
+```
+
+### Investigate a production error end-to-end
+
+```bash
+# 1. Recent error traces for a service
+cubeapm traces search --service payments --status error --last 1h -o json
+
+# 2. Inspect one trace's span waterfall
+cubeapm traces get <trace-id> -o json
+
+# 3. Correlated error logs in the same window
+cubeapm logs query 'level:error AND service:payments' --last 1h -o json
+
+# 4. Error-rate metric
+cubeapm metrics query 'rate(http_requests_total{service="payments",status=~"5.."}[5m])' -o json
+```
+
+### Find who suddenly started calling a host
+
+```bash
+cubeapm traces callers --host api.spyne.ai --last 1h --window 5m --topk 20 -o json
+```
+
+### Explore log schema before querying
+
+```bash
+cubeapm logs field-names --last 1h -o json
+cubeapm logs field-values service --last 1h -o json
+cubeapm logs streams --last 1h -o json
+```
+
+### Confirm logs still exist for an old incident window
+
+```bash
+cubeapm logs status --query 'service.name:MEDIA-SERVICE' --lookback 60 -o json | jq '.retentionHours, .earliestNonZeroBucket'
+```
+
+### Extract structured fields with jq
+
+```bash
+# Trace IDs and durations
+cubeapm traces search --service api-gateway --last 1h -o json | jq '.[] | {TRACE_ID, DURATION, OPERATION}'
+
+# Service list
+cubeapm traces services -o json | jq -r '.[].SERVICE'
+
+# Metric values
+cubeapm metrics query 'up' -o json | jq '.data.result[] | {instance: .metric.instance, value: .value[1]}'
+
+# Error counts per service from a stats query
+cubeapm logs stats 'level:error | stats by (service) count() as c' --last 1h -o json | jq '.'
+```
+
+### Ingest metrics scraped from a Prometheus exporter
+
+```bash
+curl -s http://localhost:9090/metrics | cubeapm ingest metrics --format prometheus
+```
+
+### Render the service dependency graph
+
+```bash
+cubeapm traces dependencies --last 24h --dot | dot -Tpng -o deps.png
+```
+
+### Switch between instances
+
+```bash
+cubeapm --profile staging traces services        # one-off
+cubeapm config profiles use production            # change the default
+```

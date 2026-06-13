@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark light" />
+  <title>CubeAPM CLI — Contact</title>
+  <meta name="description" content="Contact for CubeAPM CLI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    :root {
+      --bg: #08090c; --surface: #0f1219; --surface-2: #141823;
+      --border: rgba(255,255,255,0.07); --border-2: rgba(255,255,255,0.13);
+      --text: #e9ebf1; --text-muted: #9aa2b4; --text-subtle: #697083;
+      --accent: #7c9dff; --accent-2: #b388ff; --code-bg: #0b0e14;
+    }
+    body {
+      font-family: 'Geist', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background:
+        radial-gradient(1100px 520px at 50% -240px, rgba(124,157,255,0.12), transparent 62%),
+        radial-gradient(760px 420px at 88% -60px, rgba(179,136,255,0.08), transparent 58%),
+        var(--bg);
+      background-repeat: no-repeat; color: var(--text); font-size: 15px; line-height: 1.7; letter-spacing: -0.006em;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    }
+    code { font-family: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 1.5px 7px; font-size: .85em; color: var(--accent); }
+    ::selection { background: rgba(124,157,255,0.32); }
+    .container { max-width: 760px; margin: 0 auto; padding: 0 28px; }
+    nav { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 50; width: calc(100% - 28px); max-width: 760px; background: rgba(13,16,23,0.72); backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%); border: 1px solid var(--border-2); border-radius: 16px; box-shadow: 0 14px 44px -18px rgba(0,0,0,0.7); }
+    .nav-inner { margin: 0 auto; padding: 11px 14px 11px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; font-size: 15px; letter-spacing: -0.02em; color: var(--text); }
+    .brand .glyph { width: 26px; height: 26px; border-radius: 8px; background: linear-gradient(140deg, var(--accent), var(--accent-2)); color: #0a0b10; display: grid; place-items: center; font: 600 13px/1 'Geist Mono', monospace; }
+    .nav-links { display: flex; align-items: center; gap: 2px; }
+    .nav-links a { font-size: 13.5px; color: var(--text-muted); text-decoration: none; padding: 7px 11px; border-radius: 8px; transition: color .15s, background .15s; white-space: nowrap; }
+    .nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.05); }
+    header { padding: 104px 0 30px; }
+    header h1 { font-size: 40px; font-weight: 600; letter-spacing: -0.035em; line-height: 1.05; margin-bottom: 14px; color: var(--text); }
+    header .eff { font: 500 13px/1 'Geist Mono', monospace; color: var(--text-subtle); }
+    main.doc { padding-bottom: 40px; }
+    main.doc h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.015em; margin: 38px 0 12px; color: var(--text); }
+    main.doc p, main.doc li { color: var(--text-muted); margin-bottom: 12px; }
+    main.doc strong { color: var(--text); font-weight: 600; }
+    main.doc ul { padding-left: 22px; margin-bottom: 12px; }
+    main.doc li { margin-bottom: 8px; }
+    main.doc a { color: var(--accent); text-decoration: none; border-bottom: 1px solid rgba(124,157,255,0.32); transition: border-color .15s; }
+    main.doc a:hover { border-bottom-color: var(--accent); }
+    .lede { font-size: 16px; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 17px 19px; margin: 6px 0 8px; line-height: 1.6; }
+    .lede code { color: var(--accent); }
+    .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin: 20px 0 8px; }
+    .contact-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 19px; }
+    .contact-card .ico { font: 500 12px/1 'Geist Mono', monospace; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); margin-bottom: 9px; }
+    .contact-card .big { font-size: 16px; color: var(--text); margin-bottom: 5px; }
+    .contact-card .big a { color: var(--text); border-bottom: 1px solid var(--border-2); }
+    .contact-card .big a:hover { border-bottom-color: var(--accent); }
+    .contact-card .sub { font-size: 13px; color: var(--text-muted); margin: 0; }
+    footer { border-top: 1px solid var(--border); margin-top: 48px; padding: 36px 0 60px; }
+    .foot-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--text-subtle); }
+    .foot-inner .brand-sm { display: inline-flex; align-items: center; gap: 9px; }
+    .foot-inner .glyph-sm { width: 22px; height: 22px; border-radius: 7px; background: linear-gradient(140deg, var(--accent), var(--accent-2)); color: #0a0b10; display: grid; place-items: center; font: 600 11px/1 'Geist Mono', monospace; }
+    .foot-links a { color: var(--text-muted); text-decoration: none; margin: 0 2px; transition: color .15s; }
+    .foot-links a:hover { color: var(--text); }
+    .foot-links .sep { color: var(--text-subtle); margin: 0 5px; }
+    @media (max-width: 600px) { .container, .nav-inner { padding-left: 20px; padding-right: 20px; } header { padding: 84px 0 22px; } header h1 { font-size: 30px; } }
+</style>
+</head>
+<body>
+  <nav><div class="nav-inner">
+    <a href="./" class="brand"><span class="glyph">&gt;_</span>CubeAPM CLI</a>
+    <div class="nav-links">
+      <a href="./privacy-policy.html">Privacy</a>
+      <a href="./terms-of-service.html">Terms</a>
+      <a href="./contact.html">Contact</a>
+      <a href="https://github.com/piyush-gambhir/cubeapm-cli" target="_blank" rel="noopener">GitHub &#8599;</a>
+    </div>
+  </div></nav>
+  <main class="container doc">
+    <header>
+      <h1>Contact</h1>
+      <p class="eff">CubeAPM CLI &middot; Effective June 14, 2026</p>
+    </header>
+    <p class="lede">CubeAPM CLI is a free, open-source project maintained by <strong>Piyush Gambhir</strong>. Support is best-effort — here are the best ways to get in touch.</p>
+
+    <div class="contact-grid">
+      <div class="contact-card">
+        <p class="ico">Email</p>
+        <p class="big"><a href="mailto:developer.piyushgambhir@gmail.com">developer.piyushgambhir@gmail.com</a></p>
+        <p class="sub">General questions, privacy, and security reports.</p>
+      </div>
+      <div class="contact-card">
+        <p class="ico">Bugs &amp; features</p>
+        <p class="big"><a href="https://github.com/piyush-gambhir/cubeapm-cli/issues" target="_blank" rel="noopener">GitHub Issues &#8599;</a></p>
+        <p class="sub">The fastest way to report a bug or request a feature.</p>
+      </div>
+      <div class="contact-card">
+        <p class="ico">Source</p>
+        <p class="big"><a href="https://github.com/piyush-gambhir/cubeapm-cli" target="_blank" rel="noopener">piyush-gambhir/cubeapm-cli &#8599;</a></p>
+        <p class="sub">Read the code, open a pull request, or fork it.</p>
+      </div>
+    </div>
+
+    <h2>Security issues</h2>
+    <p>If you believe you've found a security vulnerability, please email <a href="mailto:developer.piyushgambhir@gmail.com">developer.piyushgambhir@gmail.com</a> with the details rather than opening a public issue. CubeAPM CLI stores credentials only on your own device and operates no servers, but responsible disclosure is always appreciated.</p>
+
+    <h2>Response time</h2>
+    <p>This is an independent side project, not a commercial product. The maintainer aims to respond when possible, but no response time or level of support is guaranteed. See the <a href="./terms-of-service.html">Terms of Service</a> for the full no-warranty terms.</p>
+
+    <h2>Not affiliated with CubeAPM</h2>
+    <p>CubeAPM CLI is an independent, unofficial tool and is not affiliated with, endorsed by, or sponsored by CubeAPM or its vendor. For issues with CubeAPM itself, contact that vendor's own support channels.</p>
+  </main>
+  <footer>
+    <div class="container foot-inner">
+      <span class="brand-sm"><span class="glyph-sm">&gt;_</span> CubeAPM CLI &middot; MIT License</span>
+      <span class="foot-links"><a href="./privacy-policy.html">Privacy</a><span class="sep">&middot;</span><a href="./terms-of-service.html">Terms</a><span class="sep">&middot;</span><a href="./contact.html">Contact</a><span class="sep">&middot;</span><a href="./llms.txt">llms.txt</a><span class="sep">&middot;</span><a href="https://github.com/piyush-gambhir/cubeapm-cli" target="_blank" rel="noopener">GitHub &#8599;</a></span>
+    </div>
+  </footer>
+</body>
+</html>
