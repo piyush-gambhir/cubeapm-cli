@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CubeAPM CLI — Privacy Policy</title>
+  <meta name="description" content="Privacy Policy for CubeAPM CLI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    :root { --bg: #fafafa; --surface: #fff; --text: #0a0a0a; --text-muted: #6b6b6b; --text-subtle: #9a9a9a; --border: #ececec; --code-bg: #f3f3f3; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.65; -webkit-font-smoothing: antialiased; }
+    code { font-family: 'JetBrains Mono', ui-monospace, monospace; background: var(--code-bg); border-radius: 4px; padding: 1px 6px; font-size: .88em; }
+    .container { max-width: 720px; margin: 0 auto; padding: 0 24px; }
+    nav { position: sticky; top: 0; z-index: 50; background: rgba(250,250,250,0.85); backdrop-filter: saturate(180%) blur(12px); -webkit-backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--border); }
+    .nav-inner { max-width: 720px; margin: 0 auto; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .nav-brand { font-weight: 600; font-size: 14px; color: var(--text); text-decoration: none; }
+    .nav-links a { font-size: 13px; color: var(--text-muted); text-decoration: none; padding: 6px 10px; border-radius: 6px; }
+    .nav-links a:hover { color: var(--text); background: var(--code-bg); }
+    header { padding: 72px 0 32px; }
+    header h1 { font-size: 34px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; margin-bottom: 12px; }
+    header .eff { font-size: 13px; color: var(--text-subtle); }
+    main.doc { padding-bottom: 40px; }
+    main.doc h2 { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; margin: 36px 0 10px; }
+    main.doc p, main.doc li { color: var(--text-muted); margin-bottom: 12px; }
+    main.doc strong { color: var(--text); font-weight: 600; }
+    main.doc ul { padding-left: 22px; margin-bottom: 12px; }
+    main.doc li { margin-bottom: 8px; }
+    main.doc a { color: var(--text); text-decoration: underline; }
+    .lede { font-size: 16px; color: var(--text-muted); border-left: 3px solid var(--border); padding-left: 16px; margin: 8px 0 4px; }
+    footer { padding: 40px 0; border-top: 1px solid var(--border); margin-top: 40px; font-size: 13px; color: var(--text-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+    footer a { color: var(--text-muted); text-decoration: none; }
+    footer a:hover { color: var(--text); }
+    @media (max-width: 600px) { header { padding: 48px 0 24px; } header h1 { font-size: 27px; } }
+</style>
+</head>
+<body>
+  <nav><div class="nav-inner">
+    <a href="./" class="nav-brand">CubeAPM CLI</a>
+    <div class="nav-links">
+      <a href="./privacy.html">Privacy</a>
+      <a href="./terms.html">Terms</a>
+      <a href="https://github.com/piyush-gambhir/cubeapm-cli" target="_blank" rel="noopener">GitHub &#8599;</a>
+    </div>
+  </div></nav>
+  <main class="container doc">
+    <header>
+      <h1>Privacy Policy</h1>
+      <p class="eff">CubeAPM CLI &middot; Effective June 14, 2026</p>
+    </header>
+    <p class="lede">CubeAPM CLI (the <code>cubeapm</code> command-line tool) is an open-source program that runs entirely on your own computer. It does <strong>not</strong> collect, transmit, or store your personal data on any server operated by the maintainer.</p>
+
+    <h2>1. No data collection</h2>
+    <p>The CLI runs locally on your machine. The maintainer operates <strong>no backend servers</strong> and receives <strong>no data</strong> from your use of the tool. There is no analytics, no telemetry, no tracking, and no advertising.</p>
+
+    <h2>2. Credentials &amp; local storage</h2>
+    <p>Any credentials you provide — API tokens, personal access tokens, OAuth access/refresh tokens, or passwords — are stored <strong>only on your device</strong>, in a local configuration file in your home directory (typically <code>~/.config/cubeapm-cli/config.yaml</code>, created with owner-only <code>0600</code> permissions). They are never sent to the maintainer or any third party.</p>
+
+    <h2>3. Network connections</h2>
+    <p>The CLI makes outbound network requests only to:</p>
+    <ul>
+      <li><strong>Your CubeAPM instance</strong> — the server you configure — to perform the actions you explicitly request.</li>
+      <li><strong>GitHub's public API</strong> — to check whether a newer release of the CLI is available. This request contains no personal data.</li>
+      <li><strong>Atlassian's identity service</strong> — for the OAuth login flow (Jira only), token exchange happens directly between your device and Atlassian; tokens are returned to and stored on your device.</li>
+    </ul>
+    <p>The maintainer is not a party to, and cannot observe, these connections.</p>
+
+    <h2>4. Data you access through the tool</h2>
+    <p>When authenticated, the CLI reads and writes data in your CubeAPM instance using the permissions you grant, solely to execute the commands you run. That data is shown in your terminal (or written to files you specify) and is <strong>not</strong> retained, copied, or transmitted anywhere by the maintainer.</p>
+
+    <h2>5. Third parties</h2>
+    <p>The maintainer does not sell, rent, or share any data. The tool integrates no third-party analytics or tracking SDKs. Your use of CubeAPM is governed by that service provider's own privacy policy.</p>
+
+    <h2>6. Children</h2>
+    <p>This tool is a developer utility and is not directed at children under 13.</p>
+
+    <h2>7. Changes to this policy</h2>
+    <p>Any changes will be posted on this page with an updated effective date.</p>
+
+    <h2>8. Contact</h2>
+    <p>Questions about this policy? Contact <strong>Piyush Gambhir</strong> at <a href="mailto:developer.piyushgambhir@gmail.com">developer.piyushgambhir@gmail.com</a>.</p>
+  </main>
+  <footer class="container">
+    <span>CubeAPM CLI &middot; MIT License</span>
+    <span><a href="./privacy.html">Privacy</a> &middot; <a href="./terms.html">Terms</a> &middot; <a href="https://github.com/piyush-gambhir/cubeapm-cli" target="_blank" rel="noopener">GitHub &#8599;</a></span>
+  </footer>
+</body>
+</html>
