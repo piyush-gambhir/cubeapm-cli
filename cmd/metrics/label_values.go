@@ -14,10 +14,11 @@ import (
 
 func newLabelValuesCmd() *cobra.Command {
 	var (
-		from string
-		to   string
-		last string
-		like string
+		from  string
+		to    string
+		last  string
+		like  string
+		match []string
 	)
 
 	cmd := &cobra.Command{
@@ -55,6 +56,9 @@ Examples:
   # Narrow to values containing a substring (case-insensitive)
   cubeapm metrics label-values service --like media
 
+  # Scope values to a series selector, e.g. only the PROD environment
+  cubeapm metrics label-values service.name --match '{env="PROD"}'
+
   # Output as JSON
   cubeapm metrics label-values job -o json`,
 		Args: cobra.ExactArgs(1),
@@ -66,14 +70,14 @@ Examples:
 				return err
 			}
 
-			values, err := cmdutil.APIClient.GetLabelValues(label, start, end)
+			values, err := cmdutil.APIClient.GetLabelValues(label, match, start, end)
 			if err != nil {
 				return err
 			}
 
 			// --like does a case-insensitive substring match. Service
 			// inventories often have case-inconsistent spellings
-			// (MEDIA-SERVICE, Media-Service, media_service) — narrowing to
+			// (MEDIA-SERVICE, Media-Service, media_service), narrowing to
 			// a family is more useful than eyeballing a long sorted list.
 			if like != "" {
 				needle := strings.ToLower(like)
@@ -109,6 +113,7 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&like, "like", "", "Case-insensitive substring filter applied to returned values")
+	cmd.Flags().StringArrayVar(&match, "match", nil, `Series selector to scope returned values; repeatable and ORed (e.g. --match '{env="PROD"}')`)
 	timeflag.AddTimeFlags(cmd, &from, &to, &last)
 
 	return cmd

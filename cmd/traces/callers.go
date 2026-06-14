@@ -52,7 +52,7 @@ Specify the target host either explicitly with --host (matches the
 group_name label, typically "api.spyne.ai", "internal.corp", etc.) or
 via --service to target a specific service's inbound traffic. When
 --service is given without --host, the host is inferred as "HTTP " +
-a conventional domain — if your setup differs, use --host explicitly.
+a conventional domain, if your setup differs, use --host explicitly.
 
 Time ranges can be specified as:
   - Relative:   --last 1h
@@ -97,7 +97,7 @@ Examples:
 				topk, groupName, window,
 			)
 			// If the caller asked to narrow to a specific called service,
-			// add that filter as well — covers deployments where a caller
+			// add that filter as well, covers deployments where a caller
 			// hits multiple hosts and you want only the traffic to the
 			// named service.
 			if service != "" {
@@ -135,7 +135,7 @@ Examples:
 			}
 
 			if len(rows) == 0 {
-				fmt.Println("No callers found. Check --host spelling — try `cubeapm metrics series --match 'cube_apm_latency_count{span_kind=\"client\"}'` to discover valid group_name values.")
+				fmt.Println("No callers found. Check --host spelling, try `cubeapm metrics series --match 'cube_apm_latency_count{span_kind=\"client\"}'` to discover valid group_name values.")
 				return nil
 			}
 
@@ -154,7 +154,7 @@ Examples:
 		},
 	}
 
-	cmd.Flags().StringVar(&host, "host", "", `Target host (matches the "group_name" label — e.g. "api.spyne.ai")`)
+	cmd.Flags().StringVar(&host, "host", "", `Target host (matches the "group_name" label, e.g. "api.spyne.ai")`)
 	cmd.Flags().StringVar(&service, "service", "", "Filter to callers of this target service")
 	cmd.Flags().StringVar(&window, "window", "2m", "Rate window (e.g. 2m, 5m). Shorter windows are more responsive but noisier.")
 	cmd.Flags().IntVar(&topk, "topk", 10, "Maximum number of callers to return")
@@ -164,7 +164,7 @@ Examples:
 }
 
 // regexSafe escapes the small set of PromQL regex metacharacters that
-// show up in real service names. We deliberately stay minimal — users
+// show up in real service names. We deliberately stay minimal, users
 // passing regex-intent strings can edit the query directly.
 func regexSafe(s string) string {
 	replacer := strings.NewReplacer(

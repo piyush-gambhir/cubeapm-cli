@@ -130,9 +130,8 @@ func TestGetStats(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
-		// Stats query returns newline-delimited JSON
-		fmt.Fprintln(w, `{"service":"api-gateway","count":"100"}`)
-		fmt.Fprintln(w, `{"service":"payments","count":"50"}`)
+		// CubeAPM returns Prometheus-vector JSON for stats, not NDJSON.
+		fmt.Fprintln(w, `{"status":"success","data":{"resultType":"vector","result":[{"metric":{"service":"api-gateway"},"value":[1700000000,"100"]},{"metric":{"service":"payments"},"value":[1700000000,"50"]}]}}`)
 	}))
 	defer ts.Close()
 
@@ -161,8 +160,7 @@ func TestGetStreams(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
-		fmt.Fprintln(w, `{"value":"{host=\"web-1\"}","hits":500}`)
-		fmt.Fprintln(w, `{"value":"{host=\"web-2\"}","hits":300}`)
+		fmt.Fprintln(w, `{"values":[{"value":"{host=\"web-1\"}","hits":500},{"value":"{host=\"web-2\"}","hits":300}]}`)
 	}))
 	defer ts.Close()
 
@@ -194,9 +192,7 @@ func TestGetFieldNames(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
-		fmt.Fprintln(w, `{"value":"_msg","hits":1000}`)
-		fmt.Fprintln(w, `{"value":"level","hits":800}`)
-		fmt.Fprintln(w, `{"value":"service","hits":600}`)
+		fmt.Fprintln(w, `{"values":[{"value":"_msg","hits":1000},{"value":"level","hits":800},{"value":"service","hits":600}]}`)
 	}))
 	defer ts.Close()
 
@@ -230,8 +226,7 @@ func TestGetFieldValues(t *testing.T) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
 		gotField = r.URL.Query().Get("field")
-		fmt.Fprintln(w, `{"value":"error","hits":500}`)
-		fmt.Fprintln(w, `{"value":"info","hits":300}`)
+		fmt.Fprintln(w, `{"values":[{"value":"error","hits":500},{"value":"info","hits":300}]}`)
 	}))
 	defer ts.Close()
 

@@ -38,10 +38,10 @@ This subcommand exists because CubeAPM's logs API does not expose retention
 configuration directly. Instead, this command samples 24-hour buckets from the
 last N days (default 30) and reports:
 
-  - earliestNonZeroBucket — the oldest day with at least one log entry
-  - latestNonZeroBucket   — the most recent day with at least one log entry
-  - retentionHours        — wall-clock hours from earliest bucket to now
-  - nonEmptyDays          — how many of the sampled days had any logs
+  - earliestNonZeroBucket, the oldest day with at least one log entry
+  - latestNonZeroBucket  , the most recent day with at least one log entry
+  - retentionHours       , wall-clock hours from earliest bucket to now
+  - nonEmptyDays         , how many of the sampled days had any logs
 
 Use it before running an RCA on an incident more than a day or two old: if the
 earliest non-zero bucket is more recent than the incident window, the logs for
@@ -113,10 +113,10 @@ Examples:
 					status.RetentionHours = int(now.Sub(t).Hours())
 				}
 				if status.RetentionHours > 0 && status.RetentionHours < 24*(lookback-1) {
-					status.Note = fmt.Sprintf("oldest non-zero bucket is %d h ago, less than the %d-day lookback — likely the actual retention horizon", status.RetentionHours, lookback)
+					status.Note = fmt.Sprintf("oldest non-zero bucket is %d h ago, less than the %d-day lookback, likely the actual retention horizon", status.RetentionHours, lookback)
 				}
 			} else {
-				status.Note = fmt.Sprintf("no logs found in the last %d days matching query %q — either logs are not flowing for this query, or retention is shorter than the smallest bucket (24 h)", lookback, query)
+				status.Note = fmt.Sprintf("no logs found in the last %d days matching query %q, either logs are not flowing for this query, or retention is shorter than the smallest bucket (24 h)", lookback, query)
 			}
 
 			if cmdutil.OutputFormat != output.FormatTable {

@@ -183,4 +183,4 @@ This triggers GitHub Actions to:
 
 ## License
 
-This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+This project is licensed under the MIT License, see [LICENSE](LICENSE) for details.

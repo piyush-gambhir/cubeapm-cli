@@ -65,11 +65,12 @@ Override via flags (`--query-port`, `--ingest-port`, `--admin-port`), env vars, 
    ```
 4. **Use single quotes around PromQL/LogsQL** to avoid shell escaping issues with curly braces, parentheses, and pipes.
 5. **Multi-port awareness:** Query port (3140) for reads, ingest port (3130) for writes, admin port (3199) for deletion. Usually only the query port matters.
-6. **Trace investigation follows a standard flow:** `services` -> `operations` -> `search` -> `get` (waterfall).
-7. **Duration filter values** use Go-style notation: `500ms`, `1s`, `100us`, `5m`.
-8. **Trace IDs** are 32-character hex strings. Get them from `traces search` output.
-9. **Range queries** auto-calculate step (~250 data points) if `--step` is omitted.
-10. **Command aliases exist** for convenience: `traces`/`trace`, `metrics`/`metric`, `logs`/`log`, `services`/`svc`, `operations`/`ops`, `dependencies`/`deps`, `query-range`/`range`, `field-names`/`fields`.
+6. **Trace investigation follows a standard flow:** `services` -> `search` -> `get` (waterfall). `operations` and `dependencies` are not exposed by all CubeAPM deployments; if they 400 with "unsupported path", use `traces search` and read the OPERATION column instead.
+7. **Environment values are UPPER-CASE** (e.g. `PROD`, `UAT`). The label is `env` on some metrics and `cube.environment` on others. `traces search` requires both `--service` and `--env` on most CubeAPM deployments.
+8. **Duration filter values** use Go-style notation: `500ms`, `1s`, `100us`, `5m`.
+9. **Trace IDs** are 32-character hex strings. Get them from `traces search` output.
+10. **Range queries** auto-calculate step (~250 data points) if `--step` is omitted.
+11. **Command aliases exist** for convenience: `traces`/`trace`, `metrics`/`metric`, `logs`/`log`, `services`/`svc`, `operations`/`ops`, `dependencies`/`deps`, `query-range`/`range`, `field-names`/`fields`.
 
 ---
 
@@ -145,6 +146,9 @@ cubeapm metrics label-values __name__ -o json
 cubeapm metrics label-values job -o json
 cubeapm metrics label-values instance --last 24h -o json
 
+# Scope to a series selector (--match is repeatable and ORed; avoids the 30k-cardinality limit)
+cubeapm metrics label-values service.name --match '{env="PROD"}' -o json
+
 # Find time series matching a selector
 cubeapm metrics series --match 'http_requests_total' -o json
 
@@ -153,6 +157,18 @@ cubeapm metrics series --match '{__name__=~"http_.*"}' --last 24h -o json
 
 # Limit returned series
 cubeapm metrics series --match 'http_requests_total' --limit 50 -o json
+```
+
+### Workflow 4b: List services in a specific environment
+
+```bash
+# Via traces services (metrics-derived; may miss trace-only services)
+cubeapm traces services --env PROD -o json
+cubeapm traces services --env UAT --last 24h -o json
+
+# Via metrics label-values with a match selector (avoids 30k-cardinality series limit)
+cubeapm metrics label-values service.name --match '{env="PROD"}' -o json
+cubeapm metrics label-values service.name --match '{cube.environment="PROD"}' -o json
 ```
 
 ### Workflow 5: Search and analyze traces
@@ -170,8 +186,8 @@ cubeapm traces search --service api-gateway --query "GET /api/users" --last 1h -
 # Filter by span tags
 cubeapm traces search --service api-gateway --tags "http.method=POST" --tags "http.status_code=500" -o json
 
-# Filter by environment and span kind
-cubeapm traces search --service payments --env production --span-kind server -o json
+# Filter by environment and span kind (env values are UPPER-CASE: PROD, UAT, etc.)
+cubeapm traces search --service payments --env PROD --span-kind server -o json
 
 # Search with a custom time range
 cubeapm traces search --service auth --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z -o json
@@ -282,6 +298,8 @@ cubeapm traces dependencies --last 24h --dot | dot -Tpng -o deps.png
 
 ### Workflow 11: Ingest metrics
 
+Supported formats: `prometheus` (POST /api/metrics/v1/save), `otlp` (POST /api/metrics/v1/save/otlp), `remote-write` (POST /api/metrics/api/v1/write).
+
 ```bash
 # Push metrics in Prometheus exposition format from a file
 cubeapm ingest metrics --format prometheus --file metrics.txt
@@ -291,9 +309,18 @@ curl -s http://localhost:9090/metrics | cubeapm ingest metrics --format promethe
 
 # Ingest OTLP protobuf metrics
 cubeapm ingest metrics --format otlp --file metrics.pb
+
+# Ingest Prometheus remote-write (Snappy-compressed protobuf)
+cubeapm ingest metrics --format remote-write --file remote-write.pb
 ```
 
 ### Workflow 12: Ingest logs
+
+Supported formats and their endpoints (on the ingest port, default 3130):
+- `jsonline`: POST /api/logs/insert/jsonline
+- `otlp`: POST /api/logs/insert/opentelemetry/v1/logs
+- `loki`: POST /api/logs/insert/loki/api/v1/push
+- `elastic`: POST /api/logs/insert/elasticsearch/_bulk
 
 ```bash
 # Ingest logs as JSON lines from a file
@@ -443,7 +470,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 
 | Command | Key Flags | Description |
 |---------|-----------|-------------|
-| `traces services` | | List all services (alias: `svc`) |
+| `traces services` | `--env` | List all services (alias: `svc`); `--env PROD` filters to a specific environment (metrics-derived, UPPER-CASE values) |
 | `traces operations <svc>` | `--span-kind` | List operations for a service (alias: `ops`) |
 | `traces search` | `--service`, `--status`, `--min-duration`, `--max-duration`, `--tags`, `--query`, `--env`, `--span-kind`, `--limit`, `--last`/`--from`/`--to` | Search traces |
 | `traces get <id>` | `--last`/`--from`/`--to` | Get trace by ID (waterfall in table mode) |
@@ -456,7 +483,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 | `metrics query <promql>` | `--time` | Instant PromQL query |
 | `metrics query-range <promql>` | `--step`, `--last`/`--from`/`--to` | Range PromQL query (alias: `range`) |
 | `metrics labels` | `--last`/`--from`/`--to` | List all label names |
-| `metrics label-values <label>` | `--last`/`--from`/`--to` | List values for a label |
+| `metrics label-values <label>` | `--match`, `--like`, `--last`/`--from`/`--to` | List values for a label; `--match '{env="PROD"}'` scopes to a series selector (repeatable, ORed) |
 | `metrics series` | `--match`, `--limit`, `--last`/`--from`/`--to` | Find time series |
 
 ### Logs (`cubeapm logs` / `log`)
@@ -477,7 +504,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 
 | Command | Key Flags | Description |
 |---------|-----------|-------------|
-| `ingest metrics` | `--format` (prometheus/otlp), `--file` | Push metrics data |
+| `ingest metrics` | `--format` (prometheus/otlp/remote-write), `--file` | Push metrics data |
 | `ingest logs` | `--format` (jsonline/otlp/loki/elastic), `--file` | Push log data |
 
 ### Config (`cubeapm config`)

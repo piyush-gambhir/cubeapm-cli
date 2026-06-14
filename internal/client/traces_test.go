@@ -405,3 +405,67 @@ func TestDecodeCubeID(t *testing.T) {
 		})
 	}
 }
+
+func TestGetTrace_NativeShape(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// CubeAPM native trace-get: {spans:[{...,process:{service_name}}], process_map:[]}
+		w.Write([]byte(`{"spans":[{"trace_id":"e6319082328509fe1e0aa6734da74b2b","span_id":"1e0aa6734da74b2b","operation_name":"GET /x","start_time":"2026-06-14T11:09:32Z","duration":1234,"process":{"service_name":"CONSOLE-BACKEND"}}],"process_map":[]}`))
+	}))
+	defer ts.Close()
+
+	c := newTestClient(ts)
+	tr, err := c.GetTrace("e6319082328509fe1e0aa6734da74b2b", time.Time{}, time.Time{})
+	if err != nil {
+		t.Fatalf("GetTrace() error = %v", err)
+	}
+	if len(tr.Spans) != 1 {
+		t.Fatalf("got %d spans, want 1", len(tr.Spans))
+	}
+	if tr.Spans[0].OperationName != "GET /x" {
+		t.Errorf("operation = %q, want %q", tr.Spans[0].OperationName, "GET /x")
+	}
+	pid := tr.Spans[0].ProcessID
+	if pid == "" {
+		t.Fatalf("span ProcessID empty; inline process not synthesized")
+	}
+	if tr.Processes[pid].ServiceName != "CONSOLE-BACKEND" {
+		t.Errorf("service = %q, want CONSOLE-BACKEND", tr.Processes[pid].ServiceName)
+	}
+}
+
+func TestGetServicesByEnv(t *testing.T) {
+	var calls int
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if len(r.URL.Query()["match[]"]) == 0 {
+			t.Errorf("expected match[] param for %s", r.URL.Path)
+		}
+		data := []string{"A", "B"} // label "service"
+		if strings.Contains(r.URL.Path, "/label/service.name/") {
+			data = []string{"B", "C"}
+		}
+		json.NewEncoder(w).Encode(map[string]interface{}{"status": "success", "data": data})
+	}))
+	defer ts.Close()
+
+	c := newTestClient(ts)
+	svcs, err := c.GetServicesByEnv("PROD", time.Time{}, time.Time{})
+	if err != nil {
+		t.Fatalf("GetServicesByEnv() error = %v", err)
+	}
+	if calls != 4 { // 2 labels x 2 env matchers
+		t.Errorf("got %d label-values calls, want 4", calls)
+	}
+	got := map[string]bool{}
+	for _, s := range svcs {
+		got[s] = true
+	}
+	for _, want := range []string{"A", "B", "C"} {
+		if !got[want] {
+			t.Errorf("missing service %q in %v", want, svcs)
+		}
+	}
+	if len(svcs) != 3 {
+		t.Errorf("got %d services, want 3 (deduped)", len(svcs))
+	}
+}

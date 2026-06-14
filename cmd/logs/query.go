@@ -17,7 +17,7 @@ import (
 // in front of the user's LogsQL query. The user query is parenthesized so a
 // top-level OR keeps its meaning: without parens, `service:x AND a OR b`
 // parses as `(service:x AND a) OR b` and silently matches other services.
-// Queries containing pipes are left unwrapped — LogsQL pipes are top-level
+// Queries containing pipes are left unwrapped, LogsQL pipes are top-level
 // and cannot appear inside parentheses; AND binds before `|` anyway. The
 // match-all query `*` is also left bare since wrapping adds nothing.
 func prependFilters(filters []string, logsql string) string {
@@ -135,11 +135,11 @@ Examples:
 					fmt.Println("No logs found.")
 					// When a --service filter is set, a common cause of empty
 					// results is a casing / naming mismatch on the service
-					// field — or the service simply doesn't ship logs. Give
+					// field, or the service simply doesn't ship logs. Give
 					// users a fast path to diagnose that rather than silently
 					// showing zero rows.
 					if service != "" {
-						fmt.Fprintf(os.Stderr, "\nHint: the --service filter narrowed by `service:%s`. If you expected results, check spelling with:\n  cubeapm logs field-values service --last 24h\n  cubeapm logs field-values service.name --last 24h\nSome services don't emit logs to CubeAPM at all — verify there.\n", service)
+						fmt.Fprintf(os.Stderr, "\nHint: the --service filter narrowed by `service:%s`. If you expected results, check spelling with:\n  cubeapm logs field-values service --last 24h\n  cubeapm logs field-values service.name --last 24h\nSome services don't emit logs to CubeAPM at all, verify there.\n", service)
 					}
 					return nil
 				}

@@ -199,8 +199,10 @@ func TestGetLabels(t *testing.T) {
 
 func TestGetLabelValues(t *testing.T) {
 	var gotPath string
+	var gotMatch []string
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
+		gotMatch = r.URL.Query()["match[]"]
 		json.NewEncoder(w).Encode(map[string]interface{}{
 			"status": "success",
 			"data":   []string{"prometheus", "node-exporter", "grafana"},
@@ -209,13 +211,16 @@ func TestGetLabelValues(t *testing.T) {
 	defer ts.Close()
 
 	c := newTestClient(ts)
-	values, err := c.GetLabelValues("job", time.Time{}, time.Time{})
+	values, err := c.GetLabelValues("job", []string{`{env="PROD"}`}, time.Time{}, time.Time{})
 	if err != nil {
 		t.Fatalf("GetLabelValues() error = %v", err)
 	}
 
 	if gotPath != "/api/metrics/api/v1/label/job/values" {
 		t.Errorf("path = %q, want /api/metrics/api/v1/label/job/values", gotPath)
+	}
+	if len(gotMatch) != 1 || gotMatch[0] != `{env="PROD"}` {
+		t.Errorf(`match[] = %v, want [{env="PROD"}]`, gotMatch)
 	}
 	if len(values) != 3 {
 		t.Errorf("got %d values, want 3", len(values))

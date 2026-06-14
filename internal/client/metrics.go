@@ -84,9 +84,14 @@ func (c *Client) GetLabels(from, to time.Time) ([]string, error) {
 	return resp.Data, nil
 }
 
-// GetLabelValues returns values for a specific label.
-func (c *Client) GetLabelValues(label string, from, to time.Time) ([]string, error) {
+// GetLabelValues returns values for a specific label. The optional match
+// selectors (repeatable, e.g. {env="PROD"}) scope the returned values to
+// series matching ANY of them, CubeAPM/Prometheus support match[] here.
+func (c *Client) GetLabelValues(label string, match []string, from, to time.Time) ([]string, error) {
 	params := url.Values{}
+	for _, m := range match {
+		params.Add("match[]", m)
+	}
 	if !from.IsZero() {
 		params.Set("start", strconv.FormatFloat(float64(from.Unix()), 'f', 0, 64))
 	}

@@ -54,7 +54,7 @@ func TestCheckReadOnly_WriteCmdAllowed(t *testing.T) {
 func TestCheckReadOnly_ReadCmdAllowed(t *testing.T) {
 	cmd := &cobra.Command{
 		Use: "list-things",
-		// No "mutates" annotation — this is a read command.
+		// No "mutates" annotation, this is a read command.
 	}
 
 	resolved := config.ResolvedConfig{ReadOnly: true}

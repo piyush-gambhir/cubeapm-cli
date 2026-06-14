@@ -68,7 +68,7 @@ type JaegerSearchResponse struct {
 	} `json:"errors,omitempty"`
 }
 
-// CubeSearchResultList is the native CubeAPM search response shape — a
+// CubeSearchResultList is the native CubeAPM search response shape, a
 // flat JSON array where each element wraps one trace with its "key span".
 // The wire format differs from Jaeger in three ways: no outer data wrapper,
 // snake_case span fields (trace_id/span_id/operation_name/start_time),
@@ -101,6 +101,17 @@ type CubeSpan struct {
 	Duration      int64         `json:"duration"`
 	Tags          []CubeSpanTag `json:"tags,omitempty"`
 	ProcessID     string        `json:"process_id,omitempty"`
+	// Process is the inline per-span process CubeAPM attaches in its native
+	// responses (service_name + resource tags) when there is no top-level
+	// process_map / process_id reference.
+	Process *CubeProcess `json:"process,omitempty"`
+}
+
+// CubeProcess is CubeAPM's inline span process descriptor.
+type CubeProcess struct {
+	ServiceNameSnake string        `json:"service_name"`
+	ServiceName      string        `json:"serviceName"`
+	Tags             []CubeSpanTag `json:"tags,omitempty"`
 }
 
 // CubeSpanRef mirrors Jaeger's SpanRef but with snake_case on the wire.

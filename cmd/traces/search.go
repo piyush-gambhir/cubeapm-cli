@@ -39,7 +39,7 @@ operation, duration, status, and timestamp for each matching trace's root span.
 
 Filters:
   --service       Filter by service name (e.g., "api-gateway", "payments")
-  --env           Filter by environment tag (e.g., "production", "staging")
+  --env           Filter by environment (values are upper-case, e.g. "PROD", "UAT")
   --query         Filter by operation name (e.g., "GET /api/users")
   --status        Filter by span status: "error" or "ok"
   --min-duration  Filter traces slower than this duration (e.g., "500ms", "1s", "100us")
@@ -70,8 +70,8 @@ Examples:
   # Filter by span tags
   cubeapm traces search --service api-gateway --tags "http.method=POST" --tags "http.status_code=500"
 
-  # Filter by environment and span kind
-  cubeapm traces search --service payments --env production --span-kind server
+  # Filter by environment and span kind (env values are upper-case: PROD, UAT)
+  cubeapm traces search --service payments --env PROD --span-kind server
 
   # Search with a custom time range
   cubeapm traces search --service auth --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z
@@ -137,10 +137,24 @@ Examples:
 					}
 				}
 
-				// Get service name from processes
+				// Resolve the service name from the process map, falling back to
+				// a service.name span tag or the --service filter. CubeAPM's native
+				// search response omits the process map, so without this fallback the
+				// SERVICE column would always be blank.
 				serviceName := ""
 				if proc, ok := trace.Processes[rootSpan.ProcessID]; ok {
 					serviceName = proc.ServiceName
+				}
+				if serviceName == "" {
+					for _, tag := range rootSpan.Tags {
+						if tag.Key == "service.name" {
+							serviceName = fmt.Sprintf("%v", tag.Value)
+							break
+						}
+					}
+				}
+				if serviceName == "" {
+					serviceName = service
 				}
 
 				// Get status from tags
@@ -172,7 +186,7 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&service, "service", "", "Filter by service name (e.g., \"api-gateway\")")
-	cmd.Flags().StringVar(&env, "env", "", "Filter by environment (e.g., \"production\", \"staging\")")
+	cmd.Flags().StringVar(&env, "env", "", "Filter by environment; values are upper-case (e.g. \"PROD\", \"UAT\")")
 	cmd.Flags().StringVar(&query, "query", "", "Filter by operation name (e.g., \"GET /api/users\")")
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum number of traces to return")
 	cmd.Flags().StringVar(&spanKind, "span-kind", "server", "Filter by span kind (client, server, producer, consumer, internal). Defaults to server because some CubeAPM deployments require a non-empty value.")

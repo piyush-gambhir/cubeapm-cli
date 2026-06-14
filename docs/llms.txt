@@ -224,9 +224,11 @@ cubeapm traces search [flags]
 
 Search for traces matching filters. Table output shows the root span per matching trace: `TRACE_ID`, `SERVICE`, `OPERATION`, `DURATION`, `STATUS`, `TIMESTAMP`.
 
+**Required on many CubeAPM deployments:** both `--service` and `--env` must be provided. The server returns a clear error if either is missing. Environment values are UPPER-CASE (e.g. `PROD`, `UAT`).
+
 Flags:
 - `--service <name>`, filter by service name (e.g. `api-gateway`)
-- `--env <env>`, filter by environment tag (added as an `environment` tag, e.g. `production`)
+- `--env <env>`, filter by environment (UPPER-CASE values: `PROD`, `UAT`, etc.)
 - `--query <op>`, filter by operation name (e.g. `GET /api/users`)
 - `--status <error|ok>`, `error` matches the `error=true` tag; `ok` matches `otel.status_code=OK`
 - `--min-duration <dur>`, only traces slower than this (`500ms`, `1s`, `100us`)
@@ -239,10 +241,10 @@ Flags:
 
 ```bash
 # Errors slower than 500ms for a service in the last hour
-cubeapm traces search --service payments --status error --min-duration 500ms --last 1h
+cubeapm traces search --service payments --env PROD --status error --min-duration 500ms --last 1h
 
 # Filter by operation and tags, output JSON, extract trace IDs
-cubeapm traces search --service api-gateway --query "GET /api/users" \
+cubeapm traces search --service api-gateway --env PROD --query "GET /api/users" \
   --tags http.status_code=500 -o json | jq -r '.[].TRACE_ID'
 ```
 
@@ -264,14 +266,24 @@ cubeapm traces get abc123def456789 -o json
 #### traces services
 
 ```
-cubeapm traces services
+cubeapm traces services [flags]
 ```
 
 List all services that have reported traces (sorted). Alias: `svc`. Column: `SERVICE`.
 
+With `--env`, list only services visible in a specific environment (e.g. `PROD`, `UAT`). This path is metrics-derived: it queries label-values filtered by `env` and `cube.environment` labels, then unions `service` and `service.name` label values. A service that emits only traces (no metrics) in that environment may not appear.
+
+Flags:
+- `--env <env>`, list only services seen in this environment (metrics-derived; UPPER-CASE values)
+- `--from` / `--to` / `--last`, time range for the metrics lookup (default last 1h; only used with `--env`)
+
 ```bash
 cubeapm traces services
 cubeapm traces svc -o json
+
+# List services active in PROD (env values are UPPER-CASE)
+cubeapm traces services --env PROD
+cubeapm traces services --env PROD --last 24h -o json
 ```
 
 #### traces operations
@@ -281,6 +293,8 @@ cubeapm traces operations <service> [flags]
 ```
 
 List operations (endpoints/methods) reported by a service. Alias: `ops`. Columns: `OPERATION`, `SPAN_KIND`.
+
+**Caveat:** this endpoint is not exposed by all CubeAPM deployments. When not exposed, the server returns a "unsupported path requested" error. The CLI surfaces this as a clear message: run `cubeapm traces search --service <svc> --env <ENV>` and read the OPERATION column instead.
 
 Flags: `--span-kind <kind>`, filter by span kind (no default; empty = all kinds).
 
@@ -296,6 +310,8 @@ cubeapm traces dependencies [flags]
 ```
 
 Service dependency graph over a time range. Alias: `deps`. Columns: `PARENT`, `CHILD`, `CALL_COUNT`.
+
+**Caveat:** this endpoint is not exposed by all CubeAPM deployments. When not exposed, the server returns a "unsupported path requested" error and the CLI surfaces it as a clear message.
 
 Flags:
 - `--dot`, emit Graphviz DOT instead of a table (pipe to `dot`)
@@ -391,11 +407,18 @@ List all values for a given label (sorted). Column: `VALUE`.
 
 Flags:
 - `--like <substr>`, case-insensitive substring filter on returned values
+- `--match <selector>`, series selector to scope returned values; repeatable and ORed (e.g. `--match '{env="PROD"}'`). Uses the Prometheus `match[]` extension. Useful to avoid the 30k-cardinality limit that applies to the unfiltered endpoint.
 - `--from` / `--to` / `--last`, time range (default last 1h)
 
 ```bash
 cubeapm metrics label-values __name__
 cubeapm metrics label-values service --like media --last 24h
+
+# List service names only in the PROD environment
+cubeapm metrics label-values service.name --match '{env="PROD"}'
+
+# Scope with cube.environment label (some CubeAPM metrics use this instead of env)
+cubeapm metrics label-values service.name --match '{cube.environment="PROD"}'
 ```
 
 #### metrics series
@@ -609,16 +632,22 @@ Push metrics or logs read from a file or stdin. Both subcommands are **mutating*
 cubeapm ingest metrics [flags]
 ```
 
-Push metrics. Formats: `prometheus` (exposition/text, default), `otlp` (OpenTelemetry protobuf binary).
+Push metrics. Formats: `prometheus` (exposition/text, default), `otlp` (OpenTelemetry protobuf binary), `remote-write` (Prometheus remote write, Snappy-compressed protobuf).
+
+Ingest endpoints (on `http://<server>:<ingest-port>`, default port 3130):
+- `prometheus`: POST /api/metrics/v1/save
+- `otlp`: POST /api/metrics/v1/save/otlp
+- `remote-write`: POST /api/metrics/api/v1/write
 
 Flags:
-- `--format <fmt>`, `prometheus` | `otlp` (default `prometheus`)
+- `--format <fmt>`, `prometheus` | `otlp` | `remote-write` (default `prometheus`)
 - `--file <path>`, input file; `-` for stdin (default `-`). With no `--file`, stdin must be piped/redirected.
 
 ```bash
 cubeapm ingest metrics --format prometheus --file metrics.txt
 curl -s http://localhost:9090/metrics | cubeapm ingest metrics --format prometheus
 cubeapm ingest metrics --format otlp --file metrics.pb
+cubeapm ingest metrics --format remote-write --file remote-write.pb
 ```
 
 #### ingest logs
@@ -628,6 +657,12 @@ cubeapm ingest logs [flags]
 ```
 
 Push logs. Formats: `jsonline` (newline-delimited JSON, default), `otlp` (protobuf), `loki` (Loki push JSON), `elastic` (Elasticsearch bulk NDJSON).
+
+Ingest endpoints (on `http://<server>:<ingest-port>`, default port 3130):
+- `jsonline`: POST /api/logs/insert/jsonline
+- `otlp`: POST /api/logs/insert/opentelemetry/v1/logs
+- `loki`: POST /api/logs/insert/loki/api/v1/push
+- `elastic`: POST /api/logs/insert/elasticsearch/_bulk
 
 Flags:
 - `--format <fmt>`, `jsonline` | `otlp` | `loki` | `elastic` (default `jsonline`)
@@ -782,6 +817,17 @@ Notes:
 - The session cookie and its expiry are written automatically after a successful Kratos login and refreshed on auto-re-auth.
 - The file is saved with `0600` permissions. Prefer environment variables over storing `password` in the file for higher-security setups.
 
+## Environments
+
+CubeAPM uses an environment label to segment telemetry by deployment stage (production, UAT, etc.).
+
+Key facts:
+- Environment values are UPPER-CASE: `PROD`, `UAT`, `STAGING`, etc.
+- The label name is inconsistent across metric families: some use `env`, others use `cube.environment`. `traces services --env` and `metrics label-values --match` account for both automatically.
+- `traces search` requires both `--service` and `--env` on most CubeAPM deployments (the server returns a clear error if either is missing).
+- `traces operations` and `traces dependencies` are not exposed by all CubeAPM deployments. When unavailable, the server returns an "unsupported path" error. Use `traces search` and read the OPERATION column to discover operations instead.
+- To list services in an environment, use `cubeapm traces services --env PROD` (metrics-derived, may miss trace-only services) or `cubeapm metrics label-values service.name --match '{env="PROD"}'` (avoids the 30k-cardinality series limit).
+
 ## Examples / recipes
 
 ### Fully non-interactive setup (CI / agent)
@@ -853,6 +899,32 @@ cubeapm logs stats 'level:error | stats by (service) count() as c' --last 1h -o 
 
 ```bash
 curl -s http://localhost:9090/metrics | cubeapm ingest metrics --format prometheus
+```
+
+### List services active in a specific environment
+
+```bash
+# Via traces services (metrics-derived; may miss trace-only services)
+cubeapm traces services --env PROD
+cubeapm traces services --env UAT --last 24h -o json
+
+# Via metrics label-values with a series selector (avoids the 30k-cardinality limit)
+cubeapm metrics label-values service.name --match '{env="PROD"}'
+cubeapm metrics label-values service.name --match '{cube.environment="PROD"}'
+
+# Both labels at once: run both commands and union the results
+cubeapm metrics label-values service.name --match '{env="PROD"}' -o json
+cubeapm metrics label-values service.name --match '{cube.environment="PROD"}' -o json
+```
+
+### Search traces in an environment (both flags typically required)
+
+```bash
+# On most CubeAPM deployments, both --service and --env are required for traces search
+cubeapm traces search --service payments --env PROD --last 1h -o json
+
+# Find operations when traces operations is not exposed
+cubeapm traces search --service payments --env PROD --last 1h -o json | jq -r '.[].OPERATION' | sort -u
 ```
 
 ### Render the service dependency graph

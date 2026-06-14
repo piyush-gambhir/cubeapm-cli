@@ -31,8 +31,8 @@ func TestIngestMetrics_Prometheus(t *testing.T) {
 	if gotMethod != "POST" {
 		t.Errorf("method = %q, want POST", gotMethod)
 	}
-	if gotPath != "/api/v1/import/prometheus" {
-		t.Errorf("path = %q, want /api/v1/import/prometheus", gotPath)
+	if gotPath != "/api/metrics/v1/save" {
+		t.Errorf("path = %q, want /api/metrics/v1/save", gotPath)
 	}
 	if gotContentType != "text/plain" {
 		t.Errorf("Content-Type = %q, want %q", gotContentType, "text/plain")
@@ -58,8 +58,29 @@ func TestIngestMetrics_OTLP(t *testing.T) {
 		t.Fatalf("IngestMetrics() error = %v", err)
 	}
 
-	if gotPath != "/v1/metrics" {
-		t.Errorf("path = %q, want /v1/metrics", gotPath)
+	if gotPath != "/api/metrics/v1/save/otlp" {
+		t.Errorf("path = %q, want /api/metrics/v1/save/otlp", gotPath)
+	}
+	if gotContentType != "application/x-protobuf" {
+		t.Errorf("Content-Type = %q, want %q", gotContentType, "application/x-protobuf")
+	}
+}
+
+func TestIngestMetrics_RemoteWrite(t *testing.T) {
+	var gotPath, gotContentType string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		gotContentType = r.Header.Get("Content-Type")
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer ts.Close()
+
+	c := newTestClient(ts)
+	if err := c.IngestMetrics("remote-write", strings.NewReader("snappy-protobuf")); err != nil {
+		t.Fatalf("IngestMetrics() error = %v", err)
+	}
+	if gotPath != "/api/metrics/api/v1/write" {
+		t.Errorf("path = %q, want /api/metrics/api/v1/write", gotPath)
 	}
 	if gotContentType != "application/x-protobuf" {
 		t.Errorf("Content-Type = %q, want %q", gotContentType, "application/x-protobuf")
@@ -106,8 +127,8 @@ func TestIngestLogs_OTLP(t *testing.T) {
 		t.Fatalf("IngestLogs() error = %v", err)
 	}
 
-	if gotPath != "/v1/logs" {
-		t.Errorf("path = %q, want /v1/logs", gotPath)
+	if gotPath != "/api/logs/insert/opentelemetry/v1/logs" {
+		t.Errorf("path = %q, want /api/logs/insert/opentelemetry/v1/logs", gotPath)
 	}
 	if gotContentType != "application/x-protobuf" {
 		t.Errorf("Content-Type = %q, want %q", gotContentType, "application/x-protobuf")

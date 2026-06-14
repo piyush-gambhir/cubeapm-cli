@@ -11,12 +11,12 @@ Designed to be used both interactively and programmatically by scripts and codin
 
 ## Features
 
-- Full API coverage — every CubeAPM API endpoint accessible from the command line
-- Multiple output formats — table, JSON, YAML (`-o json`)
-- Profile management — multiple instances with `--profile`
-- Auto-update — checks for new versions, `cubeapm update` to self-update
-- Agent-friendly — comprehensive help text, structured output for LLM coding agents
-- Cross-platform — macOS, Linux, Windows (amd64 and arm64)
+- Full API coverage, every CubeAPM API endpoint accessible from the command line
+- Multiple output formats, table, JSON, YAML (`-o json`)
+- Profile management, multiple instances with `--profile`
+- Auto-update, checks for new versions, `cubeapm update` to self-update
+- Agent-friendly, comprehensive help text, structured output for LLM coding agents
+- Cross-platform, macOS, Linux, Windows (amd64 and arm64)
 
 ## Installation
 

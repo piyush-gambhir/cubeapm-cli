@@ -13,13 +13,19 @@ func (c *Client) IngestMetrics(format string, data io.Reader) error {
 
 	switch format {
 	case "prometheus":
-		path = "/api/v1/import/prometheus"
+		// Prometheus text exposition format (CubeAPM docs: POST /api/metrics/v1/save).
+		path = "/api/metrics/v1/save"
 		contentType = "text/plain"
 	case "otlp":
-		path = "/v1/metrics"
+		// OpenTelemetry metrics (CubeAPM docs: POST /api/metrics/v1/save/otlp).
+		path = "/api/metrics/v1/save/otlp"
+		contentType = "application/x-protobuf"
+	case "remote-write", "remotewrite":
+		// Prometheus remote write (CubeAPM docs: POST /api/metrics/api/v1/write).
+		path = "/api/metrics/api/v1/write"
 		contentType = "application/x-protobuf"
 	default:
-		return fmt.Errorf("unsupported metrics format %q: use 'prometheus' or 'otlp'", format)
+		return fmt.Errorf("unsupported metrics format %q: use 'prometheus', 'otlp', or 'remote-write'", format)
 	}
 
 	resp, err := c.postRaw(c.ingestBaseURL, path, contentType, data)
@@ -42,7 +48,8 @@ func (c *Client) IngestLogs(format string, data io.Reader) error {
 		path = "/api/logs/insert/jsonline"
 		contentType = "application/stream+json"
 	case "otlp":
-		path = "/v1/logs"
+		// OpenTelemetry logs (CubeAPM docs: POST /api/logs/insert/opentelemetry/v1/logs).
+		path = "/api/logs/insert/opentelemetry/v1/logs"
 		contentType = "application/x-protobuf"
 	case "loki":
 		path = "/api/logs/insert/loki/api/v1/push"

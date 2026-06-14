@@ -88,6 +88,15 @@ func (c *Client) GetLogHits(query string, from, to time.Time, step string) (*typ
 	}
 	if step != "" {
 		params.Set("step", step)
+	} else if !from.IsZero() && !to.IsZero() {
+		// Without an explicit step the server collapses the whole range into a
+		// single, mislabeled bucket. Derive ~60 buckets so the histogram and
+		// per-bucket timestamps are meaningful by default.
+		stepDur := to.Sub(from) / 60
+		if stepDur < time.Second {
+			stepDur = time.Second
+		}
+		params.Set("step", fmt.Sprintf("%ds", int(stepDur.Seconds())))
 	}
 
 	resp, err := c.get(c.queryBaseURL, logsSelectBasePath+"/hits", params)
@@ -129,24 +138,47 @@ func (c *Client) GetLogStats(query string, from, to time.Time) (*types.StatsResu
 		return nil, err
 	}
 
-	// Stats query returns newline-delimited JSON
+	// CubeAPM returns Prometheus-style JSON for stats, not NDJSON:
+	//   {"status":"success","data":{"resultType":"vector"|"matrix",
+	//     "result":[{"metric":{labels},"value":[ts,"v"]      // vector
+	//                              ,"values":[[ts,"v"],...]}]}} // matrix
+	var promResp struct {
+		Status string `json:"status"`
+		Error  string `json:"error"`
+		Data   struct {
+			ResultType string `json:"resultType"`
+			Result     []struct {
+				Metric map[string]string `json:"metric"`
+				Value  []interface{}     `json:"value"`
+				Values [][]interface{}   `json:"values"`
+			} `json:"result"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&promResp); err != nil {
+		return nil, fmt.Errorf("parsing log stats: %w", err)
+	}
+	if promResp.Status != "" && promResp.Status != "success" {
+		return nil, fmt.Errorf("stats query failed: %s", promResp.Error)
+	}
+
 	result := &types.StatsResult{}
-	err = c.streamJSON(resp, func(raw json.RawMessage) error {
-		var fields map[string]interface{}
-		if err := json.Unmarshal(raw, &fields); err != nil {
-			return fmt.Errorf("parsing stats row: %w", err)
+	for _, r := range promResp.Data.Result {
+		row := types.StatsResultRow{Fields: make(map[string]string)}
+		for k, v := range r.Metric {
+			row.Fields[k] = v
 		}
-		row := types.StatsResultRow{
-			Fields: make(map[string]string),
-		}
-		for k, v := range fields {
-			row.Fields[k] = fmt.Sprintf("%v", v)
+		// The aggregated value is value[1] (vector) or the last of values[]
+		// (matrix). Don't clobber a real label/alias literally named "value".
+		if _, taken := row.Fields["value"]; !taken {
+			if len(r.Value) == 2 {
+				row.Fields["value"] = fmt.Sprintf("%v", r.Value[1])
+			} else if n := len(r.Values); n > 0 && len(r.Values[n-1]) == 2 {
+				row.Fields["value"] = fmt.Sprintf("%v", r.Values[n-1][1])
+			}
 		}
 		result.Rows = append(result.Rows, row)
-		return nil
-	})
-
-	return result, err
+	}
+	return result, nil
 }
 
 // GetLogStreams returns log streams.
@@ -177,22 +209,20 @@ func (c *Client) GetLogStreams(query string, from, to time.Time) ([]types.Stream
 		return nil, err
 	}
 
-	var streams []types.StreamInfo
-	err = c.streamJSON(resp, func(raw json.RawMessage) error {
-		var s types.StreamInfo
-		if err := json.Unmarshal(raw, &s); err != nil {
-			return fmt.Errorf("parsing stream: %w", err)
-		}
-		streams = append(streams, s)
-		return nil
-	})
-
-	return streams, err
+	// CubeAPM returns a single JSON object {"values":[{"value":..,"hits":..},...]},
+	// not newline-delimited JSON.
+	var wrapper struct {
+		Values []types.StreamInfo `json:"values"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&wrapper); err != nil {
+		return nil, fmt.Errorf("parsing log streams: %w", err)
+	}
+	return wrapper.Values, nil
 }
 
 // GetLogFieldNames returns available log field names.
 //
-// Default to `*` when the caller doesn't specify a query — the server
+// Default to `*` when the caller doesn't specify a query, the server
 // rejects empty queries, and users generally want "all fields" when they
 // don't narrow the search.
 func (c *Client) GetLogFieldNames(query string, from, to time.Time) ([]types.FieldInfo, error) {
@@ -218,17 +248,13 @@ func (c *Client) GetLogFieldNames(query string, from, to time.Time) ([]types.Fie
 		return nil, err
 	}
 
-	var fields []types.FieldInfo
-	err = c.streamJSON(resp, func(raw json.RawMessage) error {
-		var f types.FieldInfo
-		if err := json.Unmarshal(raw, &f); err != nil {
-			return fmt.Errorf("parsing field: %w", err)
-		}
-		fields = append(fields, f)
-		return nil
-	})
-
-	return fields, err
+	var wrapper struct {
+		Values []types.FieldInfo `json:"values"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&wrapper); err != nil {
+		return nil, fmt.Errorf("parsing field names: %w", err)
+	}
+	return wrapper.Values, nil
 }
 
 // GetLogFieldValues returns values for a specific log field.
@@ -259,15 +285,11 @@ func (c *Client) GetLogFieldValues(field, query string, from, to time.Time, limi
 		return nil, err
 	}
 
-	var values []types.FieldValueInfo
-	err = c.streamJSON(resp, func(raw json.RawMessage) error {
-		var v types.FieldValueInfo
-		if err := json.Unmarshal(raw, &v); err != nil {
-			return fmt.Errorf("parsing field value: %w", err)
-		}
-		values = append(values, v)
-		return nil
-	})
-
-	return values, err
+	var wrapper struct {
+		Values []types.FieldValueInfo `json:"values"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&wrapper); err != nil {
+		return nil, fmt.Errorf("parsing field values: %w", err)
+	}
+	return wrapper.Values, nil
 }
