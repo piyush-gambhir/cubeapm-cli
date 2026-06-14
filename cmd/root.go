@@ -87,7 +87,9 @@ Quick start:
   cubeapm traces search --service api-gateway --last 1h  # Search traces
   cubeapm traces get <trace-id>                          # View a trace
   cubeapm metrics query 'up'                             # Query metrics
-  cubeapm logs query 'error' --last 30m                  # Query logs`,
+  cubeapm logs query 'error' --last 30m                  # Query logs
+
+Full command reference (for agents/LLMs): https://cubeapm-cli.pages.dev/llms.txt`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
