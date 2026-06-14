@@ -89,7 +89,8 @@ Quick start:
   cubeapm metrics query 'up'                             # Query metrics
   cubeapm logs query 'error' --last 30m                  # Query logs
 
-Full command reference (for agents/LLMs): https://cubeapm-cli.pages.dev/llms.txt`,
+Full command reference (for agents/LLMs): https://cubeapm-cli.pages.dev/llms.txt
+Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubeapm/SKILL.md`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {

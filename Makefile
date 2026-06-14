@@ -35,3 +35,7 @@ clean:
 
 tidy:
 	go mod tidy
+
+.PHONY: llms-check
+llms-check: ## verify docs/llms.txt documents every command
+	@bash scripts/check-llms.sh

@@ -20,6 +20,11 @@ This is an **independent, unofficial** tool. It is not affiliated with, endorsed
 - Privacy: https://cubeapm-cli.pages.dev/privacy-policy
 - Terms: https://cubeapm-cli.pages.dev/terms-of-service
 - Contact: https://cubeapm-cli.pages.dev/contact
+- Skill (Claude Code agent skill): https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubeapm/SKILL.md
+
+## Skill (Claude Code / agents)
+
+A ready-made Claude Code skill ships in the repo: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubeapm/SKILL.md . Point your agent at that file, or install it as a skill (copy it to `~/.claude/skills/cubeapm/SKILL.md`, or load it via your agent's skill mechanism) to teach an agent how to drive `cubeapm`.
 
 ## Install
 
