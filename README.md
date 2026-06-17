@@ -20,19 +20,35 @@ Designed to be used both interactively and programmatically by scripts and codin
 
 ## Installation
 
-### From source (Go 1.21+)
+### Install script (recommended, no Go required)
+
+Downloads a prebuilt binary for your platform:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
+```
+
+Install a specific version or to a custom directory:
+
+```bash
+# Specific version
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.2.0 sh
+
+# Custom install directory
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
+```
+
+You can also download a prebuilt archive directly from the [releases page](https://github.com/piyush-gambhir/cubeapm-cli/releases).
+
+### Alternative (requires Go)
+
+Install with `go install` (Go 1.21+):
 
 ```bash
 go install github.com/piyush-gambhir/cubeapm-cli@latest
 ```
 
-### From the install script
-
-```bash
-curl -sSL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | bash
-```
-
-### Build from source
+Or build from source:
 
 ```bash
 git clone https://github.com/piyush-gambhir/cubeapm-cli.git

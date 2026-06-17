@@ -1,28 +1,53 @@
 name: Release
-
 on:
   push:
-    tags:
-      - "v*"
-
+    tags: ['v*']
+    branches: [release]
 permissions:
   contents: write
-
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+      - id: ver
+        run: |
+          if [ "${GITHUB_REF#refs/tags/}" != "$GITHUB_REF" ]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+          else
+            TAG="v$(tr -d ' \tv\n\r' < VERSION)"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Resolved release tag: $TAG"
+      - id: gate
+        if: startsWith(github.ref, 'refs/heads/')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view "${{ steps.ver.outputs.tag }}" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release ${{ steps.ver.outputs.tag }} already exists - skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Create and push tag
+        if: steps.gate.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if ! git rev-parse "${{ steps.ver.outputs.tag }}" >/dev/null 2>&1; then
+            git tag -a "${{ steps.ver.outputs.tag }}" -m "Release ${{ steps.ver.outputs.tag }}"
+            git push origin "${{ steps.ver.outputs.tag }}"
+          fi
       - name: Set up Go
+        if: steps.gate.outputs.skip != 'true'
         uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-
       - name: Run GoReleaser
+        if: steps.gate.outputs.skip != 'true'
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
