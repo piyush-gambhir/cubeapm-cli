@@ -32,7 +32,7 @@ Install a specific version or to a custom directory:
 
 ```bash
 # Specific version
-curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.2.0 sh
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.2.1 sh
 
 # Custom install directory
 curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
