@@ -124,11 +124,11 @@ type CubeSpanRef struct {
 // CubeSpanTag is a single tag entry from CubeAPM's native format. Only
 // one of the v_* fields is populated per entry.
 type CubeSpanTag struct {
-	Key    string  `json:"key"`
-	VStr   string  `json:"v_str,omitempty"`
-	VInt   int64   `json:"v_int,omitempty"`
-	VBool  bool    `json:"v_bool,omitempty"`
-	VFloat float64 `json:"v_float,omitempty"`
+	Key    string   `json:"key"`
+	VStr   *string  `json:"v_str,omitempty"`
+	VInt   *int64   `json:"v_int,omitempty"`
+	VBool  *bool    `json:"v_bool,omitempty"`
+	VFloat *float64 `json:"v_float,omitempty"`
 }
 
 // JaegerTraceResponse wraps the Jaeger trace API response.

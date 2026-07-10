@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/piyush-gambhir/cubeapm-cli/internal/types"
 )
 
 func newTestClient(ts *httptest.Server) *Client {
@@ -467,5 +469,29 @@ func TestGetServicesByEnv(t *testing.T) {
 	}
 	if len(svcs) != 3 {
 		t.Errorf("got %d services, want 3 (deduped)", len(svcs))
+	}
+}
+
+func TestConvertCubeTagsPreservesZeroValues(t *testing.T) {
+	var tags []types.CubeSpanTag
+	data := []byte(`[
+		{"key":"retries","v_int":0},
+		{"key":"sampled","v_bool":false},
+		{"key":"ratio","v_float":0},
+		{"key":"empty","v_str":""}
+	]`)
+	if err := json.Unmarshal(data, &tags); err != nil {
+		t.Fatal(err)
+	}
+	got := convertCubeTags(tags)
+	if len(got) != 4 {
+		t.Fatalf("got %d tags, want 4", len(got))
+	}
+	wantTypes := []string{"int64", "bool", "float64", "string"}
+	wantValues := []interface{}{int64(0), false, float64(0), ""}
+	for i := range got {
+		if got[i].Type != wantTypes[i] || got[i].Value != wantValues[i] {
+			t.Errorf("tag %d = (%s, %#v), want (%s, %#v)", i, got[i].Type, got[i].Value, wantTypes[i], wantValues[i])
+		}
 	}
 }

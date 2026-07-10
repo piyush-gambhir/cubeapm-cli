@@ -1,9 +1,26 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 )
+
+// ValidateSelectedProfile rejects stale or mistyped profile names before
+// environment fallbacks can silently target a different server.
+func ValidateSelectedProfile(cfg *Config, requested string) error {
+	name := requested
+	if name == "" {
+		name = cfg.CurrentProfile
+	}
+	if name == "" {
+		return nil
+	}
+	if _, ok := cfg.Profiles[name]; !ok {
+		return fmt.Errorf("profile %q not found", name)
+	}
+	return nil
+}
 
 // ResolvedConfig holds the final resolved configuration after layering
 // flags > env vars > config profile.

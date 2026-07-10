@@ -115,7 +115,7 @@ Examples:
 				return err
 			}
 
-			if len(results) == 0 {
+			if len(results) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				fmt.Println("No traces found.")
 				return nil
 			}

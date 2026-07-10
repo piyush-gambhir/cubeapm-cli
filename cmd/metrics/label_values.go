@@ -90,7 +90,7 @@ Examples:
 				values = filtered
 			}
 
-			if len(values) == 0 {
+			if len(values) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				if like != "" {
 					fmt.Printf("No values matching %q found for label %q.\n", like, label)
 				} else {

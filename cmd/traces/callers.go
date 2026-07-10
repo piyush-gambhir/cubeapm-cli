@@ -134,7 +134,7 @@ Examples:
 				rows = append(rows, []string{svc, s.Value.Value()})
 			}
 
-			if len(rows) == 0 {
+			if len(rows) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				fmt.Println("No callers found. Check --host spelling, try `cubeapm metrics series --match 'cube_apm_latency_count{span_kind=\"client\"}'` to discover valid group_name values.")
 				return nil
 			}

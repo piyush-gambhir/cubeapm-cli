@@ -76,7 +76,7 @@ Examples:
 				return err
 			}
 
-			if len(series) == 0 {
+			if len(series) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				fmt.Println("No matching series found.")
 				return nil
 			}

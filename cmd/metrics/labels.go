@@ -59,7 +59,7 @@ Examples:
 				return err
 			}
 
-			if len(labels) == 0 {
+			if len(labels) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				fmt.Println("No labels found.")
 				return nil
 			}

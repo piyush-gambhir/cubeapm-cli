@@ -69,7 +69,7 @@ Examples:
 				return err
 			}
 
-			if len(deps) == 0 {
+			if len(deps) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				fmt.Println("No dependencies found.")
 				return nil
 			}
