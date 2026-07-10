@@ -59,7 +59,7 @@ Examples:
 				return err
 			}
 
-			if len(streams) == 0 {
+			if len(streams) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				fmt.Println("No streams found.")
 				return nil
 			}

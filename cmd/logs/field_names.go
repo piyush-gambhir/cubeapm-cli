@@ -72,7 +72,7 @@ Examples:
 				return err
 			}
 
-			if len(fields) == 0 {
+			if len(fields) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				fmt.Println("No fields found.")
 				return nil
 			}

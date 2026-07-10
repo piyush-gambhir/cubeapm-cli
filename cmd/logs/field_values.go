@@ -69,7 +69,7 @@ Examples:
 				return err
 			}
 
-			if len(values) == 0 {
+			if len(values) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				fmt.Printf("No values found for field %q.\n", field)
 				return nil
 			}

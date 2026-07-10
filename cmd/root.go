@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -146,9 +147,13 @@ Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubea
 		if cmdName == "update" || cmdName == "version" {
 			return nil
 		}
-		<-updateInfoDone
-		if updateInfo != nil && !cmdutil.Quiet {
-			update.PrintUpdateNotice(os.Stderr, updateInfo)
+		select {
+		case <-updateInfoDone:
+			if updateInfo != nil && !cmdutil.Quiet {
+				update.PrintUpdateNotice(os.Stderr, updateInfo)
+			}
+		case <-time.After(1500 * time.Millisecond):
+			// A release check must never delay a successful CLI command.
 		}
 		return nil
 	},
@@ -200,6 +205,11 @@ func setupClient(cmd *cobra.Command) error {
 	cmdutil.AppConfig, err = config.Load()
 	if err != nil {
 		return fmt.Errorf("loading config: %w", err)
+	}
+	if cmd.Name() != "login" {
+		if err := config.ValidateSelectedProfile(cmdutil.AppConfig, flagProfile); err != nil {
+			return err
+		}
 	}
 
 	flags := config.FlagOverrides{

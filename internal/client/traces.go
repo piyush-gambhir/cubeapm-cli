@@ -252,18 +252,18 @@ func convertCubeTags(in []types.CubeSpanTag) []types.KeyValue {
 	for _, t := range in {
 		kv := types.KeyValue{Key: t.Key}
 		switch {
-		case t.VStr != "":
+		case t.VStr != nil:
 			kv.Type = "string"
-			kv.Value = t.VStr
-		case t.VInt != 0:
+			kv.Value = *t.VStr
+		case t.VInt != nil:
 			kv.Type = "int64"
-			kv.Value = t.VInt
-		case t.VBool:
+			kv.Value = *t.VInt
+		case t.VBool != nil:
 			kv.Type = "bool"
-			kv.Value = t.VBool
-		case t.VFloat != 0:
+			kv.Value = *t.VBool
+		case t.VFloat != nil:
 			kv.Type = "float64"
-			kv.Value = t.VFloat
+			kv.Value = *t.VFloat
 		default:
 			kv.Type = "string"
 			kv.Value = ""

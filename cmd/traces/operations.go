@@ -52,7 +52,7 @@ Examples:
 				return err
 			}
 
-			if len(operations) == 0 {
+			if len(operations) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				fmt.Printf("No operations found for service %q.\n", service)
 				return nil
 			}

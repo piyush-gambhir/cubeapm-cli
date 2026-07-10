@@ -49,6 +49,16 @@ func TestResolveAuth_ConfigOnly(t *testing.T) {
 	}
 }
 
+func TestValidateSelectedProfile(t *testing.T) {
+	cfg := &Config{CurrentProfile: "missing", Profiles: map[string]Profile{"prod": {}}}
+	if err := ValidateSelectedProfile(cfg, ""); err == nil {
+		t.Fatal("expected stale current profile to fail")
+	}
+	if err := ValidateSelectedProfile(cfg, "prod"); err != nil {
+		t.Fatalf("existing explicit profile should pass: %v", err)
+	}
+}
+
 func TestResolveAuth_EnvOverrides(t *testing.T) {
 	cfg := &Config{
 		CurrentProfile: "prod",

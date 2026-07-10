@@ -72,7 +72,7 @@ Examples:
 				return err
 			}
 
-			if len(services) == 0 {
+			if len(services) == 0 && cmdutil.OutputFormat == output.FormatTable {
 				if env != "" {
 					fmt.Printf("No services found in environment %q.\n", env)
 				} else {
