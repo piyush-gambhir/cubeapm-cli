@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -201,6 +202,11 @@ func saveCache(configDir string, entry cacheEntry) error {
 // SelfUpdate downloads and installs the specified version of the binary,
 // replacing the current executable in-place.
 func SelfUpdate(version, repo string) error {
+	return SelfUpdateContext(context.Background(), version, repo)
+}
+
+// SelfUpdateContext installs an update while honoring caller cancellation.
+func SelfUpdateContext(ctx context.Context, version, repo string) error {
 	osName := runtime.GOOS
 	archName := runtime.GOARCH
 
@@ -218,14 +224,14 @@ func SelfUpdate(version, repo string) error {
 	defer os.RemoveAll(tmpDir)
 
 	archivePath := filepath.Join(tmpDir, archive)
-	if err := downloadFile(downloadURL, archivePath); err != nil {
+	if err := downloadFile(ctx, downloadURL, archivePath); err != nil {
 		return fmt.Errorf("downloading release: %w", err)
 	}
 
 	// Download and verify SHA256 checksum.
 	checksumsURL := fmt.Sprintf("https://github.com/%s/releases/download/v%s/checksums.txt", repo, version)
 	checksumsPath := filepath.Join(tmpDir, "checksums.txt")
-	if err := downloadFile(checksumsURL, checksumsPath); err != nil {
+	if err := downloadFile(ctx, checksumsURL, checksumsPath); err != nil {
 		return fmt.Errorf("downloading checksums: %w", err)
 	}
 
@@ -262,8 +268,12 @@ func SelfUpdate(version, repo string) error {
 	return nil
 }
 
-func downloadFile(url, dest string) error {
-	resp, err := http.Get(url)
+func downloadFile(ctx context.Context, url, dest string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := (&http.Client{Timeout: 120 * time.Second}).Do(req)
 	if err != nil {
 		return err
 	}
@@ -279,7 +289,7 @@ func downloadFile(url, dest string) error {
 	}
 	defer f.Close()
 
-	_, err = io.Copy(f, resp.Body)
+	err = copyUpdatePayload(f, resp.Body)
 	return err
 }
 
@@ -314,7 +324,7 @@ func extractBinary(archivePath, destDir, binaryName string) (string, error) {
 			if err != nil {
 				return "", err
 			}
-			if _, err := io.Copy(out, tr); err != nil {
+			if err := copyUpdatePayload(out, tr); err != nil {
 				out.Close()
 				return "", err
 			}
@@ -344,7 +354,7 @@ func replaceBinary(newBinary, target string) error {
 		return err
 	}
 
-	if _, err := io.Copy(tmpFile, src); err != nil {
+	if err := copyUpdatePayload(tmpFile, src); err != nil {
 		src.Close()
 		tmpFile.Close()
 		os.Remove(tmpPath)
@@ -385,7 +395,7 @@ func verifyChecksum(filePath, checksumsPath, archiveName string) error {
 	defer f.Close()
 
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
+	if err := copyUpdatePayload(h, f); err != nil {
 		return fmt.Errorf("computing checksum: %w", err)
 	}
 	actualHash := hex.EncodeToString(h.Sum(nil))

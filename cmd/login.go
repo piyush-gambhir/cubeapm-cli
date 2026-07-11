@@ -234,12 +234,14 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		SessionExpiry: sessionExpiry,
 	}
 
-	cmdutil.AppConfig.SetProfile(profileName, profile)
-	if cmdutil.AppConfig.CurrentProfile == "" {
-		cmdutil.AppConfig.CurrentProfile = profileName
-	}
-
-	if err := config.Save(cmdutil.AppConfig); err != nil {
+	if err := config.Update(func(cfg *config.Config) error {
+		cfg.SetProfile(profileName, profile)
+		if cfg.CurrentProfile == "" {
+			cfg.CurrentProfile = profileName
+		}
+		cmdutil.AppConfig = cfg
+		return nil
+	}); err != nil {
 		return fmt.Errorf("saving config: %w", err)
 	}
 

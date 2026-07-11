@@ -87,8 +87,9 @@ Examples:
 
 func newProfilesUseCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "use <profile>",
-		Short: "Set the active profile",
+		Use:         "use <profile>",
+		Annotations: map[string]string{"mutates": "true"},
+		Short:       "Set the active profile",
 		Long: `Set the active connection profile.
 
 All subsequent commands will use the settings (server, credentials, ports)
@@ -104,16 +105,9 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 
-			cfg, err := config.Load()
-			if err != nil {
-				return fmt.Errorf("loading config: %w", err)
-			}
-
-			if err := cfg.SetCurrentProfile(name); err != nil {
-				return err
-			}
-
-			if err := config.Save(cfg); err != nil {
+			if err := config.Update(func(cfg *config.Config) error {
+				return cfg.SetCurrentProfile(name)
+			}); err != nil {
 				return fmt.Errorf("saving config: %w", err)
 			}
 
@@ -127,8 +121,9 @@ Examples:
 
 func newProfilesDeleteCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "delete <profile>",
-		Short: "Delete a profile",
+		Use:         "delete <profile>",
+		Annotations: map[string]string{"mutates": "true"},
+		Short:       "Delete a profile",
 		Long: `Delete a connection profile.
 
 Removes the specified profile from the config file. If the deleted profile
@@ -146,16 +141,9 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name := args[0]
 
-			cfg, err := config.Load()
-			if err != nil {
-				return fmt.Errorf("loading config: %w", err)
-			}
-
-			if err := cfg.DeleteProfile(name); err != nil {
-				return err
-			}
-
-			if err := config.Save(cfg); err != nil {
+			if err := config.Update(func(cfg *config.Config) error {
+				return cfg.DeleteProfile(name)
+			}); err != nil {
 				return fmt.Errorf("saving config: %w", err)
 			}
 

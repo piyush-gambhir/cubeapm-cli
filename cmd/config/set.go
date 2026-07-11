@@ -12,8 +12,9 @@ import (
 
 func newSetCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "set <key> <value>",
-		Short: "Set a configuration value in the current profile",
+		Use:         "set <key> <value>",
+		Annotations: map[string]string{"mutates": "true"},
+		Short:       "Set a configuration value in the current profile",
 		Long: `Set a configuration value in the current profile.
 
 Saves the value to the config file (~/.config/cubeapm-cli/config.yaml).
@@ -42,61 +43,56 @@ Examples:
 			key := args[0]
 			value := args[1]
 
-			cfg, err := config.Load()
-			if err != nil {
-				return fmt.Errorf("loading config: %w", err)
-			}
-
-			profileName := cfg.CurrentProfile
-			if profileName == "" {
-				profileName = "default"
-				cfg.CurrentProfile = profileName
-			}
-
-			profile := cfg.GetCurrentProfile()
-
-			switch key {
-			case "server":
-				profile.Server = value
-			case "query_port":
-				port, err := strconv.Atoi(value)
-				if err != nil {
-					return fmt.Errorf("invalid port number: %s", value)
+			var profileName string
+			if err := config.Update(func(cfg *config.Config) error {
+				profileName = cfg.CurrentProfile
+				if profileName == "" {
+					profileName = "default"
+					cfg.CurrentProfile = profileName
 				}
-				profile.QueryPort = port
-			case "ingest_port":
-				port, err := strconv.Atoi(value)
-				if err != nil {
-					return fmt.Errorf("invalid port number: %s", value)
-				}
-				profile.IngestPort = port
-			case "admin_port":
-				port, err := strconv.Atoi(value)
-				if err != nil {
-					return fmt.Errorf("invalid port number: %s", value)
-				}
-				profile.AdminPort = port
-			case "email":
-				profile.Email = value
-			case "password":
-				profile.Password = value
-			case "auth_method":
-				if value != "none" && value != "kratos" && value != "" {
-					return fmt.Errorf("invalid auth_method %q: use \"kratos\" or \"none\"", value)
-				}
-				profile.AuthMethod = value
-			case "output":
-				if value != "table" && value != "json" && value != "yaml" {
-					return fmt.Errorf("invalid output format %q: use table, json, or yaml", value)
-				}
-				profile.Output = value
-			default:
-				return fmt.Errorf("unknown config key %q: valid keys are server, email, password, auth_method, query_port, ingest_port, admin_port, output", key)
-			}
+				profile := cfg.GetCurrentProfile()
 
-			cfg.SetProfile(profileName, profile)
-
-			if err := config.Save(cfg); err != nil {
+				switch key {
+				case "server":
+					profile.Server = value
+				case "query_port":
+					port, err := strconv.Atoi(value)
+					if err != nil {
+						return fmt.Errorf("invalid port number: %s", value)
+					}
+					profile.QueryPort = port
+				case "ingest_port":
+					port, err := strconv.Atoi(value)
+					if err != nil {
+						return fmt.Errorf("invalid port number: %s", value)
+					}
+					profile.IngestPort = port
+				case "admin_port":
+					port, err := strconv.Atoi(value)
+					if err != nil {
+						return fmt.Errorf("invalid port number: %s", value)
+					}
+					profile.AdminPort = port
+				case "email":
+					profile.Email = value
+				case "password":
+					profile.Password = value
+				case "auth_method":
+					if value != "none" && value != "kratos" && value != "" {
+						return fmt.Errorf("invalid auth_method %q: use \"kratos\" or \"none\"", value)
+					}
+					profile.AuthMethod = value
+				case "output":
+					if value != "table" && value != "json" && value != "yaml" {
+						return fmt.Errorf("invalid output format %q: use table, json, or yaml", value)
+					}
+					profile.Output = value
+				default:
+					return fmt.Errorf("unknown config key %q: valid keys are server, email, password, auth_method, query_port, ingest_port, admin_port, output", key)
+				}
+				cfg.SetProfile(profileName, profile)
+				return nil
+			}); err != nil {
 				return fmt.Errorf("saving config: %w", err)
 			}
 

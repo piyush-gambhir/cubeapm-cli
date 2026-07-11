@@ -259,7 +259,7 @@ func (c *Client) postRaw(baseURL, path, contentType string, body io.Reader) (*ht
 	// Buffer the body so it can be replayed on 401 retry
 	var reqBody io.ReadSeeker
 	if body != nil {
-		data, err := io.ReadAll(body)
+		data, err := readAllLimited(body)
 		if err != nil {
 			return nil, fmt.Errorf("buffering request body: %w", err)
 		}
@@ -313,7 +313,7 @@ func (c *Client) checkResponse(resp *http.Response) error {
 		return nil
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := readAllLimited(resp.Body)
 	if err != nil {
 		body = []byte(fmt.Sprintf("<failed to read response body: %v>", err))
 	}

@@ -17,7 +17,7 @@ if [[ -f "$DEPLOY_ENV_FILE" ]]; then
   source "$DEPLOY_ENV_FILE"
   set +a
 else
-  if ! npx --yes wrangler@latest whoami >/dev/null 2>&1; then
+  if ! npx --yes wrangler@4.110.0 whoami >/dev/null 2>&1; then
     echo "error: not logged in to wrangler. Run \`wrangler login\` first." >&2
     exit 1
   fi
@@ -41,6 +41,6 @@ if [[ -n "${CLOUDFLARE_API_TOKEN:-}" ]]; then export CLOUDFLARE_API_TOKEN; fi
 if [[ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]]; then export CLOUDFLARE_ACCOUNT_ID; fi
 
 echo "==> Deploying ${DOCS_DIR}/ to Cloudflare Pages project '${CF_PROJECT_NAME}' (branch: ${CF_BRANCH})"
-npx --yes wrangler@latest pages deploy "$DOCS_DIR" \
+npx --yes wrangler@4.110.0 pages deploy "$DOCS_DIR" \
   --project-name="$CF_PROJECT_NAME" \
   --branch="$CF_BRANCH"

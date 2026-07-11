@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/url"
 	"strconv"
 	"strings"
@@ -284,7 +283,7 @@ func (c *Client) getRaw(baseURL, path string, params url.Values) ([]byte, error)
 	if err := c.checkResponse(resp); err != nil {
 		return nil, err
 	}
-	return io.ReadAll(resp.Body)
+	return readAllLimited(resp.Body)
 }
 
 // GetTrace retrieves a trace by its trace ID.

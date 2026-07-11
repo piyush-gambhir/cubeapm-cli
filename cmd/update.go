@@ -16,14 +16,15 @@ func newUpdateCmd() *cobra.Command {
 	var checkOnly bool
 
 	cmd := &cobra.Command{
-		Use:   "update",
-		Short: "Update cubeapm to the latest version",
+		Use:         "update",
+		Annotations: map[string]string{"mutates": "true"},
+		Short:       "Update cubeapm to the latest version",
 		Long: `Check for and install the latest version of the cubeapm CLI.
 
 Use --check to only check whether an update is available without installing it.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runUpdate(checkOnly)
+			return runUpdate(cmd, checkOnly)
 		},
 	}
 
@@ -31,7 +32,7 @@ Use --check to only check whether an update is available without installing it.`
 	return cmd
 }
 
-func runUpdate(checkOnly bool) error {
+func runUpdate(cmd *cobra.Command, checkOnly bool) error {
 	currentVersion := Version
 	if currentVersion == "" || currentVersion == "dev" {
 		return fmt.Errorf("cannot check for updates: running a development build")
@@ -80,7 +81,7 @@ func runUpdate(checkOnly bool) error {
 	}
 
 	fmt.Println()
-	if err := update.SelfUpdate(info.LatestVersion, updateRepo); err != nil {
+	if err := update.SelfUpdateContext(cmd.Context(), info.LatestVersion, updateRepo); err != nil {
 		return fmt.Errorf("update failed: %w", err)
 	}
 

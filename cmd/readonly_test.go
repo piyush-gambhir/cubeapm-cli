@@ -13,8 +13,8 @@ import (
 // It returns an error if the command is blocked in read-only mode.
 func checkReadOnly(cmd *cobra.Command, resolved config.ResolvedConfig, flagChanged bool, flagValue bool) error {
 	effectiveReadOnly := resolved.ReadOnly
-	if flagChanged {
-		effectiveReadOnly = flagValue
+	if flagChanged && flagValue {
+		effectiveReadOnly = true
 	}
 	if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
 		return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())
@@ -65,7 +65,7 @@ func TestCheckReadOnly_ReadCmdAllowed(t *testing.T) {
 	}
 }
 
-func TestCheckReadOnly_FlagOverridesConfig(t *testing.T) {
+func TestCheckReadOnly_FlagCannotDisableConfig(t *testing.T) {
 	cmd := &cobra.Command{
 		Use:         "delete-things",
 		Annotations: map[string]string{"mutates": "true"},
@@ -79,11 +79,11 @@ func TestCheckReadOnly_FlagOverridesConfig(t *testing.T) {
 		t.Fatal("expected error when --read-only flag overrides config to true")
 	}
 
-	// Config says read-only=true, but flag overrides to false
+	// Config says read-only=true; an explicitly false flag cannot bypass it.
 	resolved.ReadOnly = true
 
 	err = checkReadOnly(cmd, resolved, true, false)
-	if err != nil {
-		t.Fatalf("expected no error when --read-only=false flag overrides config, got: %v", err)
+	if err == nil {
+		t.Fatal("expected read-only config to remain sticky when --read-only=false is supplied")
 	}
 }

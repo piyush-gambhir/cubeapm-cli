@@ -1,7 +1,6 @@
 package client
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,7 +14,7 @@ func TestIngestMetrics_Prometheus(t *testing.T) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
 		gotContentType = r.Header.Get("Content-Type")
-		body, _ := io.ReadAll(r.Body)
+		body, _ := readAllLimited(r.Body)
 		gotBody = string(body)
 		w.WriteHeader(http.StatusNoContent)
 	}))
