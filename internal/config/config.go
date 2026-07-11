@@ -87,14 +87,20 @@ func Save(cfg *Config) error {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return fmt.Errorf("creating config directory: %w", err)
 	}
+	if err := os.Chmod(dir, 0o700); err != nil {
+		return fmt.Errorf("securing config directory: %w", err)
+	}
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return fmt.Errorf("marshaling config: %w", err)
 	}
 
-	if err := os.WriteFile(ConfigPath(), data, 0600); err != nil {
+	if err := atomicWriteFile(ConfigPath(), data, 0o600); err != nil {
 		return fmt.Errorf("writing config file: %w", err)
+	}
+	if err := os.Chmod(ConfigPath(), 0o600); err != nil {
+		return fmt.Errorf("securing config file: %w", err)
 	}
 
 	return nil

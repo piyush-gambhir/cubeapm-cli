@@ -23,12 +23,16 @@ builds:
       - -X github.com/piyush-gambhir/cubeapm-cli/cmd.Commit={{.Commit}}
       - -X github.com/piyush-gambhir/cubeapm-cli/cmd.BuildDate={{.Date}}
 
+sboms:
+  - artifacts: archive
+    disable: false
+
 archives:
-  - format: tar.gz
+  - formats: [tar.gz]
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 
 checksum:
   name_template: "checksums.txt"
@@ -41,4 +45,3 @@ changelog:
       - "^test:"
       - "^ci:"
       - "^chore:"
-

@@ -95,11 +95,10 @@ Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubea
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Resolve --no-input: flag > env var
-		if !cmd.Flags().Changed("no-input") {
-			if v := os.Getenv("CUBEAPM_NO_INPUT"); v == "1" || v == "true" {
-				flagNoInput = true
-			}
+		// Agent-safety environment settings are sticky: an explicit false flag
+		// must not silently re-enable prompts in automation.
+		if v := os.Getenv("CUBEAPM_NO_INPUT"); v == "1" || v == "true" {
+			flagNoInput = true
 		}
 		cmdutil.NoInput = flagNoInput
 
@@ -162,13 +161,14 @@ Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubea
 // checkPermissions enforces read-only mode and no-input constraints on the
 // current command based on resolved configuration and flag overrides.
 func checkPermissions(cmd *cobra.Command) error {
-	// Enforce read-only mode: flag > resolved config
+	// A read-only profile or environment setting is sticky; the flag can only
+	// add protection, never silently remove it for one command.
 	effectiveReadOnly := cmdutil.Resolved.ReadOnly
-	if cmd.Flags().Changed("read-only") {
-		effectiveReadOnly = flagReadOnly
+	if flagReadOnly {
+		effectiveReadOnly = true
 	}
 	if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
-		return fmt.Errorf("command '%s' is blocked in read-only mode.\nTo disable, use --read-only=false or remove read_only from your config profile.", cmd.CommandPath())
+		return fmt.Errorf("command '%s' is blocked in read-only mode; remove read_only from the profile or disable the read-only environment setting to permit writes", cmd.CommandPath())
 	}
 
 	// Enforce no-input mode for commands that require interactive input
@@ -251,13 +251,16 @@ func setupClient(cmd *cobra.Command) error {
 		if profileName == "" {
 			return nil
 		}
-		if p, ok := cmdutil.AppConfig.Profiles[profileName]; ok {
+		return config.Update(func(cfg *config.Config) error {
+			p, ok := cfg.Profiles[profileName]
+			if !ok {
+				return nil
+			}
 			p.SessionCookie = cookie
 			p.SessionExpiry = expiry
-			cmdutil.AppConfig.Profiles[profileName] = p
-			return config.Save(cmdutil.AppConfig)
-		}
-		return nil
+			cfg.Profiles[profileName] = p
+			return nil
+		})
 	})
 
 	return nil

@@ -202,7 +202,7 @@ The `metrics query` command uses a single `--time` flag (same accepted formats) 
 
 ### Read-only mode
 
-When read-only is active (via `--read-only`, or `read_only: true` in the profile, or `CUBEAPM_READ_ONLY=true`), the four mutating commands are blocked with an error: `ingest metrics`, `ingest logs`, `logs delete run`, `logs delete stop`. The flag overrides the profile/env value; use `--read-only=false` to force-enable writes for one invocation.
+When read-only is active (via `--read-only`, `read_only: true` in the profile, or `CUBEAPM_READ_ONLY=true`), the four mutating commands are blocked with an error: `ingest metrics`, `ingest logs`, `logs delete run`, `logs delete stop`. Profile and environment safety settings are sticky; remove them explicitly before permitting writes.
 
 ## Commands
 
