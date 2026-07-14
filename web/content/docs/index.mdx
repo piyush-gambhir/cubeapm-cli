@@ -1,0 +1,43 @@
+---
+title: Introduction
+description: A scriptable command-line interface for CubeAPM traces, metrics, and logs.
+---
+
+**CubeAPM CLI** is a command-line interface for querying and operating a CubeAPM
+deployment. It speaks the Jaeger-compatible traces API, Prometheus-compatible
+metrics API with PromQL, and VictoriaLogs-compatible logs API with LogsQL.
+
+It is designed for human operators, shell scripts, CI jobs, and coding agents.
+Telemetry query and discovery commands can return table, JSON, or YAML output,
+while dedicated query, ingest, and admin ports keep each kind of operation
+explicit.
+
+<Callout type="info">
+  CubeAPM CLI is an independent open-source client for CubeAPM. Your server's
+  enabled APIs, authentication settings, and retained telemetry determine what
+  each query can return.
+</Callout>
+
+## Features
+
+- **Traces** — discover services and operations, search traces, render span
+  waterfalls, inspect dependencies, and rank outbound callers.
+- **Metrics** — run instant and range PromQL queries; explore labels, values,
+  and series.
+- **Logs** — query with LogsQL, chart hit counts, aggregate statistics, inspect
+  fields and streams, probe retention, and manage deletion tasks.
+- **Ingest** — push Prometheus, OTLP, remote-write, JSON line, Loki, and
+  Elasticsearch bulk data through CubeAPM's ingest API.
+- **Connections** — Ory Kratos email/password sessions or unauthenticated
+  access, three configurable ports, and multiple named profiles.
+- **Agent-friendly** — `-o json|yaml`, `--read-only`, `--no-input`, `--quiet`,
+  structured JSON errors, and environment-based configuration.
+
+## Next steps
+
+<Cards>
+  <Card title="Installation" href="/docs/installation" description="Install a release binary or build from source." />
+  <Card title="Authentication" href="/docs/authentication" description="Connect with a Kratos session or without authentication." />
+  <Card title="Quick start" href="/docs/quickstart" description="Configure a profile and investigate your first telemetry." />
+  <Card title="Agents" href="/docs/agents" description="Structured output, non-interactive operation, and safety flags." />
+</Cards>

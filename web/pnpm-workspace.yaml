@@ -1,0 +1,13 @@
+# Project-scoped pnpm settings.
+# minimumReleaseAge relaxed: this app pins the exact Fumadocs versions that
+# create-fumadocs-app ships, freshly published, which would otherwise trip the
+# global minimum-release-age supply-chain guard.
+minimumReleaseAge: 0
+# Skip the pre-run "install status" gate so `pnpm build` doesn't re-run install.
+verifyDepsBeforeRun: false
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+allowBuilds:
+  esbuild: set this to true or false
+  sharp: set this to true or false

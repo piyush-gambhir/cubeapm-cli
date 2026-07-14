@@ -1,0 +1,92 @@
+---
+title: Authentication & connections
+description: Ory Kratos sessions, unauthenticated access, ports, and named profiles.
+---
+
+CubeAPM CLI supports two connection modes: email/password authentication through
+Ory Kratos, and direct access to instances with authentication disabled.
+Configuration priority is **CLI flags > environment variables > profile config**.
+
+## Interactive login
+
+```bash
+cubeapm login
+```
+
+The command prompts for a profile name, server, authentication mode, and the
+query, ingest, and admin ports. With email/password authentication it starts the
+Kratos browser-flow endpoints, submits the credentials, caches the resulting
+session cookie, verifies the connection against the metrics labels endpoint,
+and saves the profile.
+
+Use an explicit `http://` or `https://` scheme when transport matters. For a
+scheme-less server, interactive Kratos login assumes HTTPS while the general API
+client defaults to HTTP.
+
+For a local or network-protected instance with authentication disabled, select
+**No authentication**. The CLI then connects directly without credentials.
+
+<Callout type="info">
+  Kratos sessions are reused across invocations. If an API request returns 401
+  and the profile still has email/password credentials, the CLI signs in again,
+  retries once, and persists the refreshed session.
+</Callout>
+
+## Ports
+
+| Port | Default | Used by |
+|---|---:|---|
+| Query | `3140` | Trace, metric, and log reads |
+| Ingest | `3130` | Metric and log ingestion |
+| Admin | `3199` | Log deletion tasks |
+
+Override them with `--query-port`, `--ingest-port`, and `--admin-port`, or the
+corresponding environment variables.
+
+## Environment variables
+
+Environment configuration is the simplest non-interactive connection path:
+
+```bash
+export CUBEAPM_SERVER=cube.example.com
+export CUBEAPM_EMAIL=user@example.com
+export CUBEAPM_PASSWORD=your-password
+export CUBEAPM_QUERY_PORT=3140
+export CUBEAPM_INGEST_PORT=3130
+export CUBEAPM_ADMIN_PORT=3199
+cubeapm traces services -o json
+```
+
+If no profile fixes `auth_method`, the presence of both email and password makes
+the client use Kratos; without them it uses no authentication.
+
+## One-off overrides
+
+Global flags override environment and profile values:
+
+```bash
+cubeapm --server cube.example.com --email user@example.com --password secret traces services
+cubeapm --profile production metrics query 'up'
+```
+
+Prefer login or secret-backed environment variables over password flags so the
+password does not remain in shell history or process listings.
+
+## Named profiles
+
+```bash
+cubeapm config profiles list
+cubeapm config profiles use production
+cubeapm traces services --profile staging
+cubeapm config profiles delete old-profile
+```
+
+Profiles live at `~/.config/cubeapm-cli/config.yaml`, or under
+`$XDG_CONFIG_HOME/cubeapm-cli/config.yaml`. The CLI creates the directory with
+mode `0700` and the file with mode `0600`.
+
+<Callout type="warn">
+  A Kratos profile stores the email, password, cached session cookie, and expiry
+  so it can renew an expired session. Use environment variables instead if you
+  do not want the password persisted in the profile.
+</Callout>

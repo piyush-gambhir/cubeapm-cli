@@ -1,0 +1,52 @@
+---
+title: Installation
+description: Install the prebuilt binary or build CubeAPM CLI from source.
+---
+
+## Install script (recommended)
+
+Installs the latest prebuilt binary for your supported OS and architecture:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
+```
+
+Pin a version or change the install directory:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.2.4 sh
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
+```
+
+The installer supports macOS and Linux on `amd64` and `arm64`. It downloads
+`cubeapm-cli_<os>_<arch>.tar.gz` from the selected GitHub release and installs
+the `cubeapm` binary into `/usr/local/bin` by default.
+
+## Download a release manually
+
+Prebuilt archives are attached to each
+[GitHub Release](https://github.com/piyush-gambhir/cubeapm-cli/releases). Extract
+the archive for your platform and place `cubeapm` on your `PATH`.
+
+## Build from source
+
+Use a Go toolchain compatible with `cli-go/go.mod`:
+
+```bash
+git clone https://github.com/piyush-gambhir/cubeapm-cli.git
+cd cubeapm-cli/cli-go
+make install
+```
+
+To reproduce the supplied development build metadata directly with `go install`:
+
+```bash
+cd cubeapm-cli/cli-go
+go install -ldflags "-s -w -X github.com/piyush-gambhir/cubeapm-cli/cli-go/cmd.Version=v0.2.4-dirty -X github.com/piyush-gambhir/cubeapm-cli/cli-go/cmd.Commit=16b1e70 -X github.com/piyush-gambhir/cubeapm-cli/cli-go/cmd.BuildDate=2026-07-14T01:17:04Z" .
+```
+
+## Verify
+
+```bash
+cubeapm version
+```

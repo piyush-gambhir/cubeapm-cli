@@ -45,14 +45,14 @@ You can also download a prebuilt archive directly from the [releases page](https
 Install with `go install` (Go 1.21+):
 
 ```bash
-go install github.com/piyush-gambhir/cubeapm-cli@latest
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
 ```
 
 Or build from source:
 
 ```bash
 git clone https://github.com/piyush-gambhir/cubeapm-cli.git
-cd cubeapm-cli
+cd cubeapm-cli/cli-go
 make build
 # Binary is at ./bin/cubeapm
 ```

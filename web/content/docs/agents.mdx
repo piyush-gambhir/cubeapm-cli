@@ -1,0 +1,60 @@
+---
+title: Agents
+description: Structured output, non-interactive operation, and safety controls for agents.
+---
+
+CubeAPM CLI includes global controls for coding agents, CI jobs, and scripts.
+
+## Machine-readable output
+
+- Use `-o json` for data that will be parsed.
+- Read/query commands write requested data to stdout; errors are written to
+  stderr with a non-zero exit status.
+- With `-o json`, CLI errors use `{"error":"..."}`.
+- `logs query -o json` emits a stream of JSON objects, not one array.
+
+## Safety flags
+
+| Flag | Environment | Effect |
+|---|---|---|
+| `--read-only` | `CUBEAPM_READ_ONLY=true` | Blocks protected mutating API commands |
+| `--no-input` | `CUBEAPM_NO_INPUT=true` | Disables interactive login and update confirmation |
+| `--quiet`, `-q` | `CUBEAPM_QUIET=true` | Suppresses informational output where supported |
+
+```bash
+CUBEAPM_READ_ONLY=true \
+CUBEAPM_NO_INPUT=true \
+CUBEAPM_QUIET=true \
+cubeapm traces search --service api-gateway --last 1h -o json
+```
+
+Read-only mode blocks telemetry ingestion and starting or stopping log deletion.
+Listing deletion tasks and all query commands remain available.
+
+<Callout type="warn">
+  The current command setup bypasses read-only enforcement for `login`, config
+  changes, profile switching/deletion, and `update`. It is not a general
+  filesystem sandbox. Pair it with `--no-input`, and use an external sandbox if
+  those local or update operations must also be prevented.
+</Callout>
+
+## Non-interactive connection
+
+```bash
+export CUBEAPM_SERVER=cube.example.com
+export CUBEAPM_EMAIL="$CUBEAPM_CI_EMAIL"
+export CUBEAPM_PASSWORD="$CUBEAPM_CI_PASSWORD"
+export CUBEAPM_NO_INPUT=true
+export CUBEAPM_READ_ONLY=true
+cubeapm metrics query 'up' -o json
+```
+
+Port overrides are available as `CUBEAPM_QUERY_PORT`, `CUBEAPM_INGEST_PORT`,
+and `CUBEAPM_ADMIN_PORT`.
+
+## Claude Code skill
+
+A ready-to-use skill lives at
+[`cubeapm/SKILL.md`](https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubeapm/SKILL.md).
+The exhaustive agent-oriented command reference is also published at
+[`llms.txt`](https://cubeapm-cli.pages.dev/llms.txt).

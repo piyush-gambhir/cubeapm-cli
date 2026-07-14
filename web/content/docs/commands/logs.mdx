@@ -1,0 +1,49 @@
+---
+title: Logs
+description: Query LogsQL, explore log shape and retention, and manage deletion tasks.
+---
+
+## Query and aggregate
+
+```bash
+cubeapm logs query 'error' --service api-gateway --last 30m
+cubeapm logs query 'timeout' --stream '{host="web-1"}' --level error --limit 50 -o json
+cubeapm logs hits --query 'level:error' --last 24h --step 1h
+cubeapm logs stats 'error | stats by (service) count() as c' --last 24h -o json
+```
+
+`logs query` accepts `--service`, `--level`, and `--stream` convenience filters,
+plus `--last`, `--from`, and `--to`. JSON/YAML query results stream one entry at
+a time.
+
+## Retention and schema discovery
+
+```bash
+cubeapm logs status
+cubeapm logs status --query 'service.name:api-gateway' --lookback 60 -o json
+cubeapm logs streams --query 'error' --last 24h
+cubeapm logs field-names --last 1h
+cubeapm logs field-values service --query 'level:error' --limit 50
+```
+
+`status` samples 24-hour buckets to estimate the oldest and newest non-empty log
+windows. `field-names` has the alias `fields`; streams and field commands accept
+the standard time-range flags.
+
+## Deletion tasks
+
+```bash
+# Preview first
+cubeapm logs query '_time:<24h AND service:test' --limit 10
+
+cubeapm logs delete run '_time:<24h AND service:test'
+cubeapm logs delete list -o json
+cubeapm logs delete stop <task-id>
+cubeapm logs delete stop --if-exists <task-id>
+```
+
+<Callout type="warn">
+  Log deletion is irreversible and uses the admin port, `3199` by default.
+  Preview the exact filter with `logs query` first. `--read-only` blocks starting
+  and stopping deletion tasks but still permits `logs delete list`.
+</Callout>

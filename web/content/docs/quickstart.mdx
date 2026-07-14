@@ -1,0 +1,57 @@
+---
+title: Quick start
+description: Connect to CubeAPM and investigate traces, metrics, and logs.
+---
+
+## 1. Configure a connection
+
+```bash
+cubeapm login
+```
+
+Choose email/password for an authenticated instance or no authentication for a
+deployment that permits direct API access. The command verifies the connection
+and stores a named profile.
+
+## 2. Discover services
+
+```bash
+cubeapm traces services
+cubeapm traces services --env PROD --last 24h -o json
+```
+
+## 3. Investigate a trace
+
+```bash
+cubeapm traces search --service api-gateway --status error --last 1h
+cubeapm traces get <trace-id>
+```
+
+Table output renders a trace waterfall. Add `-o json` to retrieve the full trace
+shape for scripts or deeper inspection.
+
+## 4. Query metrics and logs
+
+```bash
+cubeapm metrics query 'up' -o json
+cubeapm metrics query-range 'rate(http_requests_total[5m])' --last 1h --step 1m -o json
+cubeapm logs query 'error' --service api-gateway --last 30m -o json
+```
+
+Quote PromQL and LogsQL expressions with single quotes so the shell does not
+interpret braces, parentheses, pipes, or other query syntax.
+
+## Discovering commands
+
+Every command has `-h`/`--help`:
+
+```bash
+cubeapm --help
+cubeapm traces --help
+cubeapm traces search --help
+```
+
+<Cards>
+  <Card title="Output formats" href="/docs/output-formats" description="table, json, yaml, streaming logs, and structured errors." />
+  <Card title="Commands" href="/docs/commands" description="The real command surface, grouped by telemetry area." />
+</Cards>

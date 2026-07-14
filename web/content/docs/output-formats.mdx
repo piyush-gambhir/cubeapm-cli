@@ -1,0 +1,48 @@
+---
+title: Output formats
+description: table, json, and yaml output for human and machine consumption.
+---
+
+The global `-o` / `--output` flag accepts three formats:
+
+- `-o table` — default, human-readable output
+- `-o json` — structured JSON for scripts and agents
+- `-o yaml` — YAML output
+
+Set a profile default when you do not want to pass the flag repeatedly:
+
+```bash
+cubeapm config set output json
+```
+
+<Callout type="info">
+  **Agents: prefer `-o json`.** Query and read commands write their requested
+  data to stdout; command errors go to stderr and become a JSON object with an
+  `error` field when JSON output was selected.
+</Callout>
+
+```bash
+cubeapm traces services -o json | jq -r '.[].SERVICE'
+cubeapm traces search --service api-gateway --last 1h -o json | jq -r '.[].TRACE_ID'
+cubeapm metrics query 'up' -o json | jq '.data.result'
+```
+
+## Shape varies by command
+
+Commands backed by a table become an array of objects in JSON or YAML. Metric
+queries return the raw Prometheus-compatible API response. `traces get` returns
+the full Jaeger-format trace outside table mode.
+
+`logs query` is intentionally streamed: JSON and YAML are emitted one entry at
+a time instead of being buffered into one array. Process JSON output as a stream:
+
+```bash
+cubeapm logs query 'error' --last 30m -o json | jq -c '{time: ._time, message: ._msg}'
+```
+
+## Presentation flags
+
+- `--no-color` disables terminal color.
+- `--quiet` / `-q` suppresses informational output on commands that emit it.
+- `--verbose` prints HTTP request diagnostics; do not combine it with a stdout
+  parser because verbose lines are written to stdout.

@@ -1,0 +1,40 @@
+---
+title: Overview
+description: The CubeAPM CLI command surface, grouped by telemetry area.
+---
+
+Every command supports `-h`/`--help`. Global connection, output, presentation,
+and safety flags can be placed before or after a subcommand.
+
+## Groups
+
+<Cards>
+  <Card title="Traces" href="/docs/commands/traces" description="Search traces, render waterfalls, discover services and operations, dependencies, and callers." />
+  <Card title="Metrics" href="/docs/commands/metrics" description="Instant and range PromQL plus label and series discovery." />
+  <Card title="Logs" href="/docs/commands/logs" description="LogsQL queries, volume, retention, statistics, schema exploration, and deletion." />
+  <Card title="Ingest & configuration" href="/docs/commands/ingest-config" description="Push telemetry, manage connections, inspect versions, and update the CLI." />
+</Cards>
+
+## Global flags
+
+```text
+-o, --output <format>   table, json, or yaml
+--server <addr>         CubeAPM server address
+--email <email>         login email
+--password <password>   login password
+--profile <name>        connection profile
+--query-port <port>     default 3140
+--ingest-port <port>    default 3130
+--admin-port <port>     default 3199
+--no-color              disable colored output
+--verbose               enable verbose HTTP output
+--read-only             block protected API write operations
+--no-input              disable interactive prompts
+-q, --quiet             suppress informational output
+```
+
+<Callout type="info">
+  This is a curated tour grounded in the command implementation. For exhaustive
+  usage at the installed version, use `cubeapm <command> --help`; the published
+  agent reference is available at `llms.txt`.
+</Callout>

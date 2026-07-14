@@ -1,0 +1,62 @@
+---
+title: Ingest & configuration
+description: Push telemetry, manage connection profiles, and maintain the CLI.
+---
+
+## Ingest telemetry
+
+Ingest commands read from `--file <path>` or stdin and use the ingest port,
+`3130` by default.
+
+```bash
+cubeapm ingest metrics --format prometheus --file metrics.txt
+cubeapm ingest metrics --format otlp --file metrics.pb
+cubeapm ingest metrics --format remote-write --file remote-write.pb
+cat metrics.txt | cubeapm ingest metrics --format prometheus
+
+cubeapm ingest logs --format jsonline --file logs.jsonl
+cubeapm ingest logs --format otlp --file logs.pb
+cubeapm ingest logs --format loki --file loki-push.json
+cubeapm ingest logs --format elastic --file elastic-bulk.ndjson
+```
+
+The default formats are `prometheus` for metrics and `jsonline` for logs;
+`--file -` explicitly selects stdin.
+
+## Configuration and profiles
+
+```bash
+cubeapm config view
+cubeapm config get server
+cubeapm config get current_profile
+cubeapm config set server cube.example.com
+cubeapm config set auth_method kratos
+cubeapm config set output json
+
+cubeapm config profiles list
+cubeapm config profiles use production
+cubeapm config profiles delete staging
+```
+
+Valid settable keys are `server`, `email`, `password`, `auth_method`,
+`query_port`, `ingest_port`, `admin_port`, and `output`. `config get` also
+accepts `current_profile`; sensitive values are masked by `get` and `view`.
+
+## Login, version, and update
+
+```bash
+cubeapm login
+cubeapm version
+cubeapm update --check
+cubeapm update
+```
+
+`login` is interactive. `update --check` does not install; `update` asks for
+confirmation before replacing a release binary and cannot proceed with
+`--no-input`.
+
+<Callout type="warn">
+  `--read-only` blocks ingestion, but the current command setup does not enforce
+  it for config changes, profile switching/deletion, `login`, or `update`. Use
+  `--no-input` and an external sandbox if those operations must also be blocked.
+</Callout>

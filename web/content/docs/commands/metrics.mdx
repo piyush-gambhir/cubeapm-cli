@@ -1,0 +1,41 @@
+---
+title: Metrics
+description: Run PromQL queries and explore labels, values, and time series.
+---
+
+## Instant and range queries
+
+Pass the PromQL expression as a quoted positional argument:
+
+```bash
+cubeapm metrics query 'up'
+cubeapm metrics query 'sum by (service) (rate(http_requests_total[5m]))' -o json
+cubeapm metrics query 'up' --time 2026-07-14T01:00:00Z
+
+cubeapm metrics query-range 'rate(http_requests_total[5m])' --last 1h --step 1m
+cubeapm metrics query-range 'up' --from -2h --to -1h -o json
+```
+
+`query-range` is also available as `range`. If `--step` is omitted, the client
+lets the API choose a useful resolution.
+
+## Discover metric metadata
+
+```bash
+cubeapm metrics labels --last 24h
+cubeapm metrics label-values __name__
+cubeapm metrics label-values service.name --like media
+cubeapm metrics label-values service.name --match '{env="PROD"}' -o json
+cubeapm metrics series --match 'up{job="api"}' --last 1h
+cubeapm metrics series --match '{__name__=~"http_.*"}' --limit 50 -o json
+```
+
+`label-values --match` is repeatable and its selectors are ORed. `series`
+requires at least one repeatable `--match` selector. Label, label-value, and
+series queries all accept `--last`, `--from`, and `--to`.
+
+<Callout type="info">
+  Use single quotes around PromQL so the shell preserves braces, regex operators,
+  parentheses, and range selectors. JSON/YAML metric queries return the raw
+  Prometheus-compatible response rather than the formatted table shape.
+</Callout>

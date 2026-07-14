@@ -11,14 +11,14 @@ description: "Expert guide for using the cubeapm CLI to query distributed traces
 
 ```bash
 # From source (Go 1.21+)
-go install github.com/piyush-gambhir/cubeapm-cli@latest
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
 
 # From the install script
 curl -sSL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | bash
 
 # Build from source
 git clone https://github.com/piyush-gambhir/cubeapm-cli.git
-cd cubeapm-cli
+cd cubeapm-cli/cli-go
 make build
 # Binary is at ./bin/cubeapm
 ```

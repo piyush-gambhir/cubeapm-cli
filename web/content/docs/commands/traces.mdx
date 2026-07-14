@@ -1,0 +1,54 @@
+---
+title: Traces
+description: Search and inspect traces, services, operations, dependencies, and callers.
+---
+
+Trace commands use CubeAPM's Jaeger-compatible APIs. Time-aware commands accept
+`--last`, `--from`, and `--to`; with none supplied, the default window is the
+last hour.
+
+## Search and inspect
+
+```bash
+cubeapm traces search --service api-gateway --last 1h
+cubeapm traces search --service payments --status error --min-duration 500ms --last 2h
+cubeapm traces search --service api-gateway --query "GET /api/users" --tags "http.method=POST"
+cubeapm traces search --service payments --env PROD --span-kind server --limit 100 -o json
+cubeapm traces search --index cube:error --service payments --last 30m
+
+cubeapm traces get <trace-id>
+cubeapm traces get <trace-id> --from 2026-07-14T00:00:00Z --to 2026-07-14T01:00:00Z -o json
+```
+
+`search` also supports `--max-duration`; `--tags` is repeatable. Its
+`--span-kind` default is `server`. Table output from `get` is a span waterfall;
+JSON and YAML return the full trace.
+
+## Discover topology
+
+```bash
+cubeapm traces services
+cubeapm traces services --env PROD --last 24h -o json
+cubeapm traces operations api-gateway --span-kind server
+cubeapm traces dependencies --last 24h
+cubeapm traces dependencies --last 24h --dot > deps.dot
+```
+
+Aliases are `trace`, `svc`, `ops`, and `deps` for their corresponding commands.
+
+<Callout type="info">
+  `traces services --env` is metrics-derived and expects environment values such
+  as `PROD` or `UAT`; a trace-only service may not appear in that filtered list.
+</Callout>
+
+## Rank outbound callers
+
+```bash
+cubeapm traces callers --host api.example.com --last 1h
+cubeapm traces callers --host api.example.com --last 1h --window 5m --topk 20 -o json
+cubeapm traces callers --host api.example.com --service MEDIA-SERVICE --last 30m
+```
+
+`callers` derives call rates from `cube_apm_latency_count`. Pass `--host`
+explicitly when your deployment's host naming convention differs from the
+command's service inference; it also accepts `--from` and `--to`.

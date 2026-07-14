@@ -1,0 +1,13 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "installation",
+    "authentication",
+    "quickstart",
+    "output-formats",
+    "agents",
+    "---Commands---",
+    "commands"
+  ]
+}
