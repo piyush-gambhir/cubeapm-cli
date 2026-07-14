@@ -6,8 +6,8 @@ export function SiteFooter() {
   const repoUrl = `https://github.com/${site.repo}`;
 
   return (
-    <footer className="border-t border-border">
-      <div className="mx-auto grid max-w-5xl gap-8 px-4 py-12 sm:grid-cols-2">
+    <footer className="bg-fd-muted/30">
+      <div className="mx-auto grid max-w-5xl gap-8 px-4 py-14 sm:grid-cols-2">
         <div className="max-w-xs">
           <div className="flex items-center gap-2 font-semibold">
             <Terminal className="size-4" />
@@ -45,9 +45,18 @@ export function SiteFooter() {
           </div>
         </div>
       </div>
-      <div className="border-t border-border">
-        <div className="mx-auto max-w-5xl px-4 py-6 text-xs text-muted-foreground">
-          © {site.name} · Open-source · Not affiliated with the upstream project.
+      <div>
+        <div className="mx-auto max-w-5xl px-4 pb-10 text-xs leading-relaxed text-muted-foreground">
+          <p>
+            {site.name} is an independent, open-source project. It is{' '}
+            <span className="font-medium text-fd-foreground/80">
+              not affiliated with, endorsed by, or sponsored by
+            </span>{' '}
+            the makers of the underlying software. All product names, logos, and
+            trademarks are the property of their respective owners and are used
+            for identification purposes only.
+          </p>
+          <p className="mt-2">© {site.name} · Open-source · MIT-licensed.</p>
         </div>
       </div>
     </footer>

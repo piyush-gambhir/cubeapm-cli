@@ -17,7 +17,7 @@ export function FloatingHeader() {
 
   return (
     <header className="fixed inset-x-0 top-3 z-50 px-4 sm:top-4">
-      <nav className="mx-auto flex h-13 max-w-3xl items-center justify-between gap-2 rounded-full border border-border bg-fd-background/70 py-2 pl-5 pr-2 shadow-lg shadow-black/[0.04] backdrop-blur-xl">
+      <nav className="mx-auto flex h-13 max-w-3xl items-center justify-between gap-2 rounded-full bg-fd-card/95 py-2 pl-5 pr-2 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)]">
         <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
           <Terminal className="size-4" />
           <span className="hidden sm:inline">{site.name}</span>

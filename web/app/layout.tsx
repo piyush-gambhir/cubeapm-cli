@@ -1,18 +1,14 @@
 import type { Metadata } from 'next';
-import { Inter, Instrument_Serif } from 'next/font/google';
+import localFont from 'next/font/local';
 import { Provider } from '@/components/provider';
 import { site } from '@/lib/site';
 import './global.css';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-sans',
-});
-
-const serif = Instrument_Serif({
-  subsets: ['latin'],
-  weight: '400',
-  variable: '--font-serif',
+const satoshi = localFont({
+  src: '../fonts/Satoshi-Variable.woff2',
+  weight: '300 900',
+  display: 'swap',
+  variable: '--font-satoshi',
 });
 
 export const metadata: Metadata = {
@@ -28,7 +24,7 @@ export default function Layout({ children }: LayoutProps<'/'>) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${serif.variable} ${inter.className}`}
+      className={`${satoshi.variable} ${satoshi.className}`}
       suppressHydrationWarning
     >
       <body className="flex flex-col min-h-screen">

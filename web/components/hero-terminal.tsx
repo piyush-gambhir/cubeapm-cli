@@ -64,12 +64,12 @@ export function HeroTerminal({
   return (
     <div
       className={cn(
-        'overflow-hidden rounded-2xl border border-border bg-fd-card/80 shadow-2xl shadow-black/5 backdrop-blur ring-1 ring-black/[0.03]',
+        'overflow-hidden rounded-2xl bg-fd-card shadow-[0_24px_80px_-24px_rgba(0,0,0,0.25)]',
         className,
       )}
     >
       {/* titlebar */}
-      <div className="flex items-center gap-2 border-b border-border/80 bg-fd-muted/40 px-4 py-3">
+      <div className="flex items-center gap-2 bg-fd-muted/50 px-4 py-3">
         <span className="size-3 rounded-full bg-red-400/90" />
         <span className="size-3 rounded-full bg-amber-400/90" />
         <span className="size-3 rounded-full bg-emerald-400/90" />

@@ -23,7 +23,7 @@ export function InstallCommand({
         });
       }}
       className={cn(
-        'group flex w-full max-w-xl items-center gap-3 rounded-xl border border-border bg-fd-card/60 px-4 py-3 text-left font-mono text-sm shadow-sm backdrop-blur transition-colors hover:border-fd-primary/40',
+        'group flex w-full max-w-xl items-center gap-3 rounded-xl bg-fd-muted px-4 py-3 text-left font-mono text-sm transition-colors hover:bg-fd-muted/70',
         className,
       )}
       aria-label="Copy install command"
