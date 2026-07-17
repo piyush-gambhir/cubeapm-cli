@@ -37,6 +37,16 @@ export interface SiteConfig {
   example: string;
   /** Optional: tech / query languages / integrations this CLI speaks (logo strip) */
   compatible?: string[];
+  /** Optional: features section heading (default: "Everything, from one binary") */
+  featuresTitle?: string;
+  /** Optional: features section subheading */
+  featuresSubtitle?: string;
+  /** Optional: CTA band body (default mentions installing the binary) */
+  ctaBody?: string;
+  /** Optional: per-site accent expressed as an OKLCH color */
+  accent?: string;
+  /** Optional: human-readable accent name */
+  accentName?: string;
 }
 
 export const site: SiteConfig = {
@@ -45,8 +55,10 @@ export const site: SiteConfig = {
   repo: 'piyush-gambhir/cubeapm-cli',
   tagline: 'Observe CubeAPM from your terminal',
   description:
-    'A scriptable CLI for distributed traces, Prometheus-compatible metrics, and VictoriaLogs-compatible logs. Query, investigate, ingest telemetry, and manage multiple CubeAPM connections from one binary.',
+    'An independent, unofficial open-source CLI for CubeAPM that is not affiliated with CubeAPM or its vendor. Query distributed traces, Prometheus-compatible metrics, and VictoriaLogs-compatible logs from one binary.',
   badge: 'Open-source · Traces, metrics & logs',
+  accent: 'oklch(0.72 0.14 300)',
+  accentName: 'violet',
   installCommand:
     'curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh',
   features: [

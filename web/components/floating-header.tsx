@@ -1,76 +1,253 @@
 'use client';
 
+import { Moon, Search, Sun } from 'lucide-react';
 import Link from 'next/link';
-import { Moon, Search, Sun, Terminal } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { useSearchContext } from 'fumadocs-ui/contexts/search';
-import { Button } from '@/components/ui/button';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { OsmoButton } from '@/components/ui/osmo-button';
 import { site } from '@/lib/site';
+
+type MenuLink = { label: string; href: string; external?: boolean };
 
 export function FloatingHeader() {
   const { setTheme, resolvedTheme } = useTheme();
   const { setOpenSearch } = useSearchContext();
+  const [open, setOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const focusTrap = useRef<HTMLDivElement>(null);
   const repoUrl = `https://github.com/${site.repo}`;
+  const groups: { title: string; links: MenuLink[] }[] = [
+    {
+      title: 'Documentation',
+      links: [
+        { label: 'Introduction', href: '/docs' },
+        { label: 'Installation', href: '/docs/installation' },
+        { label: 'Authentication', href: '/docs/authentication' },
+        { label: 'Quick start', href: '/docs/quickstart' },
+      ],
+    },
+    {
+      title: 'Project',
+      links: [
+        { label: 'GitHub', href: repoUrl, external: true },
+        { label: 'Releases', href: `${repoUrl}/releases`, external: true },
+        { label: 'Issues', href: `${repoUrl}/issues`, external: true },
+        { label: 'License', href: `${repoUrl}/blob/main/LICENSE`, external: true },
+      ],
+    },
+  ];
 
-  const iconBtn =
-    'flex size-8 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-fd-muted hover:text-fd-foreground';
+  const closeMenu = useCallback((restoreFocus = true) => {
+    setOpen(false);
+    if (restoreFocus) requestAnimationFrame(() => menuButton.current?.focus());
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const previousOverflow = document.body.style.overflow;
+    root.toggleAttribute('data-menu-open', open);
+    document.body.classList.toggle('menu-open', open);
+    if (!open) return;
+
+    document.body.style.overflow = 'hidden';
+    requestAnimationFrame(() => getFocusableElements(menu.current)[0]?.focus());
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeMenu();
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+      const focusable = getFocusableElements(focusTrap.current);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('keydown', onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      document.body.classList.remove('menu-open');
+      root.removeAttribute('data-menu-open');
+    };
+  }, [closeMenu, open]);
+
+  useEffect(() => {
+    if (open) setHidden(false);
+  }, [open]);
+
+  useEffect(() => {
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      const delta = y - lastY;
+      // Small deltas are ignored so momentum jitter doesn't flicker the bar.
+      if (Math.abs(delta) < 8) return;
+      setHidden(y > 120 && delta > 0);
+      lastY = y;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const openSearch = () => {
+    closeMenu(false);
+    setOpenSearch(true);
+  };
 
   return (
-    <header className="fixed inset-x-0 top-3 z-50 px-4 sm:top-4">
-      <nav className="mx-auto flex h-13 max-w-3xl items-center justify-between gap-2 rounded-full bg-fd-card/95 py-2 pl-5 pr-2 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.18)]">
-        <Link href="/" className="flex items-center gap-2 text-sm font-semibold">
-          <Terminal className="size-4" />
-          <span className="hidden sm:inline">{site.name}</span>
-        </Link>
+    <nav
+      className="nav"
+      data-nav-status={open ? 'active' : 'not-active'}
+      data-nav-hidden={hidden || undefined}
+      aria-label="Primary navigation"
+    >
+      <button
+        type="button"
+        className="nav__bg"
+        aria-label="Close menu"
+        tabIndex={open ? 0 : -1}
+        onClick={() => closeMenu()}
+      />
+      <div className="nav-bar__wrap">
+        <div className="nav-bar__width">
+          <div ref={focusTrap} className="nav-bar">
+            <div className="nav-bar__back" aria-hidden="true">
+              <span className="nav-bar__bg" />
+            </div>
 
-        <div className="flex items-center gap-1">
-          <Link
-            href="/docs"
-            className="hidden rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:text-fd-foreground sm:block"
-          >
-            Docs
-          </Link>
+            <div className="nav-bar__top">
+              <div className="nav-bar__menu">
+                <button
+                  ref={menuButton}
+                  type="button"
+                  className="nav-menu"
+                  aria-label={open ? 'Close menu' : 'Open menu'}
+                  aria-expanded={open}
+                  aria-controls="primary-menu-panel"
+                  onClick={() => setOpen((value) => !value)}
+                >
+                  <span className="nav-menu__icon" aria-hidden="true">
+                    <span />
+                    <span />
+                  </span>
+                  <span className="nav-menu__labels" aria-hidden="true">
+                    <span className="nav-menu__label is--menu">Menu</span>
+                    <span className="nav-menu__label is--close">Close</span>
+                  </span>
+                </button>
+              </div>
 
-          <button
-            type="button"
-            onClick={() => setOpenSearch(true)}
-            aria-label="Search"
-            className={iconBtn}
-          >
-            <Search className="size-4" />
-          </button>
+              <div className="nav-bar__logo">
+                <Link href="/" className="nav-logo" aria-label={`${site.name} home`}>
+                  <span className="nav-logo__wordmark">
+                    <span aria-hidden>
+                      &gt;<span className="nav-logo__cursor">_</span>
+                    </span>{' '}
+                    {site.binary}
+                  </span>
+                  <span className="nav-logo__icon" aria-hidden="true">&gt;_</span>
+                </Link>
+              </div>
 
-          <button
-            type="button"
-            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-            aria-label="Toggle theme"
-            className={iconBtn}
-          >
-            <Sun className="hidden size-4 dark:block" />
-            <Moon className="size-4 dark:hidden" />
-          </button>
+              <div className="nav-bar__buttons">
+                <button
+                  type="button"
+                  onClick={openSearch}
+                  aria-label="Search"
+                  className="nav-icon-button"
+                >
+                  <Search />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                  aria-label="Toggle theme"
+                  className="nav-icon-button"
+                >
+                  <Sun className="hidden dark:block" />
+                  <Moon className="dark:hidden" />
+                </button>
+                <OsmoButton
+                  href={repoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  theme="dark"
+                  radius="pill"
+                  className="nav-github"
+                >
+                  GitHub
+                </OsmoButton>
+                <OsmoButton href="/docs" radius="pill" className="nav-get-started">
+                  Get started
+                </OsmoButton>
+              </div>
+            </div>
 
-          <a
-            href={repoUrl}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="GitHub"
-            className={iconBtn}
-          >
-            <svg viewBox="0 0 24 24" fill="currentColor" className="size-4">
-              <path d="M12 .5A11.5 11.5 0 0 0 .5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2c-3.2.7-3.88-1.37-3.88-1.37-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.71.08-.71 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.19-3.1-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.84 1.19 3.1 0 4.42-2.69 5.4-5.25 5.68.41.36.77 1.06.77 2.14v3.17c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5Z" />
-            </svg>
-          </a>
-
-          <Button
-            size="sm"
-            className="ml-1 rounded-full"
-            render={<Link href="/docs" />}
-          >
-            Get started
-          </Button>
+            <div
+              id="primary-menu-panel"
+              className="nav-bar__bottom"
+              aria-hidden={!open}
+              inert={!open}
+            >
+              <div className="nav-bar__bottom-overflow">
+                <div ref={menu} className="nav-bar__bottom-inner" data-lenis-prevent="">
+                  <div className="nav-desktop-menu">
+                    {groups.map((group) => (
+                      <section className="nav-desktop-menu__col" key={group.title}>
+                        <p className="nav-menu__eyebrow">{group.title}</p>
+                        <ul>
+                          {group.links.map((link, index) => (
+                            <li key={link.label}>
+                              <Link
+                                href={link.href}
+                                target={link.external ? '_blank' : undefined}
+                                rel={link.external ? 'noreferrer' : undefined}
+                                onClick={() => closeMenu(false)}
+                              >
+                                <span aria-hidden className="nav-menu-link__index">
+                                  {String(index + 1).padStart(2, '0')}
+                                </span>
+                                {link.label}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
+                      </section>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-      </nav>
-    </header>
+      </div>
+    </nav>
   );
+}
+
+function getFocusableElements(root: HTMLElement | null) {
+  if (!root) return [];
+
+  return Array.from(
+    root.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ),
+  ).filter((element) => {
+    const style = window.getComputedStyle(element);
+    return element.getClientRects().length > 0 && style.visibility !== 'hidden';
+  });
 }

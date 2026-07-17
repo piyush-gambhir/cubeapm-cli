@@ -1,12 +1,11 @@
 import { cn } from '@/lib/utils';
 
-// Lightweight, dependency-free shell highlighter for the hero example.
 function Line({ line }: { line: string }) {
   if (line.trim() === '') return <span>{'\n'}</span>;
 
   // Comment line
   if (line.trimStart().startsWith('#')) {
-    return <span className="text-fd-muted-foreground/70">{line}</span>;
+    return <span className="hero-terminal__comment">{line}</span>;
   }
 
   const tokens = line.split(/(\s+)/);
@@ -21,27 +20,31 @@ function Line({ line }: { line: string }) {
         if (!seenBinary) {
           seenBinary = true;
           return (
-            <span key={i} className="text-violet-500 dark:text-violet-400">
+            <span key={i} className="hero-terminal__binary">
               {tok}
             </span>
           );
         }
         if (tok.startsWith('-')) {
           return (
-            <span key={i} className="text-amber-600 dark:text-amber-400">
+            <span key={i} className="hero-terminal__flag">
               {tok}
             </span>
           );
         }
-        if (/^["'].*["']$/.test(tok) || tok.startsWith('"') || tok.startsWith("'")) {
+        if (
+          /^["'].*["']$/.test(tok) ||
+          tok.startsWith('"') ||
+          tok.startsWith("'")
+        ) {
           return (
-            <span key={i} className="text-emerald-600 dark:text-emerald-400">
+            <span key={i} className="hero-terminal__string">
               {tok}
             </span>
           );
         }
         return (
-          <span key={i} className="text-fd-foreground/90">
+          <span key={i}>
             {tok}
           </span>
         );
@@ -62,28 +65,16 @@ export function HeroTerminal({
   const lines = command.split('\n');
 
   return (
-    <div
-      className={cn(
-        'overflow-hidden rounded-2xl bg-fd-card shadow-[0_24px_80px_-24px_rgba(0,0,0,0.25)]',
-        className,
-      )}
-    >
-      {/* titlebar */}
-      <div className="flex items-center gap-2 bg-fd-muted/50 px-4 py-3">
-        <span className="size-3 rounded-full bg-red-400/90" />
-        <span className="size-3 rounded-full bg-amber-400/90" />
-        <span className="size-3 rounded-full bg-emerald-400/90" />
-        <span className="ml-3 text-xs font-medium text-fd-muted-foreground">
-          {title}
-        </span>
+    <div className={cn('hero-terminal', className)}>
+      <div className="hero-terminal__titlebar">
+        <span className="osmo-eyebrow">{title}</span>
       </div>
-      {/* body */}
-      <pre className="overflow-x-auto px-5 py-4 text-left font-mono text-[13px] leading-relaxed sm:text-sm">
+      <pre className="hero-terminal__body">
         <code>
           {lines.map((line, i) => (
-            <span key={i} className="block">
+            <span key={i} className="hero-terminal__line">
               {!line.trimStart().startsWith('#') && line.trim() !== '' ? (
-                <span className="mr-2 select-none text-fd-muted-foreground/50">
+                <span className="hero-terminal__prompt" aria-hidden="true">
                   $
                 </span>
               ) : null}

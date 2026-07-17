@@ -1,4 +1,7 @@
-/privacy        /privacy-policy      301
-/terms          /terms-of-service    301
-/privacy.html   /privacy-policy      301
-/terms.html     /terms-of-service    301
+/privacy-policy.html  /privacy  301
+/terms-of-service.html  /terms  301
+/contact.html  /contact  301
+/privacy-policy  /privacy  301
+/terms-of-service  /terms  301
+/privacy.html  /privacy  301
+/terms.html  /terms  301
