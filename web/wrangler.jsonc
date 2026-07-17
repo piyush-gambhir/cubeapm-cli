@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "cubeapm-cli-web",
+  "compatibility_date": "2026-07-17",
+  "assets": {
+    "directory": "./.cloudflare/assets",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "projects.piyushgambhir.com/cubeapm-cli*",
+      "zone_name": "piyushgambhir.com"
+    }
+  ]
+}
+

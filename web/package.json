@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "build": "next build",
+    "build:cloudflare": "next build --webpack && node scripts/prepare-cloudflare-assets.mjs cubeapm-cli",
+    "deploy:cloudflare": "wrangler deploy",
     "dev": "next dev",
     "start": "serve out",
     "types:check": "fumadocs-mdx && next typegen && tsc --noEmit"
@@ -37,6 +39,7 @@
     "postcss": "^8.5.17",
     "serve": "^14.2.6",
     "tailwindcss": "^4.3.2",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "wrangler": "4.112.0"
   }
 }
