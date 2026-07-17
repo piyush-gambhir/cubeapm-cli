@@ -98,20 +98,31 @@ export default function HomePage() {
           <div className="osmo-container">
             <Reveal className="compatible-marquee">
               <div className="compatible-marquee__track">
-                {[false, true].map((hidden) => (
-                  <span
-                    className="compatible-marquee__list"
-                    aria-hidden={hidden || undefined}
-                    key={String(hidden)}
-                  >
-                    {site.compatible?.map((item) => (
-                      <span className="compatible-marquee__item" key={item}>
-                        {item}
-                        <span aria-hidden>{' · '}</span>
-                      </span>
-                    ))}
-                  </span>
-                ))}
+                {Array.from(
+                  {
+                    // Each copy is one full set, so the scroll speed stays fixed
+                    // per site; enough copies guarantee the track always overruns
+                    // the widest container so no blank gap sweeps through.
+                    length: Math.max(
+                      4,
+                      Math.ceil(24 / site.compatible.length) + 1,
+                    ),
+                  },
+                  (_, copyIndex) => (
+                    <span
+                      className="compatible-marquee__list"
+                      aria-hidden={copyIndex > 0 || undefined}
+                      key={copyIndex}
+                    >
+                      {site.compatible?.map((item) => (
+                        <span className="compatible-marquee__item" key={item}>
+                          {item}
+                          <span aria-hidden>{' · '}</span>
+                        </span>
+                      ))}
+                    </span>
+                  ),
+                )}
               </div>
             </Reveal>
           </div>

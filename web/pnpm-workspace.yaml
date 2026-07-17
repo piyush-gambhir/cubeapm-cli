@@ -1,3 +1,5 @@
+packages:
+  - '.'
 # Project-scoped pnpm settings.
 # minimumReleaseAge relaxed: this app pins the exact Fumadocs versions that
 # create-fumadocs-app ships, freshly published, which would otherwise trip the
