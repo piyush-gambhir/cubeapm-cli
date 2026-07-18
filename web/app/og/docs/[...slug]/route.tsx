@@ -6,16 +6,16 @@ import { site } from '@/lib/site';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-const fontBuffer = async (name: string) => {
-  const data = await readFile(join(process.cwd(), 'fonts', name));
+const fontBuffer = async (...fontPath: string[]) => {
+  const data = await readFile(join(process.cwd(), 'node_modules', ...fontPath));
   return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
 };
 
 export const revalidate = false;
 
-const hafferXH = fontBuffer('haffer-xh-regular-2.ttf');
+const inter = fontBuffer('@fontsource', 'inter', 'files', 'inter-latin-400-normal.woff');
 
-const hafferMono = fontBuffer('haffer-mono-regular-2.ttf');
+const jetbrainsMono = fontBuffer('@fontsource', 'jetbrains-mono', 'files', 'jetbrains-mono-latin-500-normal.woff');
 
 export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...slug]'>) {
   const { slug } = await params;
@@ -33,7 +33,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
         padding: '64px 72px',
         color: '#f3f4f1',
         background: '#131412',
-        fontFamily: 'Haffer XH',
+        fontFamily: 'Inter',
       }}
     >
       <div
@@ -41,7 +41,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
           display: 'flex',
           alignItems: 'center',
           color: site.accent,
-          fontFamily: 'Haffer Mono',
+          fontFamily: 'JetBrains Mono',
           fontSize: 26,
           letterSpacing: '-0.04em',
         }}
@@ -79,7 +79,7 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
           justifyContent: 'space-between',
           alignItems: 'center',
           color: '#7f827b',
-          fontFamily: 'Haffer Mono',
+          fontFamily: 'JetBrains Mono',
           fontSize: 19,
           letterSpacing: '0.08em',
           textTransform: 'uppercase',
@@ -94,16 +94,16 @@ export async function GET(_req: Request, { params }: RouteContext<'/og/docs/[...
       height: 630,
       fonts: [
         {
-          name: 'Haffer XH',
-          data: await hafferXH,
+          name: 'Inter',
+          data: await inter,
           style: 'normal',
           weight: 400,
         },
         {
-          name: 'Haffer Mono',
-          data: await hafferMono,
+          name: 'JetBrains Mono',
+          data: await jetbrainsMono,
           style: 'normal',
-          weight: 400,
+          weight: 500,
         },
       ],
     },
