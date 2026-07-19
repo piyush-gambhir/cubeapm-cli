@@ -1,7 +1,17 @@
 import type { Metadata } from 'next';
 import { site } from '@/lib/site';
+import { siteUrl } from '@/lib/shared';
 
-export const siteUrl = 'https://projects.piyushgambhir.com/cubeapm-cli';
+export { siteUrl };
+
+/** Social card for the site root. Rendered by app/og/home/image.png/route.tsx. */
+export const homeSocialImage = {
+  url: `${siteUrl}/og/home/image.png`,
+  width: 1200,
+  height: 630,
+  alt: `${site.name}: ${site.tagline}`,
+};
+
 export const repoUrl = `https://github.com/${site.repo}`;
 export const siteMetadataDescription =
   'Independent, unofficial CubeAPM CLI for any coding agent or shell harness to manage traces, metrics, and logs with JSON/YAML, read-only, no-input automation.';

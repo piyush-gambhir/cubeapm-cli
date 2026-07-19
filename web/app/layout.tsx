@@ -5,42 +5,40 @@ import '@fontsource/instrument-serif';
 import type { CSSProperties } from 'react';
 import { Provider } from '@/components/provider';
 import { site } from '@/lib/site';
-import {
-  defaultSocialImage,
-  siteMetadataDescription,
-  siteUrl,
-  socialMetadataDescription,
-} from '@/lib/seo';
+import { homeSocialImage, siteMetadataDescription, siteUrl, socialMetadataDescription } from '@/lib/seo';
 import './global.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
+  applicationName: site.name,
   title: {
     default: `${site.name}: ${site.tagline}`,
     template: `%s · ${site.name}`,
   },
   description: siteMetadataDescription,
-  alternates: { canonical: '/' },
   authors: [{ name: 'Piyush Gambhir', url: 'https://github.com/piyush-gambhir' }],
   creator: 'Piyush Gambhir',
   publisher: 'Piyush Gambhir',
+  alternates: {
+    canonical: siteUrl,
+  },
   icons: {
     icon: [{ url: '/cubeapm-cli/favicon.svg', type: 'image/svg+xml' }],
   },
   openGraph: {
     type: 'website',
-    url: '/',
+    locale: 'en_US',
+    url: siteUrl,
     siteName: site.name,
     title: `${site.name}: ${site.tagline}`,
     description: socialMetadataDescription,
-    locale: 'en_US',
-    images: [defaultSocialImage],
+    images: [homeSocialImage],
   },
   twitter: {
     card: 'summary_large_image',
     title: `${site.name}: ${site.tagline}`,
     description: socialMetadataDescription,
-    images: [defaultSocialImage],
+    images: [homeSocialImage],
   },
 };
 

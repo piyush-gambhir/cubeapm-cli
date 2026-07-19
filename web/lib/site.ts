@@ -47,6 +47,8 @@ export interface SiteConfig {
   accent?: string;
   /** Optional: human-readable accent name */
   accentName?: string;
+  /** Optional: hex twin of the accent, for surfaces without oklch() support (OG images) */
+  accentHex?: string;
 }
 
 export const site: SiteConfig = {
@@ -59,6 +61,7 @@ export const site: SiteConfig = {
   badge: 'Open-source · Traces, metrics & logs',
   accent: 'oklch(0.72 0.14 300)',
   accentName: 'violet',
+  accentHex: '#b28fef',
   installCommand:
     'curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh',
   features: [
