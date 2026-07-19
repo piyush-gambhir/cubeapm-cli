@@ -1,6 +1,6 @@
 export const dynamic = 'force-static';
 import type { MetadataRoute } from 'next';
-import { siteUrl } from '@/lib/seo';
+import { siteUrl } from '@/lib/metadata';
 import { source } from '@/lib/source';
 
 export default function sitemap(): MetadataRoute.Sitemap {

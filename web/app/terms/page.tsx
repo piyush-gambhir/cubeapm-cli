@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalPage } from '@/components/legal-page';
-import { createPageMetadata, repoUrl } from '@/lib/seo';
+import { createPageMetadata, repoUrl } from '@/lib/metadata';
 
-export const metadata: Metadata = createPageMetadata(
-  'Terms of Service',
-  'Terms of Service for CubeAPM CLI, an independent, unofficial open-source CLI that is not affiliated with CubeAPM or its vendor.',
-  '/terms',
-);
+export const metadata: Metadata = createPageMetadata({
+  title: 'Terms of Service',
+  description:
+    'Terms of Service for CubeAPM CLI, an independent, unofficial open-source CLI that is not affiliated with CubeAPM or its vendor.',
+  path: '/terms',
+});
 
 export default function TermsPage() {
   return (

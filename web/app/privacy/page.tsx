@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalPage } from '@/components/legal-page';
-import { createPageMetadata } from '@/lib/seo';
+import { createPageMetadata } from '@/lib/metadata';
 
-export const metadata: Metadata = createPageMetadata(
-  'Privacy Policy',
-  'Privacy policy for CubeAPM CLI, an independent, unofficial open-source CLI that is not affiliated with CubeAPM or its vendor.',
-  '/privacy',
-);
+export const metadata: Metadata = createPageMetadata({
+  title: 'Privacy Policy',
+  description:
+    'Privacy policy for CubeAPM CLI, an independent, unofficial open-source CLI that is not affiliated with CubeAPM or its vendor.',
+  path: '/privacy',
+});
 
 export default function PrivacyPage() {
   return (

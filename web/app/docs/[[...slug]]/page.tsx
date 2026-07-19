@@ -14,13 +14,13 @@ import type { Metadata } from 'next';
 import { createRelativeLink } from 'fumadocs-ui/mdx';
 import { gitConfig } from '@/lib/shared';
 import {
+  createPageMetadata,
   repoUrl,
   serializeJsonLd,
   siteUrl,
   withAgentReadyProjectContext,
   withProjectIndependence,
-} from '@/lib/seo';
-import { site } from '@/lib/site';
+} from '@/lib/metadata';
 
 const relatedDocs: Record<string, { label: string; href: string }[]> = {
   '': [
@@ -185,32 +185,12 @@ export async function generateMetadata(props: PageProps<'/docs/[[...slug]]'>): P
   const params = await props.params;
   const page = source.getPage(params.slug);
   if (!page) notFound();
-  const description = withAgentReadyProjectContext(page.data.description);
-  const image = {
-    url: getPageImage(page).url,
-    width: 1200,
-    height: 630,
-    alt: `${page.data.title} | ${site.name}`,
-  };
 
-  return {
+  return createPageMetadata({
     title: page.data.title,
-    description,
-    alternates: { canonical: page.url },
-    openGraph: {
-      type: 'article',
-      title: page.data.title,
-      description,
-      url: page.url,
-      siteName: site.name,
-      locale: 'en_US',
-      images: [image],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title: page.data.title,
-      description,
-      images: [image],
-    },
-  };
+    description: withAgentReadyProjectContext(page.data.description),
+    path: page.url,
+    type: 'article',
+    image: getPageImage(page).url,
+  });
 }

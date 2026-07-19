@@ -6,7 +6,7 @@ import { Reveal } from '@/components/reveal';
 import { SiteFooter } from '@/components/site-footer';
 import { OsmoButton } from '@/components/ui/osmo-button';
 import { site } from '@/lib/site';
-import { repoUrl, serializeJsonLd, siteUrl } from '@/lib/seo';
+import { repoUrl, serializeJsonLd, siteUrl } from '@/lib/metadata';
 import { getOtherSuiteProjects } from '@/lib/suite';
 
 const revealDelays = ['0s', '0.075s', '0.15s'] as const;

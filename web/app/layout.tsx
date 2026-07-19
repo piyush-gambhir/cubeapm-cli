@@ -5,7 +5,7 @@ import '@fontsource/instrument-serif';
 import type { CSSProperties } from 'react';
 import { Provider } from '@/components/provider';
 import { site } from '@/lib/site';
-import { homeSocialImage, siteMetadataDescription, siteUrl, socialMetadataDescription } from '@/lib/seo';
+import { homeSocialImage, siteMetadataDescription, siteUrl, socialMetadataDescription } from '@/lib/metadata';
 import './global.css';
 
 export const metadata: Metadata = {
