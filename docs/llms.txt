@@ -50,10 +50,12 @@ curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/ins
 
 The script requires `curl` and `tar`. If the install directory is not writable it falls back to `sudo`.
 
-### go install (Go 1.25+)
+### Build from source (Go 1.26+, Go 1.27.1 recommended)
 
 ```bash
-go install github.com/piyush-gambhir/cubeapm-cli@latest
+git clone https://github.com/piyush-gambhir/cubeapm-cli.git
+cd cubeapm-cli/cli-go
+make install
 ```
 
 Note: the produced binary is named after the module (`cubeapm-cli`). Symlink or rename it to `cubeapm` if you want the canonical command name used throughout this document.
@@ -67,7 +69,7 @@ make build
 # Produces the binary ./cubeapm in the repo root
 ```
 
-Other Makefile targets: `make install` (`go install` with version ldflags), `make test`, `make lint`, `make fmt`, `make vet`, `make tidy`, `make clean`.
+Other Makefile targets: `make install` (builds and installs the named binary with version metadata), `make test`, `make lint`, `make fmt`, `make vet`, `make tidy`, `make clean`.
 
 ### Prebuilt release archives
 

@@ -3,6 +3,7 @@
   "pages": [
     "index",
     "installation",
+    "compatibility",
     "authentication",
     "quickstart",
     "output-formats",

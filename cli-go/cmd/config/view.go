@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/cmdutil"
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/config"

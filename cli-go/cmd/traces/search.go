@@ -40,7 +40,7 @@ operation, duration, status, and timestamp for each matching trace's root span.
 Filters:
   --service       Filter by service name (e.g., "api-gateway", "payments")
   --env           Filter by environment (values are upper-case, e.g. "PROD", "UAT")
-  --query         Filter by operation name (e.g., "GET /api/users")
+  --query         Trace query (e.g., "GET /api/users")
   --status        Filter by span status: "error" or "ok"
   --min-duration  Filter traces slower than this duration (e.g., "500ms", "1s", "100us")
   --max-duration  Filter traces faster than this duration (e.g., "5s", "10s")
@@ -64,7 +64,7 @@ Examples:
   # Search with a maximum duration filter
   cubeapm traces search --service auth --max-duration 100ms --last 2h
 
-  # Filter by operation name
+  # Trace query
   cubeapm traces search --service api-gateway --query "GET /api/users" --last 1h
 
   # Filter by span tags
@@ -187,7 +187,7 @@ Examples:
 
 	cmd.Flags().StringVar(&service, "service", "", "Filter by service name (e.g., \"api-gateway\")")
 	cmd.Flags().StringVar(&env, "env", "", "Filter by environment; values are upper-case (e.g. \"PROD\", \"UAT\")")
-	cmd.Flags().StringVar(&query, "query", "", "Filter by operation name (e.g., \"GET /api/users\")")
+	cmd.Flags().StringVar(&query, "query", "", "Trace query (e.g., \"GET /api/users\")")
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum number of traces to return")
 	cmd.Flags().StringVar(&spanKind, "span-kind", "server", "Filter by span kind (client, server, producer, consumer, internal). Defaults to server because some CubeAPM deployments require a non-empty value.")
 	cmd.Flags().StringVar(&status, "status", "", "Filter by span status: error, ok")

@@ -40,22 +40,19 @@ curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/ins
 
 You can also download a prebuilt archive directly from the [releases page](https://github.com/piyush-gambhir/cubeapm-cli/releases).
 
-### Alternative (requires Go)
+### Build from source
 
-Install with `go install` (Go 1.21+):
-
-```bash
-curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
-```
-
-Or build from source:
+Requires Go 1.26 or later; Go 1.27.1 is recommended.
 
 ```bash
 git clone https://github.com/piyush-gambhir/cubeapm-cli.git
 cd cubeapm-cli/cli-go
-make build
-# Binary is at ./bin/cubeapm
+make install
 ```
+
+`make install` writes the correctly named executable to `go env GOBIN`, or to
+`$(go env GOPATH)/bin` when GOBIN is unset. Use `make install INSTALL_DIR=...`
+to select a different directory.
 
 ## Quick Start
 
@@ -1111,3 +1108,7 @@ Once installed, coding agents automatically know how to use this CLI effectively
 ## License
 
 See [LICENSE](LICENSE) for details.
+
+## Compatibility and maintenance
+
+See [build requirements and upstream API compatibility](docs/COMPATIBILITY.md) for the checked API baseline and dependency update workflow.

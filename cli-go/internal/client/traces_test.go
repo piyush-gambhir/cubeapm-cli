@@ -145,8 +145,8 @@ func TestSearchTraces_AllParams(t *testing.T) {
 	if gotQuery.Get("service") != "payments" {
 		t.Errorf("service = %q, want %q", gotQuery.Get("service"), "payments")
 	}
-	if gotQuery.Get("operation") != "POST /orders" {
-		t.Errorf("operation = %q, want %q", gotQuery.Get("operation"), "POST /orders")
+	if gotQuery.Get("query") != "POST /orders" {
+		t.Errorf("query = %q, want %q", gotQuery.Get("query"), "POST /orders")
 	}
 	if gotQuery.Get("limit") != "50" {
 		t.Errorf("limit = %q, want %q", gotQuery.Get("limit"), "50")
@@ -160,11 +160,11 @@ func TestSearchTraces_AllParams(t *testing.T) {
 	if gotQuery.Get("maxDuration") != "2s" {
 		t.Errorf("maxDuration = %q, want %q", gotQuery.Get("maxDuration"), "2s")
 	}
-	if gotQuery.Get("start") == "" {
-		t.Error("start param is empty, expected Unix micros")
+	if gotQuery.Get("start") != "1705312800" {
+		t.Errorf("start = %q, want Unix seconds 1705312800", gotQuery.Get("start"))
 	}
-	if gotQuery.Get("end") == "" {
-		t.Error("end param is empty, expected Unix micros")
+	if gotQuery.Get("end") != "1705316400" {
+		t.Errorf("end = %q, want Unix seconds 1705316400", gotQuery.Get("end"))
 	}
 	if gotQuery.Get("tags") == "" {
 		t.Error("tags param is empty, expected JSON")
@@ -493,5 +493,51 @@ func TestConvertCubeTagsPreservesZeroValues(t *testing.T) {
 		if got[i].Type != wantTypes[i] || got[i].Value != wantValues[i] {
 			t.Errorf("tag %d = (%s, %#v), want (%s, %#v)", i, got[i].Type, got[i].Value, wantTypes[i], wantValues[i])
 		}
+	}
+}
+
+// The public CubeAPM trace API takes Unix seconds, independently of the
+// microsecond timestamps used internally by the Jaeger-compatible renderer.
+func TestTraceFetchDocumentedTimeRange(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/traces/api/v1/traces/abc123" {
+			t.Errorf("path: %s", r.URL.Path)
+		}
+		if r.URL.Query().Get("start") != "1761666720" || r.URL.Query().Get("end") != "1761670320" {
+			t.Errorf("expected documented Unix seconds, got %s", r.URL.RawQuery)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"spans":[{"trace_id":"abc123","span_id":"123","operation_name":"GET /x","start_time":"2025-10-28T15:52:06Z","duration":1000,"process":{"service_name":"orders"}}]}`))
+	}))
+	defer ts.Close()
+	_, err := newTestClient(ts).GetTrace("abc123", time.Unix(1761666720, 0), time.Unix(1761670320, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSearchTracesPreservesEnvironmentFilters(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("env") != "staging" {
+			t.Errorf("missing environment: %s", r.URL.RawQuery)
+		}
+		if r.URL.Query().Get("query") != "*" {
+			t.Errorf("missing native query: %s", r.URL.RawQuery)
+		}
+		if r.URL.Query().Has("operation") {
+			t.Error("sent legacy operation parameter")
+		}
+		w.Write([]byte(`[]`))
+	}))
+	defer ts.Close()
+	tags := map[string]string{"environment": "staging", "http.method": "GET"}
+	for range 2 {
+		_, err := newTestClient(ts).SearchTraces("orders", tags, "*", time.Time{}, time.Time{}, 10, "", "", "", "")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if tags["environment"] != "staging" || len(tags) != 2 {
+		t.Fatalf("mutated caller tags: %v", tags)
 	}
 }

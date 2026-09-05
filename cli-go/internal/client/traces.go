@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net/url"
 	"strconv"
 	"strings"
@@ -27,6 +28,8 @@ const tracesBasePath = "/api/traces/api/v1"
 // "cube:error"). It is required by the server; callers should pass a sensible
 // default when users don't specify one.
 func (c *Client) SearchTraces(service string, tags map[string]string, query string, from, to time.Time, limit int, spanKind, minDuration, maxDuration, index string) ([]types.TraceSearchResult, error) {
+	// Promoting environment tags must not mutate the caller's filters.
+	tags = maps.Clone(tags)
 	params := url.Values{}
 	if index != "" {
 		params.Set("index", index)
@@ -52,13 +55,13 @@ func (c *Client) SearchTraces(service string, tags map[string]string, query stri
 		params.Set("tags", string(tagsJSON))
 	}
 	if query != "" {
-		params.Set("operation", query)
+		params.Set("query", query)
 	}
 	if !from.IsZero() {
-		params.Set("start", strconv.FormatInt(from.UnixMicro(), 10))
+		params.Set("start", strconv.FormatInt(from.Unix(), 10))
 	}
 	if !to.IsZero() {
-		params.Set("end", strconv.FormatInt(to.UnixMicro(), 10))
+		params.Set("end", strconv.FormatInt(to.Unix(), 10))
 	}
 	if limit > 0 {
 		params.Set("limit", strconv.Itoa(limit))
@@ -296,10 +299,10 @@ func (c *Client) getRaw(baseURL, path string, params url.Values) ([]byte, error)
 func (c *Client) GetTrace(traceID string, from, to time.Time) (*types.Trace, error) {
 	params := url.Values{}
 	if !from.IsZero() {
-		params.Set("start", strconv.FormatInt(from.UnixMicro(), 10))
+		params.Set("start", strconv.FormatInt(from.Unix(), 10))
 	}
 	if !to.IsZero() {
-		params.Set("end", strconv.FormatInt(to.UnixMicro(), 10))
+		params.Set("end", strconv.FormatInt(to.Unix(), 10))
 	}
 
 	path := fmt.Sprintf("%s/traces/%s", tracesBasePath, traceID)

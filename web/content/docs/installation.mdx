@@ -38,11 +38,11 @@ cd cubeapm-cli/cli-go
 make install
 ```
 
-To reproduce the supplied development build metadata directly with `go install`:
+`make install` names the executable `cubeapm` and includes the current checkout's
+version metadata. Set `INSTALL_DIR` to choose a destination:
 
 ```bash
-cd cubeapm-cli/cli-go
-go install -ldflags "-s -w -X github.com/piyush-gambhir/cubeapm-cli/cli-go/cmd.Version=v0.2.4-dirty -X github.com/piyush-gambhir/cubeapm-cli/cli-go/cmd.Commit=16b1e70 -X github.com/piyush-gambhir/cubeapm-cli/cli-go/cmd.BuildDate=2026-07-14T01:17:04Z" .
+make install INSTALL_DIR="$HOME/.local/bin"
 ```
 
 ## Verify
