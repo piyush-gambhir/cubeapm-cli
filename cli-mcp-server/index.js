@@ -47,7 +47,7 @@ function addTimeFlags(args, { last, from, to }) {
 }
 
 const server = new McpServer({
-  name: "cubeapm",
+  name: "cubeapm-cli",
   version: "1.0.0",
 });
 

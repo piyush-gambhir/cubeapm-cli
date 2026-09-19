@@ -1105,7 +1105,7 @@ npx skills add piyush-gambhir/cubeapm-cli@cubeapm
 
 Once installed, coding agents automatically know how to use this CLI effectively.
 
-For MCP clients that can't run shell commands directly (e.g. Claude Desktop), see [`mcp-server/`](mcp-server/) — it exposes this CLI's traces/logs/metrics queries as MCP tools and a `/usecube` prompt.
+For MCP clients that can't run shell commands directly (e.g. Claude Desktop), see [`cli-mcp-server/`](cli-mcp-server/) — it provides a local CLI bridge exposing this CLI's traces/logs/metrics queries as MCP tools and a `/usecube` prompt.
 
 ## License
 

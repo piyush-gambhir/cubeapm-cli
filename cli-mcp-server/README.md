@@ -1,18 +1,18 @@
-# cubeapm MCP server
+# cubeapm CLI MCP Server Bridge
 
-Exposes the `cubeapm` CLI to any [MCP](https://modelcontextprotocol.io)-compatible client — most notably **Claude Desktop**, which (unlike Claude Code) has no shell access and can't run the CLI directly.
+Exposes the `cubeapm` CLI to any [MCP](https://modelcontextprotocol.io)-compatible client — most notably **Claude Desktop**, which (unlike Claude Code or Cursor Agent) has no shell access and cannot run the CLI directly.
 
-This server shells out to your locally-installed, already-authenticated `cubeapm` CLI — it doesn't reimplement any of the CubeAPM API client. Every call is forced to run with `--read-only --no-input`, so it can only query data, never mutate CubeAPM state.
+> **Note:** This server is a **local CLI-backed bridge** that shells out to your locally-installed, already-authenticated `cubeapm` CLI. It requires `cubeapm` to be installed and authenticated via `cubeapm login`. Every call is executed with `--read-only --no-input` to ensure it only queries data and never mutates state.
 
 ## Requirements
 
 - Node.js 18+
-- `cubeapm` installed and on your `PATH` (see the [root README](../README.md#installation)), authenticated via `cubeapm login`
+- `cubeapm` CLI installed and on your `PATH` (see [root README](../README.md#installation)), authenticated via `cubeapm login`
 
 ## Install
 
 ```bash
-cd mcp-server
+cd cli-mcp-server
 npm install
 ```
 
@@ -25,7 +25,7 @@ Add to your `claude_desktop_config.json` (macOS: `~/Library/Application Support/
   "mcpServers": {
     "cubeapm": {
       "command": "node",
-      "args": ["/absolute/path/to/cubeapm-cli/mcp-server/index.js"]
+      "args": ["/absolute/path/to/cubeapm-cli/cli-mcp-server/index.js"]
     }
   }
 }
@@ -38,7 +38,7 @@ Restart Claude Desktop. If `cubeapm` isn't on the `PATH` Claude Desktop launches
   "mcpServers": {
     "cubeapm": {
       "command": "node",
-      "args": ["/absolute/path/to/cubeapm-cli/mcp-server/index.js"],
+      "args": ["/absolute/path/to/cubeapm-cli/cli-mcp-server/index.js"],
       "env": { "CUBEAPM_BIN": "/full/path/to/cubeapm" }
     }
   }

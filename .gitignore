@@ -14,3 +14,6 @@ dist/
 .env.deploy.development
 !.env.example
 !.env.deploy.example
+
+# dependencies
+node_modules/
