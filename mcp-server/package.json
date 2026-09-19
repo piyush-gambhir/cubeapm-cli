@@ -1,0 +1,12 @@
+{
+  "name": "cubeapm-mcp-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP server exposing the cubeapm CLI (traces/logs/metrics) to MCP clients such as Claude Desktop",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0"
+  }
+}
