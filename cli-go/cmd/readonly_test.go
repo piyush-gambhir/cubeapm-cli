@@ -43,35 +43,7 @@ func runRoot(t *testing.T, profileReadOnly bool, env map[string]string, args ...
 		t.Fatal(err)
 	}
 
-	// Cobra keeps flag values between Execute calls on the shared root.
-	resetFlags := func() {
-		for _, name := range []string{"read-only", "profile"} {
-			f := rootCmd.PersistentFlags().Lookup(name)
-			_ = f.Value.Set(f.DefValue)
-			f.Changed = false
-		}
-		if update, _, err := rootCmd.Find([]string{"update"}); err == nil {
-			check := update.Flags().Lookup("check")
-			_ = check.Value.Set("false")
-			check.Changed = false
-		}
-	}
-	resetFlags()
-	t.Cleanup(resetFlags)
-
-	// Execute adds cobra's help and completion commands to the shared root;
-	// remove them so the agent-safety manifest test sees the same graph.
-	before := map[*cobra.Command]bool{}
-	for _, c := range rootCmd.Commands() {
-		before[c] = true
-	}
-	t.Cleanup(func() {
-		for _, c := range rootCmd.Commands() {
-			if !before[c] {
-				rootCmd.RemoveCommand(c)
-			}
-		}
-	})
+	isolateRoot(t)
 
 	rootCmd.SetArgs(args)
 	err := rootCmd.Execute()
@@ -189,5 +161,42 @@ func TestReadOnlyActiveProfileAppliesDespiteProfileFlag(t *testing.T) {
 				t.Fatalf("blocked command changed the config file:\n%s", after)
 			}
 		})
+	}
+}
+
+// isolateRoot resets the shared root's flags before and after a test and
+// removes the help and completion commands Execute adds, so the agent-safety
+// manifest test sees the same command graph.
+func isolateRoot(t *testing.T) {
+	t.Helper()
+	resetRootFlags()
+	t.Cleanup(resetRootFlags)
+
+	before := map[*cobra.Command]bool{}
+	for _, c := range rootCmd.Commands() {
+		before[c] = true
+	}
+	t.Cleanup(func() {
+		for _, c := range rootCmd.Commands() {
+			if !before[c] {
+				rootCmd.RemoveCommand(c)
+			}
+		}
+	})
+}
+
+// resetRootFlags restores flag values, which cobra keeps between Execute calls.
+func resetRootFlags() {
+	for _, name := range []string{"read-only", "profile", "output", "quiet", "no-input"} {
+		f := rootCmd.PersistentFlags().Lookup(name)
+		_ = f.Value.Set(f.DefValue)
+		f.Changed = false
+	}
+	if update, _, err := rootCmd.Find([]string{"update"}); err == nil {
+		for _, name := range []string{"check", "yes"} {
+			f := update.Flags().Lookup(name)
+			_ = f.Value.Set(f.DefValue)
+			f.Changed = false
+		}
 	}
 }

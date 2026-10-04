@@ -1,12 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
-	"sync"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
 	cmdconfig "github.com/piyush-gambhir/cubeapm-cli/cli-go/cmd/config"
 	cmdingest "github.com/piyush-gambhir/cubeapm-cli/cli-go/cmd/ingest"
@@ -44,11 +47,19 @@ var (
 	flagQuiet      bool
 )
 
-// Background update check state.
+// updateCheck is the release check started by PersistentPreRunE. done is
+// closed once info is final; info stays nil when nothing is known.
+type updateCheck struct {
+	done chan struct{}
+	info *update.UpdateInfo
+}
+
 var (
-	updateInfo     *update.UpdateInfo
-	updateInfoOnce sync.Once
-	updateInfoDone = make(chan struct{})
+	pendingUpdateCheck *updateCheck
+
+	// Test seams for the update notifier.
+	stderrIsTerminal           = func() bool { return term.IsTerminal(int(os.Stderr.Fd())) }
+	noticeOutput     io.Writer = os.Stderr
 )
 
 var rootCmd = &cobra.Command{
@@ -66,7 +77,7 @@ Command groups:
   config   Manage CLI configuration and connection profiles
   login    Interactively set up a connection profile
   version  Print CLI version information
-  update   Check for and install CLI updates (Windows: --check only)
+  update   Check for and install CLI updates
 
 Global flags (apply to all commands):
   -o, --output <format>   Output format: table (default), json, yaml
@@ -111,15 +122,14 @@ Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubea
 		}
 		cmdutil.Quiet = flagQuiet
 
-		// Start a background update check for commands that should show
-		// the update notice. Skip for "update" and "version" commands.
+		if updateNotifierEnabled(cmd) {
+			startUpdateCheck()
+		}
+
 		cmdName := cmd.Name()
 		parentName := ""
 		if cmd.Parent() != nil {
 			parentName = cmd.Parent().Name()
-		}
-		if cmdName != "update" && cmdName != "version" {
-			startBackgroundUpdateCheck()
 		}
 
 		// Skip client setup for commands that don't need it
@@ -145,20 +155,7 @@ Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubea
 		return checkPermissions(cmd)
 	},
 	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-		// Wait for the background update check and print a notice if available.
-		// Skip for "update" and "version" commands, and when --quiet is set.
-		cmdName := cmd.Name()
-		if cmdName == "update" || cmdName == "version" {
-			return nil
-		}
-		select {
-		case <-updateInfoDone:
-			if updateInfo != nil && !cmdutil.Quiet {
-				update.PrintUpdateNotice(os.Stderr, updateInfo)
-			}
-		case <-time.After(1500 * time.Millisecond):
-			// A release check must never delay a successful CLI command.
-		}
+		showUpdateNotice()
 		return nil
 	},
 }
@@ -285,19 +282,68 @@ func setupClient(cmd *cobra.Command) error {
 	return nil
 }
 
-// startBackgroundUpdateCheck kicks off a goroutine to check for CLI updates.
-// The result is stored in updateInfo and updateInfoDone is closed when finished.
-func startBackgroundUpdateCheck() {
-	updateInfoOnce.Do(func() {
-		go func() {
-			defer close(updateInfoDone)
-			info, err := update.CheckForUpdate(Version, updateRepo, config.ConfigDir())
-			if err != nil {
-				return
-			}
-			updateInfo = info
-		}()
-	})
+// updateNotifierEnabled reports whether this run may look for a new release.
+// Scripts, CI, agents, quiet runs, and development builds never do, and
+// neither do commands that report versions or complete shell input.
+func updateNotifierEnabled(cmd *cobra.Command) bool {
+	if cmdutil.Quiet || !update.IsReleaseVersion(Version) || !stderrIsTerminal() {
+		return false
+	}
+	for _, name := range []string{"CI", "CUBEAPM_NO_UPDATE_NOTIFIER", "NO_UPDATE_NOTIFIER"} {
+		if os.Getenv(name) != "" {
+			return false
+		}
+	}
+	for c := cmd; c != nil; c = c.Parent() {
+		switch name := c.Name(); {
+		case name == "update", name == "version", name == "completion", name == "help",
+			strings.HasPrefix(name, "__complete"):
+			return false
+		}
+	}
+	return true
+}
+
+// startUpdateCheck answers from a fresh cache right away; otherwise it asks
+// GitHub in the background so the command never waits on the network.
+func startUpdateCheck() {
+	check := &updateCheck{done: make(chan struct{})}
+	pendingUpdateCheck = check
+	configDir := config.ConfigDir()
+	if info, ok := update.CachedCheck(Version, updateRepo, configDir, time.Now()); ok {
+		check.info = info
+		close(check.done)
+		return
+	}
+	go func() {
+		defer close(check.done)
+		info, err := update.FetchLatest(context.Background(), Version, updateRepo, configDir, update.BackgroundTimeout)
+		if err == nil {
+			check.info = info
+		}
+	}()
+}
+
+// showUpdateNotice prints the notice after the command's output, but only if
+// the check has already finished: it never delays the command.
+func showUpdateNotice() {
+	check := pendingUpdateCheck
+	if check == nil {
+		return
+	}
+	select {
+	case <-check.done:
+	default:
+		return
+	}
+	if check.info == nil || !check.info.Available {
+		return
+	}
+	method := update.InstallSelf
+	if exe, err := update.ExecutablePath(); err == nil {
+		method = update.DetectInstallMethod(exe)
+	}
+	update.Notify(noticeOutput, config.ConfigDir(), check.info, update.UpdateCommand(method), time.Now())
 }
 
 func init() {
@@ -328,6 +374,7 @@ func init() {
 
 // Execute runs the root command.
 func Execute() error {
+	update.RemoveOldExecutable()
 	if err := rootCmd.Execute(); err != nil {
 		output.WriteError(os.Stderr, string(cmdutil.OutputFormat), err, 0)
 		return err

@@ -1,145 +1,226 @@
+// Package update checks GitHub for new cubeapm releases, prints the update
+// notice, and installs releases in place.
 package update
 
 import (
-	"archive/tar"
-	"bufio"
-	"compress/gzip"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
 )
 
 const (
-	cacheDuration = 24 * time.Hour
-	cacheFileName = "update-check.json"
+	cacheDuration  = 24 * time.Hour
+	noticeInterval = 24 * time.Hour
+	cacheFileName  = "update-check.json"
+
+	// BackgroundTimeout bounds the release lookup behind the update notice.
+	BackgroundTimeout = 3 * time.Second
+	// CommandTimeout bounds the release lookup of `cubeapm update`.
+	CommandTimeout = 15 * time.Second
+
+	binName = "cubeapm"
+	project = "cubeapm-cli"
+)
+
+// Release lookups and downloads go to GitHub. Tests point these at httptest
+// servers; release notes links always use github.com.
+var (
+	APIBaseURL      = "https://api.github.com"
+	DownloadBaseURL = "https://github.com"
 )
 
 // goos is the OS the binary runs on. Tests override it to cover Windows.
 var goos = runtime.GOOS
 
-// UpdateInfo holds the result of an update check.
+// UpdateInfo holds the result of an update check. Versions carry no "v".
 type UpdateInfo struct {
 	Available      bool
 	CurrentVersion string
 	LatestVersion  string
 	ReleaseURL     string
-	PublishedAt    string
 }
 
-// cacheEntry represents the cached update check result on disk.
+// cacheEntry is the update-check.json file in the config directory.
 type cacheEntry struct {
-	LastChecked   time.Time `json:"last_checked"`
-	LatestVersion string    `json:"latest_version"`
-	ReleaseURL    string    `json:"release_url"`
+	LastChecked     time.Time `json:"last_checked"`
+	LatestVersion   string    `json:"latest_version,omitempty"`
+	CheckFailed     bool      `json:"check_failed,omitempty"`
+	NotifiedVersion string    `json:"notified_version,omitempty"`
+	NotifiedAt      time.Time `json:"notified_at,omitzero"`
 }
 
-// githubRelease represents the relevant fields from the GitHub releases API.
 type githubRelease struct {
-	TagName     string `json:"tag_name"`
-	HTMLURL     string `json:"html_url"`
-	PublishedAt string `json:"published_at"`
+	TagName string `json:"tag_name"`
 }
 
-// CheckForUpdate checks GitHub for a newer release. Uses a 24h cache stored
-// in configDir to avoid repeated network calls.
-func CheckForUpdate(currentVersion, repo, configDir string) (*UpdateInfo, error) {
-	// Skip check for dev builds or empty versions.
-	if currentVersion == "" || currentVersion == "dev" {
-		return &UpdateInfo{CurrentVersion: currentVersion}, nil
-	}
+var semverPattern = regexp.MustCompile(`^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$`)
 
-	// Try loading from cache first.
+// IsReleaseVersion reports whether v is a semantic version. Development builds
+// ("dev", empty, or a bare commit hash) are not, and never check for updates.
+func IsReleaseVersion(v string) bool {
+	return semverPattern.MatchString(v)
+}
+
+// NormalizeVersion strips a leading "v" so versions print as v<version>.
+func NormalizeVersion(v string) string {
+	return strings.TrimPrefix(v, "v")
+}
+
+// ReleaseURL is the release notes page for version.
+func ReleaseURL(repo, version string) string {
+	return fmt.Sprintf("https://github.com/%s/releases/tag/v%s", repo, NormalizeVersion(version))
+}
+
+// CachedCheck returns the cached result when the last check is less than 24
+// hours old; ok is false when GitHub should be asked again. info is nil when
+// the last check failed and nothing is known. It never touches the network.
+func CachedCheck(currentVersion, repo, configDir string, now time.Time) (info *UpdateInfo, ok bool) {
 	cached, err := loadCache(configDir)
-	if err == nil && time.Since(cached.LastChecked) < cacheDuration {
-		return buildUpdateInfo(currentVersion, cached.LatestVersion, cached.ReleaseURL, ""), nil
+	if err != nil {
+		return nil, false
 	}
-
-	return checkFresh(currentVersion, repo, configDir)
+	age := now.Sub(cached.LastChecked)
+	if age < 0 || age >= cacheDuration {
+		return nil, false
+	}
+	if !IsReleaseVersion(cached.LatestVersion) {
+		return nil, true
+	}
+	return buildUpdateInfo(currentVersion, cached.LatestVersion, repo), true
 }
 
-// CheckForUpdateFresh always performs a network call, bypassing the cache.
-func CheckForUpdateFresh(currentVersion, repo, configDir string) (*UpdateInfo, error) {
-	if currentVersion == "" || currentVersion == "dev" {
-		return &UpdateInfo{CurrentVersion: currentVersion}, nil
+// FetchLatest queries GitHub for the latest release and caches the result. A
+// failed lookup is cached too, so a broken network does not retry on every
+// command.
+func FetchLatest(ctx context.Context, currentVersion, repo, configDir string, timeout time.Duration) (*UpdateInfo, error) {
+	if !IsReleaseVersion(currentVersion) {
+		return nil, fmt.Errorf("development build %q does not check for updates", currentVersion)
 	}
-	return checkFresh(currentVersion, repo, configDir)
+	return checkFresh(ctx, currentVersion, repo, configDir, timeout)
 }
 
-func checkFresh(currentVersion, repo, configDir string) (*UpdateInfo, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("creating request: %w", err)
+// CachedUpdateInfo reads the last known release from the cache without any
+// network access. It returns nil when nothing useful is cached.
+func CachedUpdateInfo(currentVersion, repo, configDir string) *UpdateInfo {
+	if !IsReleaseVersion(currentVersion) {
+		return nil
 	}
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "cubeapm-cli")
+	cached, err := loadCache(configDir)
+	if err != nil || !IsReleaseVersion(cached.LatestVersion) {
+		return nil
+	}
+	// A cached release older than this binary predates a manual upgrade.
+	if compareSemver(parseSemver(cached.LatestVersion), parseSemver(currentVersion)) < 0 {
+		return nil
+	}
+	return buildUpdateInfo(currentVersion, cached.LatestVersion, repo)
+}
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
+func checkFresh(ctx context.Context, currentVersion, repo, configDir string, timeout time.Duration) (*UpdateInfo, error) {
+	latest, err := fetchLatestVersion(ctx, repo, timeout)
+	cached, _ := loadCache(configDir)
+	entry := cacheEntry{LastChecked: time.Now().UTC()}
+	if cached != nil {
+		entry.NotifiedVersion = cached.NotifiedVersion
+		entry.NotifiedAt = cached.NotifiedAt
+	}
 	if err != nil {
-		return nil, fmt.Errorf("checking for update: %w", err)
+		entry.CheckFailed = true
+		if cached != nil {
+			entry.LatestVersion = cached.LatestVersion
+		}
+		_ = saveCache(configDir, entry)
+		return nil, err
+	}
+	entry.LatestVersion = latest
+	_ = saveCache(configDir, entry)
+	return buildUpdateInfo(currentVersion, latest, repo), nil
+}
+
+func fetchLatestVersion(ctx context.Context, repo string, timeout time.Duration) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	url := fmt.Sprintf("%s/repos/%s/releases/latest", APIBaseURL, repo)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	req.Header.Set("User-Agent", project)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("checking for update: %w", err)
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+		return "", fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
 
 	var release githubRelease
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return nil, fmt.Errorf("parsing release response: %w", err)
+	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&release); err != nil {
+		return "", fmt.Errorf("parsing release response: %w", err)
 	}
-
-	latestVersion := strings.TrimPrefix(release.TagName, "v")
-
-	// Update the cache.
-	_ = saveCache(configDir, cacheEntry{
-		LastChecked:   time.Now().UTC(),
-		LatestVersion: latestVersion,
-		ReleaseURL:    release.HTMLURL,
-	})
-
-	return buildUpdateInfo(currentVersion, latestVersion, release.HTMLURL, release.PublishedAt), nil
+	// The tag becomes part of download URLs, so accept only a plain version.
+	if !IsReleaseVersion(release.TagName) {
+		return "", fmt.Errorf("unexpected release tag %q", release.TagName)
+	}
+	return NormalizeVersion(release.TagName), nil
 }
 
-func buildUpdateInfo(currentVersion, latestVersion, releaseURL, publishedAt string) *UpdateInfo {
+func buildUpdateInfo(currentVersion, latestVersion, repo string) *UpdateInfo {
 	info := &UpdateInfo{
-		CurrentVersion: currentVersion,
-		LatestVersion:  latestVersion,
-		ReleaseURL:     releaseURL,
-		PublishedAt:    publishedAt,
+		CurrentVersion: NormalizeVersion(currentVersion),
+		LatestVersion:  NormalizeVersion(latestVersion),
+		ReleaseURL:     ReleaseURL(repo, latestVersion),
 	}
-
 	current := parseSemver(currentVersion)
 	latest := parseSemver(latestVersion)
 	if current != nil && latest != nil {
 		info.Available = compareSemver(latest, current) > 0
 	}
-
 	return info
 }
 
-// PrintUpdateNotice prints a colored notice to w if an update is available.
-func PrintUpdateNotice(w io.Writer, info *UpdateInfo) {
+// Notify prints the update notice to w unless the same release was already
+// announced within the last 24 hours, and records the announcement.
+func Notify(w io.Writer, configDir string, info *UpdateInfo, updateCommand string, now time.Time) bool {
 	if info == nil || !info.Available {
-		return
+		return false
 	}
-	fmt.Fprintf(w, "\nA new version of cubeapm is available: v%s -> v%s\n", info.CurrentVersion, info.LatestVersion)
-	if goos == "windows" {
-		fmt.Fprintf(w, "Download it and replace cubeapm.exe from:\n")
-	} else {
-		fmt.Fprintf(w, "Run `cubeapm update` to update, or download from:\n")
+	cached, _ := loadCache(configDir)
+	if cached == nil {
+		cached = &cacheEntry{}
 	}
-	fmt.Fprintf(w, "%s\n", info.ReleaseURL)
+	since := now.Sub(cached.NotifiedAt)
+	if cached.NotifiedVersion == info.LatestVersion && since >= 0 && since < noticeInterval {
+		return false
+	}
+	cached.NotifiedVersion = info.LatestVersion
+	cached.NotifiedAt = now.UTC()
+	if err := saveCache(configDir, *cached); err != nil {
+		// Without a record the notice would repeat on every command.
+		return false
+	}
+	PrintNotice(w, info, updateCommand)
+	return true
+}
+
+// PrintNotice writes the update notice, preceded by a blank line.
+func PrintNotice(w io.Writer, info *UpdateInfo, updateCommand string) {
+	fmt.Fprintf(w, "\nA new version of %s is available: v%s -> v%s\n", binName, info.CurrentVersion, info.LatestVersion)
+	fmt.Fprintf(w, "Update with: %s\n", updateCommand)
+	fmt.Fprintf(w, "Release notes: %s\n", info.ReleaseURL)
 }
 
 // --- Semver parsing and comparison ---
@@ -151,14 +232,17 @@ type semver struct {
 }
 
 func parseSemver(v string) *semver {
-	v = strings.TrimPrefix(v, "v")
-	// Strip any pre-release/metadata suffix for comparison.
+	if !IsReleaseVersion(v) {
+		return nil
+	}
+	v = NormalizeVersion(v)
+	// Pre-release and build suffixes are ignored: a source build such as
+	// v0.2.9-3-gabc1234 counts as 0.2.9.
 	if idx := strings.IndexAny(v, "-+"); idx != -1 {
 		v = v[:idx]
 	}
 	var s semver
-	n, _ := fmt.Sscanf(v, "%d.%d.%d", &s.Major, &s.Minor, &s.Patch)
-	if n < 2 {
+	if _, err := fmt.Sscanf(v, "%d.%d.%d", &s.Major, &s.Minor, &s.Patch); err != nil {
 		return nil
 	}
 	return &s
@@ -166,6 +250,9 @@ func parseSemver(v string) *semver {
 
 // compareSemver returns >0 if a > b, 0 if equal, <0 if a < b.
 func compareSemver(a, b *semver) int {
+	if a == nil || b == nil {
+		return 0
+	}
 	if a.Major != b.Major {
 		return a.Major - b.Major
 	}
@@ -193,274 +280,36 @@ func loadCache(configDir string) (*cacheEntry, error) {
 	return &entry, nil
 }
 
+// saveCache writes the cache through a temp file and rename, so a process
+// that exits mid-write never leaves a truncated file behind.
 func saveCache(configDir string, entry cacheEntry) error {
-	if err := os.MkdirAll(configDir, 0700); err != nil {
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
 		return err
 	}
 	data, err := json.MarshalIndent(entry, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(cachePath(configDir), data, 0600)
+	tmp, err := os.CreateTemp(configDir, ".update-check-*.json")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), cachePath(configDir))
 }
 
-// --- Self-update functionality ---
-
-// CheckInstallSupported returns an error when SelfUpdate cannot install on
-// this OS. Windows releases ship as .zip archives and a running .exe cannot
-// be replaced in place, so Windows users replace cubeapm.exe by hand.
-func CheckInstallSupported(version, repo string) error {
-	if goos != "windows" {
+// ClearCache removes the cached check, for example after a successful update.
+func ClearCache(configDir string) error {
+	err := os.Remove(cachePath(configDir))
+	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
-	return fmt.Errorf("self-update is not supported on Windows: download the release from https://github.com/%s/releases/tag/v%s and replace cubeapm.exe", repo, version)
-}
-
-// SelfUpdate downloads and installs the specified version of the binary,
-// replacing the current executable in-place.
-func SelfUpdate(version, repo string) error {
-	return SelfUpdateContext(context.Background(), version, repo)
-}
-
-// SelfUpdateContext installs an update while honoring caller cancellation.
-func SelfUpdateContext(ctx context.Context, version, repo string) error {
-	if err := CheckInstallSupported(version, repo); err != nil {
-		return err
-	}
-	osName := runtime.GOOS
-	archName := runtime.GOARCH
-
-	// Build download URL matching the release artifact naming convention.
-	archive := fmt.Sprintf("cubeapm-cli_%s_%s.tar.gz", osName, archName)
-	downloadURL := fmt.Sprintf("https://github.com/%s/releases/download/v%s/%s", repo, version, archive)
-
-	fmt.Printf("Downloading cubeapm v%s (%s/%s)...\n", version, osName, archName)
-
-	// Download to a temp directory.
-	tmpDir, err := os.MkdirTemp("", "cubeapm-update-*")
-	if err != nil {
-		return fmt.Errorf("creating temp directory: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	archivePath := filepath.Join(tmpDir, archive)
-	if err := downloadFile(ctx, downloadURL, archivePath); err != nil {
-		return fmt.Errorf("downloading release: %w", err)
-	}
-
-	// Download and verify SHA256 checksum.
-	checksumsURL := fmt.Sprintf("https://github.com/%s/releases/download/v%s/checksums.txt", repo, version)
-	checksumsPath := filepath.Join(tmpDir, "checksums.txt")
-	if err := downloadFile(ctx, checksumsURL, checksumsPath); err != nil {
-		return fmt.Errorf("downloading checksums: %w", err)
-	}
-
-	fmt.Println("Verifying checksum...")
-	if err := verifyChecksum(archivePath, checksumsPath, archive); err != nil {
-		return fmt.Errorf("checksum verification failed: %w", err)
-	}
-
-	// Extract the binary from the tarball.
-	fmt.Println("Extracting...")
-	binaryPath, err := extractBinary(archivePath, tmpDir, "cubeapm")
-	if err != nil {
-		return fmt.Errorf("extracting binary: %w", err)
-	}
-
-	// Find current executable path.
-	execPath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("finding current executable: %w", err)
-	}
-	execPath, err = filepath.EvalSymlinks(execPath)
-	if err != nil {
-		return fmt.Errorf("resolving executable path: %w", err)
-	}
-
-	// Replace the binary atomically: copy to temp file beside the target,
-	// then rename (which is atomic on the same filesystem).
-	fmt.Printf("Replacing %s...\n", execPath)
-	if err := replaceBinary(binaryPath, execPath); err != nil {
-		return err
-	}
-
-	fmt.Printf("Successfully updated to cubeapm v%s\n", version)
-	return nil
-}
-
-func downloadFile(ctx context.Context, url, dest string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return err
-	}
-	resp, err := (&http.Client{Timeout: 120 * time.Second}).Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download returned HTTP %d", resp.StatusCode)
-	}
-
-	f, err := os.Create(dest)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	err = copyUpdatePayload(f, resp.Body)
 	return err
-}
-
-func extractBinary(archivePath, destDir, binaryName string) (string, error) {
-	f, err := os.Open(archivePath)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		return "", fmt.Errorf("reading gzip: %w", err)
-	}
-	defer gz.Close()
-
-	tr := tar.NewReader(gz)
-	for {
-		header, err := tr.Next()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return "", fmt.Errorf("reading tar: %w", err)
-		}
-
-		// Look for the binary file (may be at root or in a subdirectory).
-		name := filepath.Base(header.Name)
-		if name == binaryName && header.Typeflag == tar.TypeReg {
-			outPath := filepath.Join(destDir, binaryName)
-			out, err := os.OpenFile(outPath, os.O_CREATE|os.O_WRONLY, 0755)
-			if err != nil {
-				return "", err
-			}
-			if err := copyUpdatePayload(out, tr); err != nil {
-				out.Close()
-				return "", err
-			}
-			out.Close()
-			return outPath, nil
-		}
-	}
-
-	return "", fmt.Errorf("binary %q not found in archive", binaryName)
-}
-
-func replaceBinary(newBinary, target string) error {
-	// Read the new binary into memory-ish (via temp file in same dir).
-	targetDir := filepath.Dir(target)
-	tmpFile, err := os.CreateTemp(targetDir, ".cubeapm-update-*")
-	if err != nil {
-		// If we can't write to the target directory, we may need elevated permissions.
-		return fmt.Errorf("cannot write to %s (you may need to use sudo): %w", targetDir, err)
-	}
-	tmpPath := tmpFile.Name()
-
-	// Copy new binary to temp file.
-	src, err := os.Open(newBinary)
-	if err != nil {
-		tmpFile.Close()
-		os.Remove(tmpPath)
-		return err
-	}
-
-	if err := copyUpdatePayload(tmpFile, src); err != nil {
-		src.Close()
-		tmpFile.Close()
-		os.Remove(tmpPath)
-		return err
-	}
-	src.Close()
-	tmpFile.Close()
-
-	// Preserve permissions from the original binary.
-	info, err := os.Stat(target)
-	if err != nil {
-		os.Remove(tmpPath)
-		return err
-	}
-	if err := os.Chmod(tmpPath, info.Mode()); err != nil {
-		os.Remove(tmpPath)
-		return err
-	}
-
-	// Atomic rename.
-	if err := os.Rename(tmpPath, target); err != nil {
-		os.Remove(tmpPath)
-		return fmt.Errorf("replacing binary (you may need to use sudo): %w", err)
-	}
-
-	return nil
-}
-
-// verifyChecksum computes the SHA256 hash of the file at filePath and compares
-// it to the expected hash found in the GoReleaser checksums file for the given
-// archive name. The checksums file format is: "<hex-hash>  <filename>\n".
-func verifyChecksum(filePath, checksumsPath, archiveName string) error {
-	// Compute SHA256 of the downloaded file.
-	f, err := os.Open(filePath)
-	if err != nil {
-		return fmt.Errorf("opening file for checksum: %w", err)
-	}
-	defer f.Close()
-
-	h := sha256.New()
-	if err := copyUpdatePayload(h, f); err != nil {
-		return fmt.Errorf("computing checksum: %w", err)
-	}
-	actualHash := hex.EncodeToString(h.Sum(nil))
-
-	// Parse checksums.txt for the expected hash.
-	data, err := os.ReadFile(checksumsPath)
-	if err != nil {
-		return fmt.Errorf("reading checksums file: %w", err)
-	}
-
-	var expectedHash string
-	for _, line := range strings.Split(string(data), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" {
-			continue
-		}
-		// GoReleaser format: "<hash>  <filename>" (two spaces)
-		parts := strings.Fields(line)
-		if len(parts) != 2 {
-			continue
-		}
-		if parts[1] == archiveName {
-			expectedHash = parts[0]
-			break
-		}
-	}
-
-	if expectedHash == "" {
-		return fmt.Errorf("checksum for %q not found in checksums.txt", archiveName)
-	}
-
-	if !strings.EqualFold(actualHash, expectedHash) {
-		return fmt.Errorf("SHA256 mismatch: expected %s, got %s", expectedHash, actualHash)
-	}
-
-	return nil
-}
-
-// ConfirmPrompt asks the user for y/n confirmation.
-func ConfirmPrompt(prompt string) bool {
-	fmt.Printf("%s [y/N]: ", prompt)
-	scanner := bufio.NewScanner(os.Stdin)
-	if scanner.Scan() {
-		answer := strings.TrimSpace(strings.ToLower(scanner.Text()))
-		return answer == "y" || answer == "yes"
-	}
-	return false
 }

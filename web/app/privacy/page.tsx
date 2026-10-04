@@ -53,9 +53,12 @@ export default function PrivacyPage() {
             perform the actions you explicitly request.
           </li>
           <li>
-            <strong>GitHub&apos;s public API</strong>, to check whether a newer
-            release of the CLI is available. This request contains no personal
-            data.
+            <strong>GitHub</strong>, to check whether a newer release of the CLI
+            is available and to download it when you run{' '}
+            <code>cubeapm update</code>. The automatic check happens at most once
+            a day and only in an interactive terminal; set{' '}
+            <code>CUBEAPM_NO_UPDATE_NOTIFIER=1</code> to turn it off. These
+            requests contain no personal data.
           </li>
         </ul>
         <p>The maintainer is not a party to, and cannot observe, these connections.</p>

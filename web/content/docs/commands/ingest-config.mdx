@@ -48,13 +48,20 @@ accepts `current_profile`; sensitive values are masked by `get` and `view`.
 cubeapm login
 cubeapm version
 cubeapm update --check
+cubeapm update --check -o json
 cubeapm update
+cubeapm update --yes
 ```
 
-`login` is interactive. `update --check` does not install; `update` asks for
-confirmation before replacing a release binary and cannot proceed with
-`--no-input`. On Windows, `update` cannot install: use `update --check`, then
-download the release and replace `cubeapm.exe`.
+`login` is interactive. `version` also shows the latest known release from the
+local update cache, without using the network. `update --check` does not
+install; it always asks GitHub and, with `-o json`, prints `current_version`,
+`latest_version`, `update_available`, `release_url`, and `install_method`.
+`update` works on macOS, Linux, and Windows: it asks `Update now? [Y/n]`,
+verifies the release's SHA-256 checksum, and replaces the binary. `--yes` skips
+the question and is required with `--no-input` or without a terminal. See
+[Installation](/docs/installation#update) for the update notice and how to turn
+it off.
 
 <Callout type="warn">
   `--read-only` blocks ingestion, `config set`, `config profiles use` and

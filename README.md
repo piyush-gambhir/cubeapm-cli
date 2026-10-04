@@ -14,7 +14,7 @@ Designed to be used both interactively and programmatically by scripts and codin
 - Full API coverage, every CubeAPM API endpoint accessible from the command line
 - Multiple output formats, table, JSON, YAML (`-o json`)
 - Profile management, multiple instances with `--profile`
-- Auto-update, checks for new versions, `cubeapm update` to self-update (macOS and Linux)
+- Update notice in interactive terminals, `cubeapm update` to self-update with SHA-256 verification (macOS, Linux, and Windows)
 - Agent-friendly, comprehensive help text, structured output for LLM coding agents
 - Cross-platform, macOS and Linux (amd64 and arm64), Windows (amd64)
 
@@ -89,6 +89,9 @@ export CUBEAPM_PASSWORD=your-password
 export CUBEAPM_QUERY_PORT=3140
 export CUBEAPM_INGEST_PORT=3130
 export CUBEAPM_ADMIN_PORT=3199
+
+# Turn off the update notice (NO_UPDATE_NOTIFIER=1 and CI also work)
+export CUBEAPM_NO_UPDATE_NOTIFIER=1
 ```
 
 ### CLI flags (override everything)
@@ -135,7 +138,7 @@ These commands accept `--from`, `--to`, and `--last`: `traces search`, `get`, `s
 
 ## Output Formats
 
-The `traces`, `metrics`, and `logs` read commands support three output formats via the `-o` / `--output` flag. Table-backed commands emit an array of objects keyed by the table headers (`TRACE_ID`, `SERVICE`, ...); `metrics query`/`query-range` return the raw Prometheus response; `logs query` streams one object per entry (YAML separates the entries with `---`). `-o` has no effect on `config view` (always YAML), `config get`, `config profiles list`, `version`, `login`, `update`, `ingest`, `logs delete run`/`stop`, or `traces dependencies --dot`.
+The `traces`, `metrics`, and `logs` read commands support three output formats via the `-o` / `--output` flag. Table-backed commands emit an array of objects keyed by the table headers (`TRACE_ID`, `SERVICE`, ...); `metrics query`/`query-range` return the raw Prometheus response; `logs query` streams one object per entry (YAML separates the entries with `---`). `update --check` also supports `-o json`/`yaml`. `-o` has no effect on `config view` (always YAML), `config get`, `config profiles list`, `version`, `login`, `update` without `--check`, `ingest`, `logs delete run`/`stop`, or `traces dependencies --dot`.
 
 ```bash
 # Table format (default) - human-readable columns
@@ -1073,7 +1076,7 @@ Prompts for profile name, server address, authentication method (email/password 
 
 #### `version`
 
-Print CLI version, commit hash, and build date.
+Print CLI version, commit hash, and build date. When an earlier command already checked for releases, it also prints `latest:` and `update_available:` from the local cache (never from the network).
 
 ```
 cubeapm version
@@ -1081,16 +1084,33 @@ cubeapm version
 
 #### `update`
 
-Check for and install the latest version.
+Check for and install the latest release on macOS, Linux, and Windows.
 
 ```
-cubeapm update           # Check and install
-cubeapm update --check   # Only check, do not install
+cubeapm update --check           # Report current and latest versions
+cubeapm update --check -o json   # The same, as JSON
+cubeapm update                   # Ask, then install
+cubeapm update --yes             # Install without asking
 ```
 
-On Windows, `update` cannot install: run `cubeapm update --check`, then download
-the release and replace `cubeapm.exe`. Read-only mode blocks `update` but allows
-`update --check`.
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--check` | | Only check for updates, do not install |
+| `--yes` | `-y` | Install without asking for confirmation |
+
+`update` downloads the release archive for your OS and architecture, verifies its SHA-256 checksum against the release's `checksums.txt`, and replaces the binary in place. On Windows the running `cubeapm.exe` is renamed to `cubeapm.exe.old` (deleted on a later run) and the new one takes its place. If the binary's directory is not writable, `update` fails and leaves the current binary untouched: re-run it with `sudo`, or reinstall with the install script into a writable directory (`INSTALL_DIR=~/.local/bin`). In a terminal it asks `Update now? [Y/n]`; under `--no-input`, or without a terminal, it needs `--yes`. A binary that `make install` put in a Go bin directory (`$GOBIN`, `$GOPATH/bin`, or `~/go/bin`) is not replaced: `update` prints `git pull && make install` (run it in your `cubeapm-cli/cli-go` checkout) instead. `update` does not work on a `dev` build.
+
+`update --check` always asks GitHub (bypassing the daily cache) and exits 0 whether or not an update exists. With `-o json` it prints `current_version`, `latest_version`, `update_available`, `release_url`, and `install_method` (`self` or `go`). Read-only mode blocks `update` but allows `update --check`.
+
+**Update notice.** In an interactive terminal, cubeapm checks GitHub for a new release at most once a day, in the background (cached in `update-check.json` in the config directory), and prints a notice on stderr after the command's output, at most once a day per release:
+
+```
+A new version of cubeapm is available: v<current> -> v<latest>
+Update with: cubeapm update
+Release notes: https://github.com/piyush-gambhir/cubeapm-cli/releases/tag/v<latest>
+```
+
+There is no check, and no network request, when stderr is not a terminal, when `CI` is set, with `--quiet` or `CUBEAPM_QUIET`, when `CUBEAPM_NO_UPDATE_NOTIFIER=1` or `NO_UPDATE_NOTIFIER=1` is set, on `dev` builds, or for `update`, `version`, `completion`, and `help`. Scripts, CI jobs, and coding agents therefore never see it. `cubeapm version` also shows the latest known release from that cache, without using the network.
 
 ---
 
