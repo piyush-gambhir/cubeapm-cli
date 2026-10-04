@@ -218,7 +218,7 @@ func TestUpdateNoticeGoInstallLine(t *testing.T) {
 	}
 }
 
-func TestUpdateNoticeNeverWaitsForGitHub(t *testing.T) {
+func TestUpdateNoticeWaitsAtMostOneSecond(t *testing.T) {
 	block := make(chan struct{})
 	env := newUpdateEnv(t, "v0.2.10", block)
 
@@ -236,11 +236,43 @@ func TestUpdateNoticeNeverWaitsForGitHub(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if elapsed > time.Second {
-		t.Fatalf("command waited %v for the release check", elapsed)
+	if elapsed > updateNoticeWait+500*time.Millisecond {
+		t.Fatalf("command waited %v for the release check, want at most about %v", elapsed, updateNoticeWait)
 	}
 	if env.notice.Len() != 0 {
 		t.Fatalf("unexpected notice: %q", env.notice.String())
+	}
+}
+
+func TestUpdateNoticeWaitsForSlowCheck(t *testing.T) {
+	block := make(chan struct{})
+	env := newUpdateEnv(t, "v0.2.10", block)
+	time.AfterFunc(200*time.Millisecond, func() { close(block) })
+
+	// config get finishes long before GitHub answers; the day's only check
+	// must still produce the notice on this run.
+	if err := env.run("config", "get", "server"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(env.notice.String(), "v0.2.9 -> v0.2.10") {
+		t.Fatalf("no notice after a 200ms release check: %q", env.notice.String())
+	}
+}
+
+func TestUpdateCheckFeedsNotifier(t *testing.T) {
+	env := newUpdateEnv(t, "v0.2.10", nil)
+	env.seedCache("0.2.9")
+	if err := env.run("update", "--check"); err != nil {
+		t.Fatal(err)
+	}
+	if err := env.run("config", "get", "server"); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(env.notice.String(), "v0.2.9 -> v0.2.10") {
+		t.Fatalf("notifier disagrees with update --check: %q", env.notice.String())
+	}
+	if got := env.lookups.Load(); got != 1 {
+		t.Fatalf("release lookups = %d, want 1 (the notifier must reuse the update --check answer)", got)
 	}
 }
 

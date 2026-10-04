@@ -80,7 +80,9 @@ with `git pull && make install`.
 
 In an interactive terminal, cubeapm checks GitHub for a new release at most
 once a day, in the background, and prints a notice on stderr after the
-command's output, at most once a day per release:
+command's output, at most once a day per release. On the run that checks, the
+command waits at most 1 second for GitHub, so a fast command still shows the
+notice:
 
 ```text
 A new version of cubeapm is available: v<current> -> v<latest>

@@ -5,7 +5,6 @@ package update
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -329,13 +328,4 @@ func saveCache(configDir string, entry cacheEntry) error {
 		return err
 	}
 	return os.Rename(tmp.Name(), cachePath(configDir))
-}
-
-// ClearCache removes the cached check, for example after a successful update.
-func ClearCache(configDir string) error {
-	err := os.Remove(cachePath(configDir))
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	return err
 }
