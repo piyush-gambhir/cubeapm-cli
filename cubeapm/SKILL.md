@@ -10,17 +10,14 @@ description: "Expert guide for using the cubeapm CLI to query distributed traces
 ### Installation
 
 ```bash
-# From source (Go 1.26+ (Go 1.27.1 recommended))
+# Install script (macOS and Linux, no Go required)
 curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
 
-# From the install script
-curl -sSL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | bash
-
-# Build from source
+# Build from source (Go 1.26+, Go 1.27.1 recommended)
 git clone https://github.com/piyush-gambhir/cubeapm-cli.git
 cd cubeapm-cli/cli-go
 make build
-# Binary is at ./bin/cubeapm
+# Binary is at ./cubeapm
 ```
 
 ### Authentication
@@ -464,7 +461,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 |---------|-------------|
 | `cubeapm login` | Interactively configure a connection profile |
 | `cubeapm version` | Print CLI version, commit hash, build date |
-| `cubeapm update` | Check for and install CLI updates (`--check` for dry run) |
+| `cubeapm update` | Check for and install CLI updates (`--check` for dry run; Windows supports `--check` only) |
 
 ### Traces (`cubeapm traces` / `trace`)
 
@@ -545,7 +542,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 | Empty trace results | Time range too narrow or wrong service | Try `--last 24h` for a wider window. Run `traces services` to verify service name. |
 | PromQL parse error | Shell is interpreting special characters | Use single quotes around the entire PromQL expression. Avoid double quotes. |
 | LogsQL parse error | Pipe character interpreted by shell | Use single quotes: `'error \| stats count() by (service)'` |
-| "dev" version | Binary built from source without version tags | Normal for local builds. Use `cubeapm update` to get a release build. |
+| "dev" version | Binary built without version metadata (for example plain `go build`) | Normal for local builds. `cubeapm update` does not work on dev builds; install a release with the install script or from the releases page. |
 | Auth error / 401 | Session expired or invalid credentials | Run `cubeapm login` to re-authenticate, or check `CUBEAPM_EMAIL`/`CUBEAPM_PASSWORD` env vars. |
 | No data for metrics query | Wrong metric name or labels | Use `cubeapm metrics label-values __name__` to discover available metric names. |
 | `logs stats` returns error | Missing stats pipe | The query must contain `\| stats`. Example: `'error \| stats count() by (service)'` |

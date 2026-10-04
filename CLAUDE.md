@@ -373,7 +373,7 @@ PromQL is the query language for metrics (Prometheus-compatible):
 |---------|-------------|
 | `cubeapm login` | Interactively configure a connection profile |
 | `cubeapm version` | Print CLI version |
-| `cubeapm update` | Check for and install CLI updates |
+| `cubeapm update` | Check for and install CLI updates (Windows: `--check` only) |
 
 ### `cubeapm config` -- Manage CLI configuration
 

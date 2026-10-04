@@ -21,7 +21,10 @@ func newUpdateCmd() *cobra.Command {
 		Short:       "Update cubeapm to the latest version",
 		Long: `Check for and install the latest version of the cubeapm CLI.
 
-Use --check to only check whether an update is available without installing it.`,
+Use --check to only check whether an update is available without installing it.
+
+On Windows, update cannot install: use --check, then download the release and
+replace cubeapm.exe yourself.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUpdate(cmd, checkOnly)
@@ -63,11 +66,19 @@ func runUpdate(cmd *cobra.Command, checkOnly bool) error {
 		fmt.Printf("Release:   %s\n", info.ReleaseURL)
 	}
 
+	installErr := update.CheckInstallSupported(info.LatestVersion, updateRepo)
 	if checkOnly {
 		if !cmdutil.Quiet {
-			fmt.Printf("\nRun `cubeapm update` to install the update.\n")
+			if installErr != nil {
+				fmt.Printf("\nDownload the release above and replace cubeapm.exe to update.\n")
+			} else {
+				fmt.Printf("\nRun `cubeapm update` to install the update.\n")
+			}
 		}
 		return nil
+	}
+	if installErr != nil {
+		return installErr
 	}
 
 	if cmdutil.NoInput {

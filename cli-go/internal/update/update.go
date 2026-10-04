@@ -23,6 +23,9 @@ const (
 	cacheFileName = "update-check.json"
 )
 
+// goos is the OS the binary runs on. Tests override it to cover Windows.
+var goos = runtime.GOOS
+
 // UpdateInfo holds the result of an update check.
 type UpdateInfo struct {
 	Available      bool
@@ -131,7 +134,11 @@ func PrintUpdateNotice(w io.Writer, info *UpdateInfo) {
 		return
 	}
 	fmt.Fprintf(w, "\nA new version of cubeapm is available: v%s -> v%s\n", info.CurrentVersion, info.LatestVersion)
-	fmt.Fprintf(w, "Run `cubeapm update` to update, or download from:\n")
+	if goos == "windows" {
+		fmt.Fprintf(w, "Download it and replace cubeapm.exe from:\n")
+	} else {
+		fmt.Fprintf(w, "Run `cubeapm update` to update, or download from:\n")
+	}
 	fmt.Fprintf(w, "%s\n", info.ReleaseURL)
 }
 
@@ -199,6 +206,16 @@ func saveCache(configDir string, entry cacheEntry) error {
 
 // --- Self-update functionality ---
 
+// CheckInstallSupported returns an error when SelfUpdate cannot install on
+// this OS. Windows releases ship as .zip archives and a running .exe cannot
+// be replaced in place, so Windows users replace cubeapm.exe by hand.
+func CheckInstallSupported(version, repo string) error {
+	if goos != "windows" {
+		return nil
+	}
+	return fmt.Errorf("self-update is not supported on Windows: download the release from https://github.com/%s/releases/tag/v%s and replace cubeapm.exe", repo, version)
+}
+
 // SelfUpdate downloads and installs the specified version of the binary,
 // replacing the current executable in-place.
 func SelfUpdate(version, repo string) error {
@@ -207,6 +224,9 @@ func SelfUpdate(version, repo string) error {
 
 // SelfUpdateContext installs an update while honoring caller cancellation.
 func SelfUpdateContext(ctx context.Context, version, repo string) error {
+	if err := CheckInstallSupported(version, repo); err != nil {
+		return err
+	}
 	osName := runtime.GOOS
 	archName := runtime.GOARCH
 

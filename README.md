@@ -14,9 +14,9 @@ Designed to be used both interactively and programmatically by scripts and codin
 - Full API coverage, every CubeAPM API endpoint accessible from the command line
 - Multiple output formats, table, JSON, YAML (`-o json`)
 - Profile management, multiple instances with `--profile`
-- Auto-update, checks for new versions, `cubeapm update` to self-update
+- Auto-update, checks for new versions, `cubeapm update` to self-update (macOS and Linux)
 - Agent-friendly, comprehensive help text, structured output for LLM coding agents
-- Cross-platform, macOS, Linux, Windows (amd64 and arm64)
+- Cross-platform, macOS and Linux (amd64 and arm64), Windows (amd64)
 
 ## Installation
 
@@ -32,7 +32,7 @@ Install a specific version or to a custom directory:
 
 ```bash
 # Specific version
-curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.2.1 sh
+curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.2.7 sh
 
 # Custom install directory
 curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
@@ -904,7 +904,7 @@ cubeapm ingest logs --format elastic --file elastic-bulk.ndjson
 
 Manage CLI configuration and connection profiles.
 
-Configuration is stored at `~/.config/cubeapm/config.yaml`.
+Configuration is stored at `~/.config/cubeapm-cli/config.yaml`.
 
 #### `config view`
 
@@ -1017,6 +1017,9 @@ cubeapm update           # Check and install
 cubeapm update --check   # Only check, do not install
 ```
 
+On Windows, `update` cannot install: run `cubeapm update --check`, then download
+the release and replace `cubeapm.exe`.
+
 ---
 
 ## Common Workflows
@@ -1105,7 +1108,7 @@ npx skills add piyush-gambhir/cubeapm-cli@cubeapm
 
 Once installed, coding agents automatically know how to use this CLI effectively.
 
-For MCP clients that can't run shell commands directly (e.g. Claude Desktop), see [`cli-mcp-server/`](cli-mcp-server/) — it provides a local CLI bridge exposing this CLI's traces/logs/metrics queries as MCP tools and a `/usecube` prompt.
+For MCP clients that can't run shell commands directly (e.g. Claude Desktop), see [`cli-mcp-server/`](cli-mcp-server/), which provides a local CLI bridge exposing this CLI's traces/logs/metrics queries as MCP tools and a `/usecube` prompt.
 
 ## License
 

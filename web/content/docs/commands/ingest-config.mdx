@@ -53,7 +53,8 @@ cubeapm update
 
 `login` is interactive. `update --check` does not install; `update` asks for
 confirmation before replacing a release binary and cannot proceed with
-`--no-input`.
+`--no-input`. On Windows, `update` cannot install: use `update --check`, then
+download the release and replace `cubeapm.exe`.
 
 <Callout type="warn">
   `--read-only` blocks ingestion, but the current command setup does not enforce

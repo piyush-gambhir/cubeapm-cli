@@ -3,7 +3,7 @@
 #   curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
 #
 # Install specific version:
-#   curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.1.0 sh
+#   curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.2.7 sh
 #
 # Install to custom directory:
 #   curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
