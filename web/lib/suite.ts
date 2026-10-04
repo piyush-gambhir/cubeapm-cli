@@ -11,6 +11,7 @@ export const suite: readonly SuiteProject[] = [
   'grafana-cli',
   'cubeapm-cli',
   'nginxpm-cli',
+  'bing-webmaster-cli',
   'reckon',
 ].map((name) => ({
   name,
