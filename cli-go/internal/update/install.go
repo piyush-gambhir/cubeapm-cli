@@ -134,7 +134,7 @@ func Install(ctx context.Context, repo, version, execPath string, progress io.Wr
 	}
 
 	archive := ArchiveName(goos, goarch)
-	baseURL := fmt.Sprintf("%s/%s/releases/download/v%s/", DownloadBaseURL, repo, version)
+	baseURL := fmt.Sprintf("%s/%s/releases/download/v%s/", GitHubBaseURL, repo, version)
 
 	tmpDir, err := os.MkdirTemp("", "cubeapm-update-*")
 	if err != nil {

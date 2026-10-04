@@ -21,7 +21,7 @@ import (
 type updateEnv struct {
 	t            *testing.T
 	configDir    string
-	apiHits      atomic.Int32
+	lookups      atomic.Int32
 	downloadHits atomic.Int32
 	notice       bytes.Buffer
 	out          bytes.Buffer
@@ -31,23 +31,25 @@ func newUpdateEnv(t *testing.T, latestTag string, block <-chan struct{}) *update
 	t.Helper()
 	env := &updateEnv{t: t}
 
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/repos/"+updateRepo+"/releases/latest" {
+	var srv *httptest.Server
+	srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/"+updateRepo+"/releases/latest" {
 			env.downloadHits.Add(1)
 			http.NotFound(w, r)
 			return
 		}
-		env.apiHits.Add(1)
+		env.lookups.Add(1)
 		if block != nil {
 			<-block
 		}
-		fmt.Fprintf(w, `{"tag_name":%q}`, latestTag)
+		w.Header().Set("Location", srv.URL+"/"+updateRepo+"/releases/tag/"+latestTag)
+		w.WriteHeader(http.StatusFound)
 	}))
 	t.Cleanup(srv.Close)
 
-	origAPI, origDownload := update.APIBaseURL, update.DownloadBaseURL
+	origBase := update.GitHubBaseURL
 	origVersion, origStderr, origStdin, origNotice := Version, stderrIsTerminal, stdinIsTerminal, noticeOutput
-	update.APIBaseURL, update.DownloadBaseURL = srv.URL, srv.URL
+	update.GitHubBaseURL = srv.URL
 	Version = "0.2.9"
 	stderrIsTerminal = func() bool { return true }
 	stdinIsTerminal = func() bool { return true }
@@ -55,7 +57,7 @@ func newUpdateEnv(t *testing.T, latestTag string, block <-chan struct{}) *update
 	pendingUpdateCheck = nil
 	rootCmd.SetOut(&env.out)
 	t.Cleanup(func() {
-		update.APIBaseURL, update.DownloadBaseURL = origAPI, origDownload
+		update.GitHubBaseURL = origBase
 		Version, stderrIsTerminal, stdinIsTerminal, noticeOutput = origVersion, origStderr, origStdin, origNotice
 		pendingUpdateCheck = nil
 		rootCmd.SetOut(nil)
@@ -115,7 +117,7 @@ func TestUpdateNotifierSuppressed(t *testing.T) {
 		version string
 		noTTY   bool
 		args    []string
-		apiHits int32 // update --check queries GitHub itself
+		lookups int32 // update --check queries GitHub itself
 	}{
 		{name: "stderr not a terminal", noTTY: true, args: configGet},
 		{name: "CI", env: map[string]string{"CI": "true"}, args: configGet},
@@ -127,7 +129,7 @@ func TestUpdateNotifierSuppressed(t *testing.T) {
 		{name: "empty version", version: " ", args: configGet},
 		{name: "commit hash version", version: "0e8ddd8", args: configGet},
 		{name: "version command", args: []string{"version"}},
-		{name: "update command", args: []string{"update", "--check"}, apiHits: 1},
+		{name: "update command", args: []string{"update", "--check"}, lookups: 1},
 		{name: "completion command", args: []string{"completion", "bash"}},
 		{name: "help command", args: []string{"help"}},
 		{name: "shell completion request", args: []string{"__complete", "traces", ""}},
@@ -154,8 +156,8 @@ func TestUpdateNotifierSuppressed(t *testing.T) {
 			if pendingUpdateCheck != nil {
 				t.Fatal("the update notifier started a check")
 			}
-			if got := env.apiHits.Load(); got != tc.apiHits {
-				t.Fatalf("GitHub API hits = %d, want %d", got, tc.apiHits)
+			if got := env.lookups.Load(); got != tc.lookups {
+				t.Fatalf("release lookups = %d, want %d", got, tc.lookups)
 			}
 			if env.notice.Len() != 0 {
 				t.Fatalf("unexpected notice: %q", env.notice.String())
@@ -177,8 +179,8 @@ func TestUpdateNotifierChecksInTerminal(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("update check did not finish")
 	}
-	if env.apiHits.Load() != 1 {
-		t.Fatalf("GitHub API hits = %d, want 1", env.apiHits.Load())
+	if env.lookups.Load() != 1 {
+		t.Fatalf("release lookups = %d, want 1", env.lookups.Load())
 	}
 	if _, err := os.Stat(filepath.Join(env.configDir, "update-check.json")); err != nil {
 		t.Fatalf("check result not cached: %v", err)
@@ -199,8 +201,8 @@ func TestUpdateNoticeOncePerVersion(t *testing.T) {
 	if env.notice.String() != want {
 		t.Fatalf("notice output:\n%q\nwant exactly one notice:\n%q", env.notice.String(), want)
 	}
-	if env.apiHits.Load() != 0 {
-		t.Fatalf("a fresh cache still reached GitHub %d times", env.apiHits.Load())
+	if env.lookups.Load() != 0 {
+		t.Fatalf("a fresh cache still reached GitHub %d times", env.lookups.Load())
 	}
 }
 
@@ -242,6 +244,40 @@ func TestUpdateNoticeNeverWaitsForGitHub(t *testing.T) {
 	}
 }
 
+func TestUpdateCheckCountsWhenCommandExitsFirst(t *testing.T) {
+	block := make(chan struct{})
+	env := newUpdateEnv(t, "v0.2.10", block)
+	if err := env.run("config", "get", "server"); err != nil {
+		t.Fatal(err)
+	}
+	first := pendingUpdateCheck
+	var second *updateCheck
+	// Let the background requests finish before the temp dirs go away.
+	t.Cleanup(func() {
+		close(block)
+		for _, check := range []*updateCheck{first, second} {
+			if check != nil {
+				<-check.done
+			}
+		}
+	})
+	if first == nil {
+		t.Fatal("no update check started")
+	}
+
+	// The first command finished while GitHub had not answered. The next one
+	// must answer from the recorded attempt instead of asking again.
+	if err := env.run("config", "get", "server"); err != nil {
+		t.Fatal(err)
+	}
+	second = pendingUpdateCheck
+	select {
+	case <-second.done:
+	default:
+		t.Fatal("the second command started another GitHub request")
+	}
+}
+
 func TestUpdateCheckJSON(t *testing.T) {
 	env := newUpdateEnv(t, "v0.2.10", nil)
 	env.seedCache("0.2.9") // --check must bypass the cache
@@ -267,8 +303,8 @@ func TestUpdateCheckJSON(t *testing.T) {
 			t.Errorf("%s = %v, want %v", k, got[k], v)
 		}
 	}
-	if env.apiHits.Load() != 1 {
-		t.Fatalf("GitHub API hits = %d, want 1", env.apiHits.Load())
+	if env.lookups.Load() != 1 {
+		t.Fatalf("release lookups = %d, want 1", env.lookups.Load())
 	}
 }
 
@@ -364,7 +400,7 @@ func TestVersionShowsCachedLatest(t *testing.T) {
 			t.Errorf("version output lacks %q:\n%s", want, env.out.String())
 		}
 	}
-	if env.apiHits.Load() != 0 {
+	if env.lookups.Load() != 0 {
 		t.Fatal("version used the network")
 	}
 }
