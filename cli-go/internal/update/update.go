@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -31,12 +32,11 @@ const (
 	project = "cubeapm-cli"
 )
 
-// Release lookups and downloads go to GitHub. Tests point these at httptest
-// servers; release notes links always use github.com.
-var (
-	APIBaseURL      = "https://api.github.com"
-	DownloadBaseURL = "https://github.com"
-)
+// GitHubBaseURL serves the releases/latest redirect and the release assets.
+// Neither goes through api.github.com, whose unauthenticated limit of 60
+// requests per hour per IP breaks shared networks. Tests point this at an
+// httptest server; release notes links always use github.com.
+var GitHubBaseURL = "https://github.com"
 
 // goos is the OS the binary runs on. Tests override it to cover Windows.
 var goos = runtime.GOOS
@@ -56,10 +56,6 @@ type cacheEntry struct {
 	CheckFailed     bool      `json:"check_failed,omitempty"`
 	NotifiedVersion string    `json:"notified_version,omitempty"`
 	NotifiedAt      time.Time `json:"notified_at,omitzero"`
-}
-
-type githubRelease struct {
-	TagName string `json:"tag_name"`
 }
 
 var semverPattern = regexp.MustCompile(`^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$`)
@@ -98,7 +94,7 @@ func CachedCheck(currentVersion, repo, configDir string, now time.Time) (info *U
 	return buildUpdateInfo(currentVersion, cached.LatestVersion, repo), true
 }
 
-// FetchLatest queries GitHub for the latest release and caches the result. A
+// FetchLatest asks GitHub for the latest release and caches the result. A
 // failed lookup is cached too, so a broken network does not retry on every
 // command.
 func FetchLatest(ctx context.Context, currentVersion, repo, configDir string, timeout time.Duration) (*UpdateInfo, error) {
@@ -106,6 +102,20 @@ func FetchLatest(ctx context.Context, currentVersion, repo, configDir string, ti
 		return nil, fmt.Errorf("development build %q does not check for updates", currentVersion)
 	}
 	return checkFresh(ctx, currentVersion, repo, configDir, timeout)
+}
+
+// RecordCheckAttempt records that a release check is starting, before any
+// request is sent. A command that exits before the answer arrives still counts
+// as a (failed) check, so GitHub is asked at most once a day. The last known
+// release and the notice record are kept.
+func RecordCheckAttempt(configDir string, now time.Time) error {
+	var entry cacheEntry
+	if cached, err := loadCache(configDir); err == nil {
+		entry = *cached
+	}
+	entry.LastChecked = now.UTC()
+	entry.CheckFailed = true // replaced once the answer arrives
+	return saveCache(configDir, entry)
 }
 
 // CachedUpdateInfo reads the last known release from the cache without any
@@ -146,36 +156,52 @@ func checkFresh(ctx context.Context, currentVersion, repo, configDir string, tim
 	return buildUpdateInfo(currentVersion, latest, repo), nil
 }
 
+// fetchLatestVersion reads the latest release tag from the redirect GitHub
+// sends for /<repo>/releases/latest (302 to /<repo>/releases/tag/<tag>). The
+// redirect is never followed, so one small request answers the question.
 func fetchLatestVersion(ctx context.Context, repo string, timeout time.Duration) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	url := fmt.Sprintf("%s/repos/%s/releases/latest", APIBaseURL, repo)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	base, err := url.Parse(GitHubBaseURL)
+	if err != nil {
+		return "", fmt.Errorf("parsing GitHub URL: %w", err)
+	}
+	latestURL := fmt.Sprintf("%s/%s/releases/latest", strings.TrimSuffix(GitHubBaseURL, "/"), repo)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, latestURL, nil)
 	if err != nil {
 		return "", fmt.Errorf("creating request: %w", err)
 	}
-	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", project)
 
-	resp, err := http.DefaultClient.Do(req)
+	client := &http.Client{
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("checking for update: %w", err)
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusFound {
+		return "", fmt.Errorf("%s returned status %d, expected a redirect to the latest release", latestURL, resp.StatusCode)
 	}
-
-	var release githubRelease
-	if err := json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&release); err != nil {
-		return "", fmt.Errorf("parsing release response: %w", err)
+	location, err := resp.Location()
+	if err != nil {
+		return "", fmt.Errorf("%s redirect has no usable Location header: %w", latestURL, err)
 	}
-	// The tag becomes part of download URLs, so accept only a plain version.
-	if !IsReleaseVersion(release.TagName) {
-		return "", fmt.Errorf("unexpected release tag %q", release.TagName)
+	if location.Scheme != base.Scheme || location.Host != base.Host {
+		return "", fmt.Errorf("latest release redirect points to unexpected host %q", location.Host)
 	}
-	return NormalizeVersion(release.TagName), nil
+	prefix := "/" + repo + "/releases/tag/"
+	tag := ""
+	if len(location.Path) > len(prefix) && strings.EqualFold(location.Path[:len(prefix)], prefix) {
+		tag = location.Path[len(prefix):]
+	}
+	// The tag becomes part of download URLs, so accept only a plain v<semver>.
+	if !strings.HasPrefix(tag, "v") || !IsReleaseVersion(tag) {
+		return "", fmt.Errorf("latest release redirect %q does not name a version tag", location.String())
+	}
+	return NormalizeVersion(tag), nil
 }
 
 func buildUpdateInfo(currentVersion, latestVersion, repo string) *UpdateInfo {

@@ -111,9 +111,9 @@ func releaseServer(t *testing.T, version, archiveName string, archive []byte, ch
 		}
 	}))
 	t.Cleanup(srv.Close)
-	orig := DownloadBaseURL
-	DownloadBaseURL = srv.URL
-	t.Cleanup(func() { DownloadBaseURL = orig })
+	orig := GitHubBaseURL
+	GitHubBaseURL = srv.URL
+	t.Cleanup(func() { GitHubBaseURL = orig })
 	return &hits
 }
 

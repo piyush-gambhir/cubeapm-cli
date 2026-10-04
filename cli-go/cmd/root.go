@@ -315,6 +315,13 @@ func startUpdateCheck() {
 		close(check.done)
 		return
 	}
+	// Record the attempt first, so a command that exits before the answer
+	// arrives does not leave the next command to ask GitHub again. Without a
+	// record there is no once-a-day limit, so skip the check.
+	if err := update.RecordCheckAttempt(configDir, time.Now()); err != nil {
+		close(check.done)
+		return
+	}
 	go func() {
 		defer close(check.done)
 		info, err := update.FetchLatest(context.Background(), Version, updateRepo, configDir, update.BackgroundTimeout)
