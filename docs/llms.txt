@@ -2,7 +2,7 @@
 
 > Command-line interface for querying distributed traces (Jaeger-compatible), metrics (Prometheus/PromQL), and logs (VictoriaLogs/LogsQL) from a CubeAPM observability server, built to be driven both interactively and programmatically by scripts and coding agents.
 
-`cubeapm` is a single static Go binary that talks to a CubeAPM server's HTTP APIs. It groups its functionality into command groups, `traces`, `metrics`, `logs`, `ingest`, `config`, plus the top-level `login`, `version`, and `update` commands. Every command supports `table` (default), `json`, and `yaml` output via `-o`/`--output`; JSON is the format intended for scripting and agents.
+`cubeapm` is a single static Go binary that talks to a CubeAPM server's HTTP APIs. It groups its functionality into command groups, `traces`, `metrics`, `logs`, `ingest`, `config`, plus the top-level `login`, `version`, and `update` commands. The `traces`, `metrics`, and `logs` read commands support `table` (default), `json`, and `yaml` output via `-o`/`--output`; JSON is the format intended for scripting and agents. `-o` has no effect on `config view` (always YAML), `config get`, `config profiles list`, `version`, `login`, `update`, `ingest`, `logs delete run`/`stop`, or `traces dependencies --dot`.
 
 This is an **independent, unofficial** tool. It is not affiliated with, endorsed by, or sponsored by CubeAPM or its makers. "CubeAPM" is the name of the third-party product this CLI connects to.
 
@@ -128,11 +128,13 @@ cubeapm --server cube.example.com --email user@example.com --password secret tra
 
 ### Resolution precedence
 
-For every setting, values are layered in this order (highest wins):
+Connection and output settings are layered in this order (highest wins):
 
-1. **CLI flags** (`--server`, `--email`, `--password`, `--query-port`, `--ingest-port`, `--admin-port`, `--output`, `--profile`, `--read-only`, `--no-input`, `--quiet`)
+1. **CLI flags** (`--server`, `--email`, `--password`, `--query-port`, `--ingest-port`, `--admin-port`, `--output`, `--profile`)
 2. **Environment variables** (`CUBEAPM_*`, see below)
 3. **The active profile** in the config file (selected by `--profile`, else `current_profile`)
+
+The safety settings (`--read-only`, `--no-input`, `--quiet`) follow different rules; see "Safety settings" below.
 
 ### Environment variables
 
@@ -144,9 +146,9 @@ For every setting, values are layered in this order (highest wins):
 | `CUBEAPM_QUERY_PORT` | Query API port (default `3140`) |
 | `CUBEAPM_INGEST_PORT` | Ingest API port (default `3130`) |
 | `CUBEAPM_ADMIN_PORT` | Admin API port (default `3199`) |
-| `CUBEAPM_READ_ONLY` | Block write/delete commands when `true`/`1` |
-| `CUBEAPM_NO_INPUT` | Disable all interactive prompts when `true`/`1` |
-| `CUBEAPM_QUIET` | Suppress informational output when `true`/`1` |
+| `CUBEAPM_READ_ONLY` | Read-only mode; any Go boolean (`true`/`1` on, `false`/`0` off), and it overrides the profile's `read_only` |
+| `CUBEAPM_NO_INPUT` | Disable all interactive prompts when exactly `true` or `1` |
+| `CUBEAPM_QUIET` | Suppress informational output when exactly `true` or `1` (ignored if `--quiet` is passed) |
 | `XDG_CONFIG_HOME` | Relocate the config directory |
 
 There is no environment variable for output format or profile selection, use `-o`/`--output` and `--profile` (or set `output` in the profile via `cubeapm config set output ...`).
@@ -185,7 +187,7 @@ Behind a reverse proxy on HTTPS, all three are usually the same host on port 443
 
 ### Time-range flags
 
-Most read commands accept `--from`, `--to`, and `--last`. If none are given, the default window is the **last 1 hour**.
+These commands accept `--from`, `--to`, and `--last`: `traces search`, `get`, `services` (only with `--env`), `dependencies`, `callers` (only the end time is used; the rate window is `--window`); `metrics query-range`, `labels`, `label-values`, `series`; `logs query`, `hits`, `stats`, `streams`, `field-names`, `field-values`. `logs status` uses `--lookback <days>` instead, and the remaining commands take no time flags. If none are given, the default window is the **last 1 hour**.
 
 - `--last <dur>`, relative duration from now: `30m`, `1h`, `2d`, `1d12h`, `90s`. Units: `ns`, `us`, `ms`, `s`, `m`, `h`, `d` (note: Go's stdlib lacks `d`, so this CLI adds it). When set, `--last` takes precedence over `--from`/`--to`.
 - `--from`/`--to`, accept RFC3339 (`2024-01-15T10:00:00Z`), date-only (`2024-01-15`), date+time without a zone (`2024-01-15T10:00:00`, interpreted as **local** time), Unix seconds (`1705312800`) or milliseconds (`>= 1e12`), or relative (`-1h`, `now-30m`, `now`).
@@ -193,9 +195,11 @@ Most read commands accept `--from`, `--to`, and `--last`. If none are given, the
 
 The `metrics query` command uses a single `--time` flag (same accepted formats) for the instant evaluation timestamp instead of a range.
 
-### Read-only mode
+### Safety settings
 
-When read-only is active (via `--read-only`, `read_only: true` in the profile, or `CUBEAPM_READ_ONLY=true`), the four mutating commands are blocked with an error: `ingest metrics`, `ingest logs`, `logs delete run`, `logs delete stop`. Profile and environment safety settings are sticky; remove them explicitly before permitting writes.
+- **Read-only:** the base value is `CUBEAPM_READ_ONLY` when it is set to a valid Go boolean (so `CUBEAPM_READ_ONLY=false` turns off a profile's `read_only: true`), otherwise the profile's `read_only`. `--read-only` can only turn it on; `--read-only=false` never turns it off. When on, exactly four commands are blocked with an error: `ingest metrics`, `ingest logs`, `logs delete run`, `logs delete stop`. Everything else runs, including `logs delete list` and all queries. Read-only is not enforced for `login`, `config set`, `config profiles use`/`delete`, or `update`.
+- **No-input:** on if `--no-input` is passed or `CUBEAPM_NO_INPUT` is `1`/`true`; `--no-input=false` does not override the environment. `login` and the `update` install confirmation fail instead of prompting.
+- **Quiet:** `--quiet` wins when passed (including `--quiet=false`); otherwise `CUBEAPM_QUIET` (`1`/`true`) applies.
 
 ## Commands
 
@@ -473,7 +477,7 @@ Log-volume histogram (counts per time bucket) for a query. Columns: `TIMESTAMP`,
 
 Flags:
 - `--query <logsql>`, query to count (default `*`)
-- `--step <dur>`, bucket size (`5m`, `1h`); server auto-selects if omitted
+- `--step <dur>`, bucket size (`5m`, `1h`); if omitted, the CLI uses the range divided by 60 (minimum `1s`)
 - `--from` / `--to` / `--last`, time range (default last 1h)
 
 ```bash
@@ -571,7 +575,7 @@ cubeapm logs field-values host --query 'error' --limit 50 -o json
 cubeapm logs delete <run|stop|list>
 ```
 
-Manage asynchronous log-deletion tasks via the admin API (port 3199). These are **mutating** commands and are blocked under read-only mode.
+Manage asynchronous log-deletion tasks via the admin API (port 3199). `run` and `stop` are **mutating** and blocked under read-only mode; `list` is read-only and always allowed.
 
 ##### logs delete run
 

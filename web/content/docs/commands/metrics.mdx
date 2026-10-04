@@ -16,8 +16,8 @@ cubeapm metrics query-range 'rate(http_requests_total[5m])' --last 1h --step 1m
 cubeapm metrics query-range 'up' --from -2h --to -1h -o json
 ```
 
-`query-range` is also available as `range`. If `--step` is omitted, the client
-lets the API choose a useful resolution.
+`query-range` is also available as `range`. If `--step` is omitted, the CLI
+computes it as the time range divided by 250 (minimum `1s`) and sends that step.
 
 ## Discover metric metadata
 

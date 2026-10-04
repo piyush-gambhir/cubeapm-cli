@@ -107,7 +107,7 @@ Settings are resolved in this order (highest priority first):
 
 ## Time Ranges
 
-All query commands support flexible time ranges via `--from`, `--to`, and `--last` flags:
+These commands accept `--from`, `--to`, and `--last`: `traces search`, `get`, `services` (only with `--env`), `dependencies`, `callers` (only the end time is used; the rate window is `--window`); `metrics query-range`, `labels`, `label-values`, `series`; and `logs query`, `hits`, `stats`, `streams`, `field-names`, `field-values`. `metrics query` takes a single `--time`, and `logs status` takes `--lookback <days>`. `--last` wins over `--from`/`--to`.
 
 ```bash
 # Relative duration from now (most common)
@@ -125,7 +125,7 @@ All query commands support flexible time ranges via `--from`, `--to`, and `--las
 # Relative from/to
 --from -2h --to -1h      # between 2 hours ago and 1 hour ago
 
-# Date only (midnight UTC)
+# Date only (midnight local time; timestamps without a zone are local too)
 --from 2024-01-15
 
 # Default: if no time flags, defaults to last 1 hour
@@ -133,7 +133,7 @@ All query commands support flexible time ranges via `--from`, `--to`, and `--las
 
 ## Output Formats
 
-All commands support three output formats via the `-o` / `--output` flag:
+The `traces`, `metrics`, and `logs` read commands support three output formats via the `-o` / `--output` flag. Table-backed commands emit an array of objects keyed by the table headers (`TRACE_ID`, `SERVICE`, ...); `metrics query`/`query-range` return the raw Prometheus response; `logs query` streams one object per entry. `-o` has no effect on `config view` (always YAML), `config get`, `config profiles list`, `version`, `login`, `update`, `ingest`, `logs delete run`/`stop`, or `traces dependencies --dot`.
 
 ```bash
 # Table format (default) - human-readable columns
@@ -214,13 +214,13 @@ cubeapm traces search [flags]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--service` | string | | Filter by service name |
-| `--env` | string | | Filter by environment tag |
+| `--env` | string | | Filter by environment; sent unchanged (case-sensitive), CubeAPM values are usually upper-case (`PROD`, `UAT`) |
 | `--query` | string | | Filter by operation name |
 | `--status` | string | | Filter by span status: `error`, `ok` |
 | `--min-duration` | string | | Minimum trace duration (e.g., `500ms`, `1s`) |
 | `--max-duration` | string | | Maximum trace duration (e.g., `5s`, `10s`) |
 | `--tags` | string[] | | Filter by span tag key=value (repeatable) |
-| `--span-kind` | string | | Filter by span kind: `client`, `server`, `producer`, `consumer`, `internal` |
+| `--span-kind` | string | `server` | Filter by span kind: `client`, `server`, `producer`, `consumer`, `internal` |
 | `--limit` | int | `20` | Maximum number of traces to return |
 | `--from` | string | | Start time (RFC3339, Unix, or relative) |
 | `--to` | string | | End time (RFC3339, Unix, or relative) |
@@ -242,7 +242,7 @@ cubeapm traces search --service api-gateway --query "GET /api/users" --last 1h
 cubeapm traces search --service api-gateway --tags "http.method=POST" --tags "http.status_code=500"
 
 # Filter by environment and span kind
-cubeapm traces search --service payments --env production --span-kind server
+cubeapm traces search --service payments --env PROD --span-kind server
 
 # Search with a custom time range
 cubeapm traces search --service auth --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z
@@ -434,7 +434,7 @@ Returns a matrix of time series with multiple data points per series.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--step` | string | auto | Query resolution step (e.g., `15s`, `1m`, `5m`, `1h`). Auto-calculated if omitted (~250 data points). |
+| `--step` | string | auto | Query resolution step (e.g., `15s`, `1m`, `5m`, `1h`). If omitted, the CLI uses the range divided by 250 (minimum `1s`). |
 | `--from` | string | | Start time |
 | `--to` | string | | End time |
 | `--last` | string | | Relative duration from now |
@@ -638,7 +638,7 @@ cubeapm logs hits [flags]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--query` | string | `*` | LogsQL query to filter entries |
-| `--step` | string | auto | Time bucket size (e.g., `5m`, `1h`) |
+| `--step` | string | auto | Time bucket size (e.g., `5m`, `1h`). If omitted, the CLI uses the range divided by 60 (minimum `1s`). |
 | `--from` | string | | Start time |
 | `--to` | string | | End time |
 | `--last` | string | | Relative duration from now |
@@ -841,7 +841,7 @@ cubeapm ingest metrics [flags]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--format` | string | `prometheus` | Data format: `prometheus`, `otlp` |
+| `--format` | string | `prometheus` | Data format: `prometheus` (text exposition), `otlp` (protobuf), `remote-write` (Prometheus remote write, Snappy-compressed protobuf) |
 | `--file` | string | `-` (stdin) | File path or `-` for stdin |
 
 **Examples:**
@@ -858,6 +858,9 @@ curl -s http://localhost:9090/metrics | cubeapm ingest metrics --format promethe
 
 # OTLP protobuf
 cubeapm ingest metrics --format otlp --file metrics.pb
+
+# Prometheus remote write (Snappy-compressed protobuf)
+cubeapm ingest metrics --format remote-write --file remote-write.pb
 ```
 
 #### `ingest logs`

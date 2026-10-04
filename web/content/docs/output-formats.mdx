@@ -3,7 +3,11 @@ title: Output formats
 description: table, json, and yaml output for human and machine consumption.
 ---
 
-The global `-o` / `--output` flag accepts three formats:
+The global `-o` / `--output` flag accepts three formats. They apply to the
+`traces`, `metrics`, and `logs` read commands; `-o` has no effect on
+`config view` (always YAML), `config get`, `config profiles list`, `version`,
+`login`, `update`, `ingest`, `logs delete run`/`stop`, or
+`traces dependencies --dot`.
 
 - `-o table`: default, human-readable output
 - `-o json`: structured JSON for scripts and agents
@@ -29,9 +33,11 @@ cubeapm metrics query 'up' -o json | jq '.data.result'
 
 ## Shape varies by command
 
-Commands backed by a table become an array of objects in JSON or YAML. Metric
-queries return the raw Prometheus-compatible API response. `traces get` returns
-the full Jaeger-format trace outside table mode.
+Commands backed by a table become an array of objects in JSON or YAML, keyed by
+the table headers (for example `TRACE_ID` or `SERVICE`). Metric queries return
+the raw Prometheus-compatible API response. `traces get` returns the full
+Jaeger-format trace outside table mode. With no results, `logs hits`,
+`logs stats`, and `logs delete list` print a plain message instead of `[]`.
 
 `logs query` is intentionally streamed: JSON and YAML are emitted one entry at
 a time instead of being buffered into one array. Process JSON output as a stream:

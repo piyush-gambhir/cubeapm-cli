@@ -63,11 +63,12 @@ Override via flags (`--query-port`, `--ingest-port`, `--admin-port`), env vars, 
 4. **Use single quotes around PromQL/LogsQL** to avoid shell escaping issues with curly braces, parentheses, and pipes.
 5. **Multi-port awareness:** Query port (3140) for reads, ingest port (3130) for writes, admin port (3199) for deletion. Usually only the query port matters.
 6. **Trace investigation follows a standard flow:** `services` -> `search` -> `get` (waterfall). `operations` and `dependencies` are not exposed by all CubeAPM deployments; if they 400 with "unsupported path", use `traces search` and read the OPERATION column instead.
-7. **Environment values are UPPER-CASE** (e.g. `PROD`, `UAT`). The label is `env` on some metrics and `cube.environment` on others. `traces search` requires both `--service` and `--env` on most CubeAPM deployments.
+7. **Environment values are UPPER-CASE** (e.g. `PROD`, `UAT`). `--env` is sent to the server unchanged (no case conversion), so pass the exact value the deployment uses (for example `PROD`, not `production`). The label is `env` on some metrics and `cube.environment` on others. `traces search` requires both `--service` and `--env` on most CubeAPM deployments, and its `--span-kind` defaults to `server` (pass `--span-kind client` etc. to search other spans).
 8. **Duration filter values** use Go-style notation: `500ms`, `1s`, `100us`, `5m`.
 9. **Trace IDs** are 32-character hex strings. Get them from `traces search` output.
-10. **Range queries** auto-calculate step (~250 data points) if `--step` is omitted.
+10. **Range queries:** if `--step` is omitted, the CLI computes it as the range divided by 250 (minimum `1s`). `logs hits` without `--step` uses the range divided by 60.
 11. **Command aliases exist** for convenience: `traces`/`trace`, `metrics`/`metric`, `logs`/`log`, `services`/`svc`, `operations`/`ops`, `dependencies`/`deps`, `query-range`/`range`, `field-names`/`fields`.
+12. **JSON shapes:** table-backed commands emit an array of objects keyed by the uppercase table headers (for example `TRACE_ID`, `SERVICE`, `OPERATION`). `metrics query`/`query-range` return the raw Prometheus response, `traces get` the full trace, and `logs query` a stream of objects with `_time`, `_stream`, `_msg`, and the entry's other non-underscore fields (values as strings).
 
 ---
 
@@ -436,17 +437,17 @@ cubeapm logs query 'trace_id:<trace-id>' --last 1h -o json
 ### Workflow 18: Script-friendly output with jq
 
 ```bash
-# Extract trace IDs and durations
-cubeapm traces search --service api-gateway --last 1h -o json | jq '.[] | {traceID, duration, operationName}'
+# Extract trace IDs and durations (keys are the table headers)
+cubeapm traces search --service api-gateway --last 1h -o json | jq '.[] | {TRACE_ID, DURATION, OPERATION}'
 
 # Get a list of service names
-cubeapm traces services -o json | jq '.[].name'
+cubeapm traces services -o json | jq -r '.[].SERVICE'
 
 # Extract metric values
 cubeapm metrics query 'up' -o json | jq '.data.result[] | {metric: .metric.instance, value: .value[1]}'
 
-# Count errors per service from logs
-cubeapm logs stats 'level:error | stats count() by (service)' --last 1h -o json | jq '.[] | {service, count}'
+# Count errors per service from logs (keys are the group-by labels plus "value")
+cubeapm logs stats 'level:error | stats count() by (service)' --last 1h -o json | jq '.[] | {service, value}'
 ```
 
 ---
@@ -469,9 +470,10 @@ See [references/commands.md](references/commands.md) for the full command refere
 |---------|-----------|-------------|
 | `traces services` | `--env` | List all services (alias: `svc`); `--env PROD` filters to a specific environment (metrics-derived, UPPER-CASE values) |
 | `traces operations <svc>` | `--span-kind` | List operations for a service (alias: `ops`) |
-| `traces search` | `--service`, `--status`, `--min-duration`, `--max-duration`, `--tags`, `--query`, `--env`, `--span-kind`, `--limit`, `--last`/`--from`/`--to` | Search traces |
+| `traces search` | `--service`, `--status`, `--min-duration`, `--max-duration`, `--tags`, `--query`, `--env`, `--span-kind` (default `server`), `--index` (default `cube:latency`), `--limit` (default 20), `--last`/`--from`/`--to` | Search traces |
 | `traces get <id>` | `--last`/`--from`/`--to` | Get trace by ID (waterfall in table mode) |
 | `traces dependencies` | `--dot`, `--last`/`--from`/`--to` | Service dependency graph (alias: `deps`) |
+| `traces callers` | `--host`, `--service`, `--window` (default `2m`), `--topk` (default 10), `--last`/`--from`/`--to` | Rank services by outbound HTTP call rate to a host |
 
 ### Metrics (`cubeapm metrics` / `metric`)
 
@@ -489,6 +491,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 |---------|-----------|-------------|
 | `logs query <logsql>` | `--service`, `--level`, `--stream`, `--limit`, `--last`/`--from`/`--to` | Query logs |
 | `logs hits` | `--query`, `--step`, `--last`/`--from`/`--to` | Log volume histogram |
+| `logs status` | `--query`, `--lookback` (days, default 30) | Probe log retention (oldest and newest non-empty daily buckets) |
 | `logs stats <logsql>` | `--last`/`--from`/`--to` | Stats/aggregation query (must contain `\| stats`) |
 | `logs streams` | `--query`, `--last`/`--from`/`--to` | List log streams |
 | `logs field-names` | `--query`, `--last`/`--from`/`--to` | List field names (alias: `fields`) |
