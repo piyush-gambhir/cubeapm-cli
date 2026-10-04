@@ -31,8 +31,8 @@ fi
 if [[ "$ENV" == "production" ]]; then
   : "${GITHUB_TOKEN:?set GITHUB_TOKEN in ${DEPLOY_ENV_FILE} (PAT with repo + write:packages)}"
 
-  if ! git describe --tags --exact-match HEAD >/dev/null 2>&1; then
-    echo "error: production release requires a tag at HEAD." >&2
+  if ! git describe --tags --match 'v*' --exact-match HEAD >/dev/null 2>&1; then
+    echo "error: production release requires a vX.Y.Z tag at HEAD." >&2
     echo "       e.g.  git tag v0.1.0 && git push origin v0.1.0" >&2
     exit 1
   fi
