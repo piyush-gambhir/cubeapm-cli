@@ -3,58 +3,198 @@ package update
 import (
 	"bytes"
 	"context"
-	"strings"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 const testRepo = "piyush-gambhir/cubeapm-cli"
 
-func setGOOS(t *testing.T, value string) {
+func setGOOS(t *testing.T, osName, arch string) {
 	t.Helper()
-	orig := goos
-	goos = value
-	t.Cleanup(func() { goos = orig })
+	origOS, origArch := goos, goarch
+	goos, goarch = osName, arch
+	t.Cleanup(func() { goos, goarch = origOS, origArch })
 }
 
-func TestSelfUpdateRefusesOnWindows(t *testing.T) {
-	setGOOS(t, "windows")
-	// A canceled context makes any network attempt fail fast, so the test
-	// only passes when the Windows check runs before downloading.
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
+// latestServer serves releases/latest with tag (or status when non-zero) and
+// counts requests.
+func latestServer(t *testing.T, tag string, status int) *atomic.Int32 {
+	t.Helper()
+	var hits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		if r.URL.Path != "/repos/"+testRepo+"/releases/latest" {
+			http.NotFound(w, r)
+			return
+		}
+		if status != 0 {
+			w.WriteHeader(status)
+			return
+		}
+		fmt.Fprintf(w, `{"tag_name":%q}`, tag)
+	}))
+	t.Cleanup(srv.Close)
+	orig := APIBaseURL
+	APIBaseURL = srv.URL
+	t.Cleanup(func() { APIBaseURL = orig })
+	return &hits
+}
 
-	err := SelfUpdateContext(ctx, "0.2.8", testRepo)
-	if err == nil {
-		t.Fatal("expected an error on Windows")
-	}
-	for _, want := range []string{"cubeapm.exe", "https://github.com/" + testRepo + "/releases/tag/v0.2.8"} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("error %q does not mention %q", err, want)
+func TestIsReleaseVersion(t *testing.T) {
+	for v, want := range map[string]bool{
+		"0.2.9": true, "v0.2.9": true, "v0.2.9-3-gabc1234-dirty": true, "1.0.0+build.1": true,
+		"dev": false, "": false, "0e8ddd8": false, "0.2": false, "v1.2.3/../x": false,
+	} {
+		if got := IsReleaseVersion(v); got != want {
+			t.Errorf("IsReleaseVersion(%q) = %v, want %v", v, got, want)
 		}
 	}
 }
 
-func TestCheckInstallSupported(t *testing.T) {
-	setGOOS(t, "linux")
-	if err := CheckInstallSupported("0.2.8", testRepo); err != nil {
-		t.Fatalf("linux: unexpected error: %v", err)
+func TestFetchLatestCachesSuccessAndFailure(t *testing.T) {
+	dir := t.TempDir()
+	latestServer(t, "v0.2.10", 0)
+
+	info, err := FetchLatest(context.Background(), "0.2.9", testRepo, dir, time.Second)
+	if err != nil {
+		t.Fatal(err)
 	}
-	setGOOS(t, "windows")
-	if err := CheckInstallSupported("0.2.8", testRepo); err == nil {
-		t.Fatal("windows: expected an error")
+	if !info.Available || info.LatestVersion != "0.2.10" || info.ReleaseURL != "https://github.com/"+testRepo+"/releases/tag/v0.2.10" {
+		t.Fatalf("unexpected info %+v", info)
+	}
+	if cached, ok := CachedCheck("0.2.9", testRepo, dir, time.Now()); !ok || cached == nil || !cached.Available {
+		t.Fatalf("CachedCheck after success = %+v, %v", cached, ok)
+	}
+	if _, ok := CachedCheck("0.2.9", testRepo, dir, time.Now().Add(25*time.Hour)); ok {
+		t.Fatal("cache older than 24h should be stale")
+	}
+
+	// A failed lookup is cached as well, so the next command does not retry;
+	// the last known release survives the failure.
+	hits := latestServer(t, "", http.StatusInternalServerError)
+	if _, err := FetchLatest(context.Background(), "0.2.9", testRepo, dir, time.Second); err == nil {
+		t.Fatal("expected an error from a failing GitHub API")
+	}
+	cached, ok := CachedCheck("0.2.9", testRepo, dir, time.Now())
+	if !ok {
+		t.Fatal("a failed check should be cached")
+	}
+	if cached == nil || cached.LatestVersion != "0.2.10" {
+		t.Fatalf("failed check lost the last known release: %+v", cached)
+	}
+	if hits.Load() != 1 {
+		t.Fatalf("GitHub hits = %d, want 1", hits.Load())
 	}
 }
 
-func TestPrintUpdateNoticeOnWindows(t *testing.T) {
-	setGOOS(t, "windows")
-	info := &UpdateInfo{Available: true, CurrentVersion: "0.2.7", LatestVersion: "0.2.8", ReleaseURL: "https://example.test/v0.2.8"}
-	var buf bytes.Buffer
-	PrintUpdateNotice(&buf, info)
-	out := buf.String()
-	if strings.Contains(out, "cubeapm update") {
-		t.Errorf("Windows notice suggests self-update: %q", out)
+func TestFetchLatestRejectsUnexpectedTag(t *testing.T) {
+	latestServer(t, "v0.2.10/../../evil", 0)
+	if _, err := FetchLatest(context.Background(), "0.2.9", testRepo, t.TempDir(), time.Second); err == nil {
+		t.Fatal("expected an error for a tag that is not a version")
 	}
-	if !strings.Contains(out, info.ReleaseURL) || !strings.Contains(out, "cubeapm.exe") {
-		t.Errorf("Windows notice lacks release URL or cubeapm.exe: %q", out)
+}
+
+func TestFetchLatestSkipsDevBuilds(t *testing.T) {
+	hits := latestServer(t, "v0.2.10", 0)
+	for _, v := range []string{"dev", "", "0e8ddd8"} {
+		if _, err := FetchLatest(context.Background(), v, testRepo, t.TempDir(), time.Second); err == nil {
+			t.Errorf("version %q: expected an error", v)
+		}
+	}
+	if hits.Load() != 0 {
+		t.Fatalf("dev builds reached GitHub %d times", hits.Load())
+	}
+}
+
+func TestNotifyOncePerVersionPerDay(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
+	info := buildUpdateInfo("0.2.9", "0.2.10", testRepo)
+
+	var buf bytes.Buffer
+	if !Notify(&buf, dir, info, SelfUpdateCommand, now) {
+		t.Fatal("first notice was not printed")
+	}
+	want := "\nA new version of cubeapm is available: v0.2.9 -> v0.2.10\n" +
+		"Update with: cubeapm update\n" +
+		"Release notes: https://github.com/piyush-gambhir/cubeapm-cli/releases/tag/v0.2.10\n"
+	if buf.String() != want {
+		t.Fatalf("notice:\n%q\nwant:\n%q", buf.String(), want)
+	}
+
+	buf.Reset()
+	if Notify(&buf, dir, info, SelfUpdateCommand, now.Add(time.Hour)) || buf.Len() != 0 {
+		t.Fatalf("same release announced twice within 24h: %q", buf.String())
+	}
+	if !Notify(&buf, dir, buildUpdateInfo("0.2.9", "0.2.11", testRepo), SelfUpdateCommand, now.Add(2*time.Hour)) {
+		t.Fatal("a newer release should be announced right away")
+	}
+	if !Notify(&buf, dir, buildUpdateInfo("0.2.9", "0.2.11", testRepo), SelfUpdateCommand, now.Add(27*time.Hour)) {
+		t.Fatal("the release should be announced again after 24h")
+	}
+
+	var entry cacheEntry
+	data, _ := os.ReadFile(filepath.Join(dir, cacheFileName))
+	if err := json.Unmarshal(data, &entry); err != nil || entry.NotifiedVersion != "0.2.11" {
+		t.Fatalf("cache does not record the notice: %s", data)
+	}
+}
+
+func TestNotifyGoInstallLine(t *testing.T) {
+	var buf bytes.Buffer
+	Notify(&buf, t.TempDir(), buildUpdateInfo("v0.2.9", "0.2.10", testRepo), UpdateCommand(InstallGo), time.Now())
+	if !bytes.Contains(buf.Bytes(), []byte("Update with: git pull && make install (in your cubeapm-cli/cli-go checkout)\n")) {
+		t.Fatalf("go install notice lacks the source-build command: %q", buf.String())
+	}
+	if !bytes.Contains(buf.Bytes(), []byte("v0.2.9 -> v0.2.10")) {
+		t.Fatalf("notice does not normalize versions: %q", buf.String())
+	}
+}
+
+func TestDetectInstallMethod(t *testing.T) {
+	gobin, gopath, home, other := t.TempDir(), t.TempDir(), t.TempDir(), t.TempDir()
+	t.Setenv("GOBIN", gobin)
+	t.Setenv("GOPATH", gopath)
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	for path, want := range map[string]string{
+		filepath.Join(gobin, "cubeapm"):              InstallGo,
+		filepath.Join(gopath, "bin", "cubeapm"):      InstallGo,
+		filepath.Join(home, "go", "bin", "cubeapm"):  InstallGo,
+		filepath.Join(other, "cubeapm"):              InstallSelf,
+		filepath.Join(home, "go", "cubeapm", "bin"):  InstallSelf,
+		filepath.Join(home, ".local", "bin", "cube"): InstallSelf,
+	} {
+		if got := DetectInstallMethod(path); got != want {
+			t.Errorf("DetectInstallMethod(%s) = %s, want %s", path, got, want)
+		}
+	}
+}
+
+func TestCachedUpdateInfo(t *testing.T) {
+	dir := t.TempDir()
+	if CachedUpdateInfo("0.2.9", testRepo, dir) != nil {
+		t.Fatal("expected nil without a cache")
+	}
+	if err := saveCache(dir, cacheEntry{LastChecked: time.Now().Add(-72 * time.Hour), LatestVersion: "0.2.10"}); err != nil {
+		t.Fatal(err)
+	}
+	if info := CachedUpdateInfo("0.2.9", testRepo, dir); info == nil || !info.Available || info.LatestVersion != "0.2.10" {
+		t.Fatalf("CachedUpdateInfo = %+v", info)
+	}
+	// After a manual upgrade the cached release is older than this binary.
+	if info := CachedUpdateInfo("0.2.11", testRepo, dir); info != nil {
+		t.Fatalf("stale cache reported %+v", info)
+	}
+	if CachedUpdateInfo("dev", testRepo, dir) != nil {
+		t.Fatal("dev builds should not report a latest version")
 	}
 }

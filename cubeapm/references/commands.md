@@ -21,7 +21,7 @@ These flags apply to all commands:
 | `--no-color` | | bool | `false` | Disable colored output |
 | `--verbose` | | bool | `false` | Enable verbose HTTP request logging (written to stdout) |
 | `--read-only` | | bool | `false` | Block every write command (see [Safety settings](#safety-settings)) |
-| `--no-input` | | bool | `false` | Disable all interactive prompts (`login` and the `update` confirmation fail instead) |
+| `--no-input` | | bool | `false` | Disable all interactive prompts (`login` fails instead; `update` needs `--yes`) |
 | `--quiet` | `-q` | bool | `false` | Suppress informational output |
 
 ---
@@ -38,7 +38,7 @@ cubeapm login
 
 ### `cubeapm version`
 
-Print CLI version, commit hash, and build date.
+Print CLI version, commit hash, and build date. When an earlier command already checked for releases, it also prints `latest:` and `update_available:` from the local cache (never from the network).
 
 ```bash
 cubeapm version
@@ -46,18 +46,33 @@ cubeapm version
 
 ### `cubeapm update`
 
-Check for and install the latest CLI version.
+Check for and install the latest release on macOS, Linux, and Windows.
 
 ```bash
-cubeapm update           # Check and install
-cubeapm update --check   # Only check, do not install
+cubeapm update --check           # Report current and latest versions
+cubeapm update --check -o json   # The same, as JSON
+cubeapm update                   # Ask, then install
+cubeapm update --yes             # Install without asking
 ```
 
-On Windows, `update` cannot install: use `--check`, then download the release and replace `cubeapm.exe`. Read-only mode blocks `update` but allows `update --check`.
+| Flag | Short | Type | Default | Description |
+|------|-------|------|---------|-------------|
+| `--check` | | bool | `false` | Only check for updates, do not install |
+| `--yes` | `-y` | bool | `false` | Install without asking for confirmation |
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--check` | bool | `false` | Only check for updates, do not install |
+`update` downloads the release archive for your OS and architecture, verifies its SHA-256 checksum against the release's `checksums.txt`, and replaces the binary in place. On Windows the running `cubeapm.exe` is renamed to `cubeapm.exe.old` (deleted on a later run) and the new one takes its place. If the binary's directory is not writable, `update` fails and leaves the current binary untouched: re-run it with `sudo`, or reinstall with the install script into a writable directory (`INSTALL_DIR=~/.local/bin`). In a terminal it asks `Update now? [Y/n]`; under `--no-input`, or without a terminal, it needs `--yes`. A binary that `make install` put in a Go bin directory (`$GOBIN`, `$GOPATH/bin`, or `~/go/bin`) is not replaced: `update` prints `git pull && make install` (run it in your `cubeapm-cli/cli-go` checkout) instead. `update` does not work on a `dev` build.
+
+`update --check` always asks GitHub (bypassing the daily cache) and exits 0 whether or not an update exists. With `-o json` it prints `current_version`, `latest_version`, `update_available`, `release_url`, and `install_method` (`self` or `go`). Read-only mode blocks `update` but allows `update --check`.
+
+**Update notice.** In an interactive terminal, cubeapm checks GitHub for a new release at most once a day, in the background (cached in `update-check.json` in the config directory), and prints a notice on stderr after the command's output, at most once a day per release:
+
+```
+A new version of cubeapm is available: v<current> -> v<latest>
+Update with: cubeapm update
+Release notes: https://github.com/piyush-gambhir/cubeapm-cli/releases/tag/v<latest>
+```
+
+There is no check, and no network request, when stderr is not a terminal, when `CI` is set, with `--quiet` or `CUBEAPM_QUIET`, when `CUBEAPM_NO_UPDATE_NOTIFIER=1` or `NO_UPDATE_NOTIFIER=1` is set, on `dev` builds, or for `update`, `version`, `completion`, and `help`. Scripts, CI jobs, and coding agents therefore never see it.
 
 ---
 
@@ -942,7 +957,9 @@ Timestamps without a zone (`2024-01-15T10:00:00`) are local time. Default: if no
 | `CUBEAPM_ADMIN_PORT` | Admin port (default: 3199) |
 | `CUBEAPM_READ_ONLY` | A true Go boolean (`true`, `1`, ...) turns read-only mode on; `false`/`0` never turns off a profile's `read_only: true` |
 | `CUBEAPM_NO_INPUT` | `1` or `true` disables interactive prompts |
-| `CUBEAPM_QUIET` | `1` or `true` suppresses informational output |
+| `CUBEAPM_QUIET` | `1` or `true` suppresses informational output and the update notice |
+| `CUBEAPM_NO_UPDATE_NOTIFIER`, `NO_UPDATE_NOTIFIER` | Any non-empty value turns off the update notice and its GitHub release check |
+| `CI` | Any non-empty value turns off the update notice and its GitHub release check |
 | `XDG_CONFIG_HOME` | Relocates the config file to `$XDG_CONFIG_HOME/cubeapm-cli/config.yaml` |
 
 ## Safety settings

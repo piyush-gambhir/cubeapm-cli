@@ -462,7 +462,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 |---------|-------------|
 | `cubeapm login` | Interactively configure a connection profile |
 | `cubeapm version` | Print CLI version, commit hash, build date |
-| `cubeapm update` | Check for and install CLI updates (`--check` for dry run; Windows supports `--check` only) |
+| `cubeapm update` | Install the latest release on macOS, Linux, or Windows (`--check` only reports, with `-o json`; `--yes` skips the prompt and is required with `--no-input`) |
 
 ### Traces (`cubeapm traces` / `trace`)
 
@@ -546,6 +546,8 @@ See [references/commands.md](references/commands.md) for the full command refere
 | PromQL parse error | Shell is interpreting special characters | Use single quotes around the entire PromQL expression. Avoid double quotes. |
 | LogsQL parse error | Pipe character interpreted by shell | Use single quotes: `'error \| stats count() by (service)'` |
 | "dev" version | Binary built without version metadata (for example plain `go build`) | Normal for local builds. `cubeapm update` does not work on dev builds; install a release with the install script or from the releases page. |
+| "A new version of cubeapm is available" on stderr | Interactive-terminal update notice (once a day per release) | Run `cubeapm update`, or set `CUBEAPM_NO_UPDATE_NOTIFIER=1` to turn it off. It never appears when stderr is not a terminal, when `CI` is set, or with `--quiet`, so agent output is unaffected. |
+| `update` fails asking for `--yes` | `--no-input` or no terminal, so it cannot prompt | Re-run as `cubeapm update --yes`. |
 | Auth error / 401 | Session expired or invalid credentials | Run `cubeapm login` to re-authenticate, or check `CUBEAPM_EMAIL`/`CUBEAPM_PASSWORD` env vars. |
 | No data for metrics query | Wrong metric name or labels | Use `cubeapm metrics label-values __name__` to discover available metric names. |
 | `logs stats` returns error | Missing stats pipe | The query must contain `\| stats`. Example: `'error \| stats count() by (service)'` |

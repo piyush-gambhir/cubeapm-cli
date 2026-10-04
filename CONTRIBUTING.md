@@ -52,7 +52,7 @@ make fmt     # gofmt
 │   │   ├── root.go             # Root command, global flags, read-only and no-input checks
 │   │   ├── login.go            # Interactive login
 │   │   ├── version.go          # version command
-│   │   ├── update.go           # update command (self-update; --check only on Windows)
+│   │   ├── update.go           # update command (self-update on macOS, Linux, Windows; --check)
 │   │   ├── traces/             # search, get, services, operations, dependencies, callers
 │   │   ├── metrics/            # query, query-range, labels, label-values, series
 │   │   ├── logs/               # query, hits, stats, streams, field-names, field-values, status
@@ -74,7 +74,7 @@ make fmt     # gofmt
 │   │   ├── output/             # JSON/YAML/Table formatters
 │   │   ├── timeflag/           # Flexible time range parsing (RFC3339, Unix, relative durations)
 │   │   ├── types/              # Shared data types (trace, metric, log, common)
-│   │   └── update/             # Update check and self-update
+│   │   └── update/             # Release check, update notice, and self-update
 │   └── scripts/
 │       ├── check-llms.sh       # Checks docs/llms.txt documents every command
 │       └── deploy.sh           # Local GoReleaser wrapper

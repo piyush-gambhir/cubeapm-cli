@@ -43,6 +43,12 @@ Read-only is only ever added, never removed. A profile's `read_only: true`,
 `--quiet=false` overrides `CUBEAPM_QUIET`, but `--no-input=false` does not
 override `CUBEAPM_NO_INPUT`.
 
+The update notice never reaches agents: the once-a-day GitHub release check
+runs only when stderr is a terminal, and never when `CI` is set, with `--quiet`,
+or when `CUBEAPM_NO_UPDATE_NOTIFIER` or `NO_UPDATE_NOTIFIER` is set. To check
+for a release from a script, use `cubeapm update --check -o json`; to install
+without a prompt, `cubeapm update --yes`.
+
 <Callout type="warn">
   Read-only mode does not cover `login`, which is interactive; `--no-input`
   blocks it. It is not a general filesystem sandbox, so use an external sandbox
