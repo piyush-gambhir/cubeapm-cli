@@ -66,7 +66,7 @@ Command groups:
   config   Manage CLI configuration and connection profiles
   login    Interactively set up a connection profile
   version  Print CLI version information
-  update   Check for and install CLI updates
+  update   Check for and install CLI updates (Windows: --check only)
 
 Global flags (apply to all commands):
   -o, --output <format>   Output format: table (default), json, yaml
@@ -90,7 +90,7 @@ Quick start:
   cubeapm metrics query 'up'                             # Query metrics
   cubeapm logs query 'error' --last 30m                  # Query logs
 
-Full command reference (for agents/LLMs): https://cubeapm-cli.pages.dev/llms.txt
+Full command reference (for agents/LLMs): https://github.com/piyush-gambhir/cubeapm-cli/blob/main/docs/llms.txt
 Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubeapm/SKILL.md`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
