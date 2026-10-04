@@ -1,7 +1,7 @@
 version: 2
 updates:
   - package-ecosystem: gomod
-    directory: /
+    directory: /cli-go
     schedule:
       interval: weekly
     groups:
@@ -11,3 +11,21 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    groups:
+      github-actions:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+    groups:
+      web-dependencies:
+        patterns: ["*"]
+        update-types: [minor, patch]
+  - package-ecosystem: npm
+    directory: /cli-mcp-server
+    schedule:
+      interval: weekly
+    groups:
+      cli-mcp-server-dependencies:
+        patterns: ["*"]
