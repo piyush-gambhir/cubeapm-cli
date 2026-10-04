@@ -54,7 +54,7 @@ esac
 # Get version
 if [ -z "$VERSION" ]; then
     info "Fetching latest version..."
-    VERSION=$(curl -sSf "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/' 2>/dev/null) || error "Failed to fetch latest version. Set VERSION env var manually."
+    VERSION=$(curl -sSfI "https://github.com/${REPO}/releases/latest" | tr -d '\r' | sed -n 's#^[Ll]ocation: .*/releases/tag/v\([0-9][0-9A-Za-z.-]*\)$#\1#p') || error "Failed to fetch latest version. Set VERSION env var manually."
     [ -z "$VERSION" ] && error "Could not determine latest version. Set VERSION env var manually."
 fi
 
