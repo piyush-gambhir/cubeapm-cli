@@ -50,6 +50,8 @@ cubeapm update           # Check and install
 cubeapm update --check   # Only check, do not install
 ```
 
+On Windows, `update` cannot install: use `--check`, then download the release and replace `cubeapm.exe`.
+
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--check` | bool | `false` | Only check for updates, do not install |
@@ -709,7 +711,7 @@ cubeapm ingest logs --format elastic --file elastic-bulk.ndjson
 
 Command group: `cubeapm config`
 
-Manage CLI configuration and connection profiles. Configuration is stored at `~/.config/cubeapm/config.yaml`.
+Manage CLI configuration and connection profiles. Configuration is stored at `~/.config/cubeapm-cli/config.yaml`.
 
 ### `config view`
 
