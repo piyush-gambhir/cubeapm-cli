@@ -34,17 +34,19 @@ export CUBEAPM_PASSWORD=your-password
 
 ## Output Formats
 
-All query commands support three output formats via `-o`:
+The `traces`, `metrics`, and `logs` read commands (including `logs status` and `logs delete list`) support three output formats via `-o`:
 
 - `-o table` (default) -- human-readable tabular output
 - `-o json` -- JSON, ideal for programmatic parsing with jq
 - `-o yaml` -- YAML, useful for config management
 
+Table-backed commands emit an array of objects keyed by the uppercase table headers (`TRACE_ID`, `SERVICE`, ...). `metrics query`/`query-range` return the raw Prometheus response, `traces get` the full trace, and `logs query` a stream of one object per entry. `-o` has no effect on `config view` (always YAML), `config get`, `config profiles list`, `version`, `login`, `update`, `ingest`, `logs delete run`/`stop`, or `traces dependencies --dot`. With no results, `logs hits`, `logs stats`, and `logs delete list` print a plain message instead of `[]`, even with `-o json`.
+
 **For agents:** Always use `-o json` when you need to parse or process output programmatically.
 
 ## Time Range Notation
 
-Most query commands accept time range flags. There are three ways to specify them:
+These commands accept `--last`/`--from`/`--to`: `traces search`, `get`, `services` (only with `--env`), `dependencies`, `callers` (only the end time is used; the rate window is `--window`); `metrics query-range`, `labels`, `label-values`, `series`; `logs query`, `hits`, `stats`, `streams`, `field-names`, `field-values`. `metrics query` takes `--time` instead, and `logs status` takes `--lookback <days>`. There are three ways to specify them:
 
 | Method | Flags | Examples |
 |--------|-------|---------|
@@ -52,7 +54,7 @@ Most query commands accept time range flags. There are three ways to specify the
 | Absolute (RFC3339) | `--from`, `--to` | `--from 2024-01-15T10:00:00Z --to 2024-01-15T12:00:00Z` |
 | Absolute (Unix) | `--from`, `--to` | `--from 1705312800 --to 1705356000` |
 
-If no time flags are provided, the default is the last 1 hour.
+If no time flags are provided, the default is the last 1 hour. `--last` wins over `--from`/`--to`.
 
 ## Common Workflows
 
@@ -113,8 +115,8 @@ cubeapm traces search --service api-gateway --query "GET /api/users" --last 1h -
 # Filter by span tags
 cubeapm traces search --service api-gateway --tags "http.method=POST" --tags "http.status_code=500" -o json
 
-# Filter by environment and span kind
-cubeapm traces search --service payments --env production --span-kind server -o json
+# Filter by environment and span kind (env is case-sensitive and usually upper-case; span kind defaults to server)
+cubeapm traces search --service payments --env PROD --span-kind server -o json
 
 # Search with a custom time range
 cubeapm traces search --service auth --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z -o json
@@ -357,7 +359,7 @@ PromQL is the query language for metrics (Prometheus-compatible):
 - Trace IDs are 32-character hex strings. Get them from `traces search` output.
 - The `traces get` command shows a visual waterfall view in table mode, but `-o json` gives full span data.
 - For metrics, use `query` for current values and `query-range` for time series data.
-- Range queries auto-calculate step if `--step` is omitted (~250 data points).
+- Range queries auto-calculate step if `--step` is omitted: the CLI uses the range divided by 250 (minimum 1s). `logs hits` without `--step` uses the range divided by 60.
 - The `--service`, `--level`, and `--stream` flags on `logs query` are convenience shortcuts that prepend filters to the LogsQL expression.
 - Log stats queries must contain a `| stats` pipe (e.g., `'error | stats by (service) count() as c'`).
 - Log deletion uses the admin port (default 3199), not the query port.
@@ -390,11 +392,12 @@ PromQL is the query language for metrics (Prometheus-compatible):
 
 | Command | Description |
 |---------|-------------|
-| `cubeapm traces services` | List all services (alias: `svc`) |
+| `cubeapm traces services` | List all services (alias: `svc`; --env PROD lists one environment, metrics-derived, with --last/--from/--to) |
 | `cubeapm traces operations <service>` | List operations for a service (alias: `ops`; --span-kind) |
-| `cubeapm traces search` | Search traces (--service, --env, --query, --status, --min-duration, --max-duration, --tags, --span-kind, --limit, --last/--from/--to) |
+| `cubeapm traces search` | Search traces (--service, --env, --query, --status, --min-duration, --max-duration, --tags, --span-kind (default server), --index (default cube:latency), --limit, --last/--from/--to) |
 | `cubeapm traces get <trace-id>` | Get a trace by ID (waterfall in table mode; --last/--from/--to) |
 | `cubeapm traces dependencies` | Show service dependency graph (alias: `deps`; --dot, --last/--from/--to) |
+| `cubeapm traces callers` | Rank services by outbound HTTP call rate to a host (--host, --service, --window, --topk, --last/--from/--to) |
 
 ### `cubeapm metrics` (alias: `metric`) -- Prometheus-compatible metrics
 
@@ -403,7 +406,7 @@ PromQL is the query language for metrics (Prometheus-compatible):
 | `cubeapm metrics query <promql>` | Execute an instant PromQL query (--time) |
 | `cubeapm metrics query-range <promql>` | Execute a range PromQL query (alias: `range`; --step, --last/--from/--to) |
 | `cubeapm metrics labels` | List all metric label names (--last/--from/--to) |
-| `cubeapm metrics label-values <label>` | List values for a label (--last/--from/--to) |
+| `cubeapm metrics label-values <label>` | List values for a label (--match, --like, --last/--from/--to) |
 | `cubeapm metrics series` | Find time series (--match, --limit, --last/--from/--to) |
 
 ### `cubeapm logs` (alias: `log`) -- VictoriaLogs-compatible logs
@@ -412,19 +415,20 @@ PromQL is the query language for metrics (Prometheus-compatible):
 |---------|-------------|
 | `cubeapm logs query <logsql>` | Query logs (--service, --level, --stream, --limit, --last/--from/--to) |
 | `cubeapm logs hits` | Show log volume over time (--query, --step, --last/--from/--to) |
+| `cubeapm logs status` | Probe log retention from daily buckets (--query, --lookback) |
 | `cubeapm logs stats <logsql>` | Execute a stats/aggregation query (--last/--from/--to) |
 | `cubeapm logs streams` | List log streams and entry counts (--query, --last/--from/--to) |
 | `cubeapm logs field-names` | List log field names and hit counts (alias: `fields`; --query, --last/--from/--to) |
 | `cubeapm logs field-values <field>` | List values for a log field (--query, --limit, --last/--from/--to) |
 | `cubeapm logs delete run <filter>` | Start a log deletion task |
-| `cubeapm logs delete list` | List active deletion tasks |
-| `cubeapm logs delete stop <task-id>` | Stop a running deletion task |
+| `cubeapm logs delete list` | List active deletion tasks (alias: `ls`) |
+| `cubeapm logs delete stop <task-id>` | Stop a running deletion task (--if-exists) |
 
 ### `cubeapm ingest` -- Push data to CubeAPM
 
 | Command | Description |
 |---------|-------------|
-| `cubeapm ingest metrics` | Push metrics data (--format: prometheus/otlp; --file) |
+| `cubeapm ingest metrics` | Push metrics data (--format: prometheus/otlp/remote-write; --file) |
 | `cubeapm ingest logs` | Push log data (--format: jsonline/otlp/loki/elastic; --file) |
 
 ## Global Flags
@@ -441,3 +445,6 @@ PromQL is the query language for metrics (Prometheus-compatible):
 | `--admin-port <port>` | Admin port override (default: 3199) |
 | `--no-color` | Disable colored output |
 | `--verbose` | Enable verbose HTTP request logging |
+| `--read-only` | Block ingest and `logs delete run`/`stop` (cannot be turned off by `--read-only=false`) |
+| `--no-input` | Disable all interactive prompts (for CI/agent use) |
+| `-q, --quiet` | Suppress informational output |

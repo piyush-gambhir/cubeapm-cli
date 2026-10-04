@@ -253,9 +253,9 @@ The config file is created with `0600` permissions (owner read/write only) to pr
 | `CUBEAPM_QUERY_PORT` | Query API port (default: 3140) |
 | `CUBEAPM_INGEST_PORT` | Ingest API port (default: 3130) |
 | `CUBEAPM_ADMIN_PORT` | Admin API port (default: 3199) |
-| `CUBEAPM_READ_ONLY` | Block write/delete operations (`true`/`false`) |
-| `CUBEAPM_NO_INPUT` | Disable interactive prompts (`true`/`false`) |
-| `CUBEAPM_QUIET` | Suppress informational output (`true`/`false`) |
+| `CUBEAPM_READ_ONLY` | Block ingest and log deletion start/stop (`true`/`1`); `false`/`0` overrides a profile's `read_only: true` |
+| `CUBEAPM_NO_INPUT` | Disable interactive prompts (exactly `true` or `1`) |
+| `CUBEAPM_QUIET` | Suppress informational output (exactly `true` or `1`; ignored if `--quiet` is passed) |
 
 ### CLI Flags
 

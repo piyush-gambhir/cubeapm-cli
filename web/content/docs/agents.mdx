@@ -32,6 +32,11 @@ cubeapm traces search --service api-gateway --last 1h -o json
 
 Read-only mode blocks telemetry ingestion and starting or stopping log deletion.
 Listing deletion tasks and all query commands remain available.
+`--read-only=false` cannot turn read-only off. `CUBEAPM_READ_ONLY`, when set,
+replaces the profile's `read_only` value, so `CUBEAPM_READ_ONLY=false` disables
+it. `CUBEAPM_NO_INPUT` and `CUBEAPM_QUIET` take effect only for `1` or `true`;
+`--quiet=false` overrides `CUBEAPM_QUIET`, but `--no-input=false` does not
+override `CUBEAPM_NO_INPUT`.
 
 <Callout type="warn">
   The current command setup bypasses read-only enforcement for `login`, config

@@ -19,7 +19,10 @@ These flags apply to all commands:
 | `--ingest-port` | | int | `3130` | Override ingest API port |
 | `--admin-port` | | int | `3199` | Override admin API port |
 | `--no-color` | | bool | `false` | Disable colored output |
-| `--verbose` | | bool | `false` | Enable verbose HTTP request logging |
+| `--verbose` | | bool | `false` | Enable verbose HTTP request logging (written to stdout) |
+| `--read-only` | | bool | `false` | Block mutating API commands (see [Safety settings](#safety-settings)) |
+| `--no-input` | | bool | `false` | Disable all interactive prompts (`login` and the `update` confirmation fail instead) |
+| `--quiet` | `-q` | bool | `false` | Suppress informational output |
 
 ---
 
@@ -66,7 +69,7 @@ Query and inspect distributed traces via the Jaeger-compatible API. All commands
 
 ### `traces services`
 
-List all services that have reported traces.
+List all services that have reported traces. If the Jaeger services endpoint is unavailable, the CLI falls back to the `service` metric label values.
 
 ```
 cubeapm traces services [flags]
@@ -74,11 +77,21 @@ cubeapm traces services [flags]
 
 Alias: `cubeapm traces svc`
 
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--env` | string | | List only services seen in this environment (metrics-derived from the `env` and `cube.environment` labels; a trace-only service may not appear). Sent unchanged, so use the deployment's value, for example `PROD` |
+| `--from` | string | | Start time (only used with `--env`) |
+| `--to` | string | | End time (only used with `--env`) |
+| `--last` | string | | Relative duration from now (only used with `--env`; default window is the last 1 hour) |
+
+JSON output: array of `{"SERVICE": "..."}`.
+
 **Examples:**
 
 ```bash
 cubeapm traces services
 cubeapm traces services -o json
+cubeapm traces services --env PROD --last 24h -o json
 ```
 
 ### `traces operations`
@@ -93,7 +106,9 @@ Alias: `cubeapm traces ops`
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--span-kind` | string | | Filter by span kind: `client`, `server`, `producer`, `consumer`, `internal` |
+| `--span-kind` | string | | Filter by span kind: `client`, `server`, `producer`, `consumer`, `internal` (empty lists all kinds) |
+
+JSON output: array of `{"OPERATION": "...", "SPAN_KIND": "..."}`. Not every CubeAPM deployment exposes this endpoint; when it returns "unsupported path", use `traces search` and read the `OPERATION` column.
 
 **Examples:**
 
@@ -114,17 +129,20 @@ cubeapm traces search [flags]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--service` | string | | Filter by service name |
-| `--env` | string | | Filter by environment tag |
+| `--env` | string | | Filter by environment; sent to the server unchanged (case-sensitive). CubeAPM values are usually upper-case: `PROD`, `UAT` |
 | `--query` | string | | Filter by operation name |
 | `--status` | string | | Filter by span status: `error`, `ok` |
 | `--min-duration` | string | | Minimum trace duration (e.g., `500ms`, `1s`) |
 | `--max-duration` | string | | Maximum trace duration (e.g., `5s`, `10s`) |
 | `--tags` | string[] | | Filter by span tag key=value (repeatable) |
-| `--span-kind` | string | | Filter by span kind: `client`, `server`, `producer`, `consumer`, `internal` |
+| `--span-kind` | string | `server` | Filter by span kind: `client`, `server`, `producer`, `consumer`, `internal`. Defaults to `server` because some deployments require a value |
+| `--index` | string | `cube:latency` | CubeAPM trace index to query (e.g. `cube:latency`, `cube:error`) |
 | `--limit` | int | `20` | Maximum number of traces to return |
 | `--from` | string | | Start time (RFC3339, Unix, or relative) |
 | `--to` | string | | End time (RFC3339, Unix, or relative) |
 | `--last` | string | | Relative duration from now (e.g., `1h`, `30m`) |
+
+Many deployments require both `--service` and `--env`. JSON output: array of objects with `TRACE_ID`, `SERVICE`, `OPERATION`, `DURATION`, `STATUS`, `TIMESTAMP` (one per trace, from its root span).
 
 **Examples:**
 
@@ -142,7 +160,10 @@ cubeapm traces search --service api-gateway --query "GET /api/users" --last 1h
 cubeapm traces search --service api-gateway --tags "http.method=POST" --tags "http.status_code=500"
 
 # Filter by environment and span kind
-cubeapm traces search --service payments --env production --span-kind server
+cubeapm traces search --service payments --env PROD --span-kind server
+
+# Search the error index
+cubeapm traces search --index cube:error --service payments --env PROD --last 30m
 
 # Search with a custom time range
 cubeapm traces search --service auth --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z
@@ -166,9 +187,11 @@ In table mode (default), renders a visual waterfall/tree view showing parent-chi
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--from` | string | | Start time (narrows lookup window) |
-| `--to` | string | | End time (narrows lookup window) |
+| `--from` | string | | Start time of the lookup window |
+| `--to` | string | | End time of the lookup window |
 | `--last` | string | | Relative duration from now |
+
+The lookup window is always sent; with no time flags it is the last 1 hour, so pass `--last` or `--from`/`--to` for older traces.
 
 **Examples:**
 
@@ -211,6 +234,38 @@ cubeapm traces dependencies --last 24h -o json
 
 # Export as Graphviz DOT and render to PNG
 cubeapm traces dependencies --last 24h --dot | dot -Tpng -o deps.png
+```
+
+`--dot` writes DOT regardless of `-o`. Otherwise JSON output is an array of `{"PARENT", "CHILD", "CALL_COUNT"}` objects.
+
+### `traces callers`
+
+Rank the services making outbound HTTP calls to a host, by call rate. Runs the instant PromQL query `topk(<topk>, sum by (service) (rate(cube_apm_latency_count{group_name="HTTP <host>",span_kind="client"}[<window>])))`.
+
+```
+cubeapm traces callers [flags]
+```
+
+At least one of `--host` or `--service` is required.
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--host` | string | | Target host, matched against the `group_name` label (`HTTP ` is prepended if missing). If omitted, the host defaults to `api.spyne.ai` |
+| `--service` | string | | Keep only client spans whose `span_name` contains this service name |
+| `--window` | string | `2m` | PromQL rate window |
+| `--topk` | int | `10` | Maximum number of callers to return |
+| `--from` | string | | Accepted, but only the end of the resolved range is used |
+| `--to` | string | | Evaluation time of the instant query |
+| `--last` | string | | Evaluation time is now |
+
+The query is evaluated at a single instant (the end of the time range, `now` by default), so the rate covers only `--window` before that instant. JSON output: array of `{"CALLER_SERVICE", "CALLS_PER_SEC"}` sorted by rate, highest first.
+
+**Examples:**
+
+```bash
+cubeapm traces callers --host api.example.com --last 1h
+cubeapm traces callers --host api.example.com --to 2026-04-19T13:50:00Z --window 5m --topk 20 -o json
+cubeapm traces callers --host api.example.com --service MEDIA-SERVICE
 ```
 
 ---
@@ -267,7 +322,7 @@ Alias: `cubeapm metrics range`
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--step` | string | auto | Query resolution step (e.g., `15s`, `1m`, `5m`, `1h`). Auto-calculated if omitted (~250 data points). |
+| `--step` | string | auto | Query resolution step (e.g., `15s`, `1m`, `5m`, `1h`). If omitted, the CLI uses the range divided by 250 (minimum `1s`) |
 | `--from` | string | | Start time |
 | `--to` | string | | End time |
 | `--last` | string | | Relative duration from now |
@@ -323,6 +378,8 @@ cubeapm metrics label-values <label> [flags]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
+| `--match` | string[] | | Series selector that scopes the returned values (repeatable, ORed), e.g. `'{env="PROD"}'` |
+| `--like` | string | | Case-insensitive substring filter applied to the returned values |
 | `--from` | string | | Start time |
 | `--to` | string | | End time |
 | `--last` | string | | Relative duration from now |
@@ -338,6 +395,9 @@ cubeapm metrics label-values __name__
 
 # List instances seen in the last 24 hours
 cubeapm metrics label-values instance --last 24h
+
+# Services in one environment, narrowed by substring
+cubeapm metrics label-values service.name --match '{env="PROD"}' --like media
 
 # Output as JSON
 cubeapm metrics label-values job -o json
@@ -463,7 +523,7 @@ cubeapm logs hits [flags]
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--query` | string | `*` | LogsQL query to filter entries |
-| `--step` | string | auto | Time bucket size (e.g., `5m`, `1h`) |
+| `--step` | string | auto | Time bucket size (e.g., `5m`, `1h`). If omitted, the CLI uses the range divided by 60 (minimum `1s`) |
 | `--from` | string | | Start time |
 | `--to` | string | | End time |
 | `--last` | string | | Relative duration from now |
@@ -482,6 +542,28 @@ cubeapm logs hits --query 'service:api-gateway' --last 6h --step 15m
 
 # Output as JSON
 cubeapm logs hits --query 'error' --last 24h --step 1h -o json
+```
+
+### `logs status`
+
+Probe the effective log retention. Samples 24-hour hit buckets over the last `--lookback` days and reports the oldest and newest non-empty buckets.
+
+```
+cubeapm logs status [flags]
+```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--query` | string | `*` | LogsQL query to probe (e.g. `'service.name:api-gateway'`) |
+| `--lookback` | int | `30` | Lookback window in days |
+
+JSON output is one object: `query`, `lookbackDays`, `hasLogs`, `nonEmptyDays`, and when present `earliestNonZeroBucket`, `latestNonZeroBucket`, `retentionHours`, `note`.
+
+**Examples:**
+
+```bash
+cubeapm logs status
+cubeapm logs status --query 'service.name:api-gateway' --lookback 60 -o json
 ```
 
 ### `logs stats`
@@ -616,7 +698,7 @@ cubeapm logs delete run '_time:<7d AND level:debug'
 
 ### `logs delete list`
 
-List active deletion tasks.
+List active deletion tasks. JSON output: array of `{"TASK_ID", "FILTER", "STATUS", "PROGRESS"}`. With no tasks it prints `No active deletion tasks.` instead. Allowed in read-only mode.
 
 ```
 cubeapm logs delete list
@@ -626,11 +708,17 @@ Alias: `cubeapm logs delete ls`
 
 ### `logs delete stop`
 
-Stop a running deletion task.
+Stop a running deletion task. Entries already deleted are not restored.
 
 ```
-cubeapm logs delete stop <task-id>
+cubeapm logs delete stop <task-id> [flags]
 ```
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--if-exists` | bool | `false` | Succeed silently if the task does not exist |
+
+`logs delete run` and `logs delete stop` are blocked in read-only mode.
 
 ---
 
@@ -650,8 +738,14 @@ cubeapm ingest metrics [flags]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--format` | string | `prometheus` | Data format: `prometheus`, `otlp` |
+| `--format` | string | `prometheus` | Data format: `prometheus`, `otlp`, `remote-write` |
 | `--file` | string | `-` (stdin) | File path or `-` for stdin |
+
+**Format details:**
+
+- **prometheus** -- Prometheus text exposition format (POST `/api/metrics/v1/save`)
+- **otlp** -- OpenTelemetry metrics, protobuf binary (POST `/api/metrics/v1/save/otlp`)
+- **remote-write** -- Prometheus remote write, Snappy-compressed protobuf (POST `/api/metrics/api/v1/write`)
 
 **Examples:**
 
@@ -667,6 +761,9 @@ curl -s http://localhost:9090/metrics | cubeapm ingest metrics --format promethe
 
 # OTLP protobuf
 cubeapm ingest metrics --format otlp --file metrics.pb
+
+# Prometheus remote write (Snappy-compressed protobuf)
+cubeapm ingest metrics --format remote-write --file remote-write.pb
 ```
 
 ### `ingest logs`
@@ -797,7 +894,7 @@ Alias: `cubeapm config profiles rm`
 
 ## Time Range Reference
 
-All query commands accept time range flags. There are multiple ways to specify them:
+These commands accept `--last`, `--from`, and `--to`: `traces search`, `get`, `services` (only with `--env`), `dependencies`, `callers` (end time only); `metrics query-range`, `labels`, `label-values`, `series`; `logs query`, `hits`, `stats`, `streams`, `field-names`, `field-values`. `metrics query` uses `--time`, `logs status` uses `--lookback <days>`, and the other commands take no time flags. There are multiple ways to specify them:
 
 | Method | Flags | Examples |
 |--------|-------|---------|
@@ -805,9 +902,9 @@ All query commands accept time range flags. There are multiple ways to specify t
 | Absolute (RFC3339) | `--from`, `--to` | `--from 2024-01-15T10:00:00Z --to 2024-01-15T12:00:00Z` |
 | Absolute (Unix) | `--from`, `--to` | `--from 1705312800 --to 1705356000` |
 | Relative from/to | `--from`, `--to` | `--from -2h --to -1h` |
-| Date only | `--from` | `--from 2024-01-15` (midnight UTC) |
+| Date only | `--from` | `--from 2024-01-15` (midnight local time) |
 
-Default: if no time flags are provided, the default is the last 1 hour.
+Timestamps without a zone (`2024-01-15T10:00:00`) are local time. Default: if no time flags are provided, the default is the last 1 hour. `--last` wins over `--from`/`--to`; only `--from` means `--to` is now; only `--to` means `--from` is one hour earlier.
 
 ## Command Aliases
 
@@ -829,7 +926,7 @@ Default: if no time flags are provided, the default is the last 1 hour.
 
 | Port | Default | Env Var | Flag | Used By |
 |------|---------|---------|------|---------|
-| Query | 3140 | `CUBEAPM_QUERY_PORT` | `--query-port` | `traces`, `metrics`, `logs query/hits/stats/streams/field-names/field-values` |
+| Query | 3140 | `CUBEAPM_QUERY_PORT` | `--query-port` | `traces`, `metrics`, `logs query/hits/status/stats/streams/field-names/field-values` |
 | Ingest | 3130 | `CUBEAPM_INGEST_PORT` | `--ingest-port` | `ingest metrics`, `ingest logs` |
 | Admin | 3199 | `CUBEAPM_ADMIN_PORT` | `--admin-port` | `logs delete run/list/stop` |
 
@@ -843,3 +940,13 @@ Default: if no time flags are provided, the default is the last 1 hour.
 | `CUBEAPM_QUERY_PORT` | Query port (default: 3140) |
 | `CUBEAPM_INGEST_PORT` | Ingest port (default: 3130) |
 | `CUBEAPM_ADMIN_PORT` | Admin port (default: 3199) |
+| `CUBEAPM_READ_ONLY` | Read-only mode: any Go boolean (`true`, `1`, `false`, `0`, ...); overrides the profile's `read_only` |
+| `CUBEAPM_NO_INPUT` | `1` or `true` disables interactive prompts |
+| `CUBEAPM_QUIET` | `1` or `true` suppresses informational output |
+| `XDG_CONFIG_HOME` | Relocates the config file to `$XDG_CONFIG_HOME/cubeapm-cli/config.yaml` |
+
+## Safety settings
+
+- **Read-only** is on when `CUBEAPM_READ_ONLY` is true, or when it is unset (or not a valid boolean) and the profile has `read_only: true`, or when `--read-only` is passed. `--read-only=false` never turns it off. It blocks `ingest metrics`, `ingest logs`, `logs delete run`, and `logs delete stop`; `logs delete list` and all queries still run. It is not enforced for `login`, `config set`, `config profiles use`/`delete`, or `update`.
+- **No-input** is on when `--no-input` is passed or `CUBEAPM_NO_INPUT` is `1`/`true`; `--no-input=false` does not override the environment.
+- **Quiet** follows `--quiet` when the flag is given (including `--quiet=false`), otherwise `CUBEAPM_QUIET`.
