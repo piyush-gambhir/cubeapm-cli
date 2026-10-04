@@ -57,6 +57,10 @@ type updateCheck struct {
 var (
 	pendingUpdateCheck *updateCheck
 
+	// updateNoticeWait bounds how long a command waits, at most once a day,
+	// for the release check it started.
+	updateNoticeWait = time.Second
+
 	// Test seams for the update notifier.
 	stderrIsTerminal           = func() bool { return term.IsTerminal(int(os.Stderr.Fd())) }
 	noticeOutput     io.Writer = os.Stderr
@@ -331,8 +335,10 @@ func startUpdateCheck() {
 	}()
 }
 
-// showUpdateNotice prints the notice after the command's output, but only if
-// the check has already finished: it never delays the command.
+// showUpdateNotice prints the notice after the command's output. A cached
+// answer is ready at once. A request this run started gets at most
+// updateNoticeWait to finish: the attempt is already recorded, so a fast
+// command that exits first would otherwise lose the day's only check.
 func showUpdateNotice() {
 	check := pendingUpdateCheck
 	if check == nil {
@@ -340,7 +346,7 @@ func showUpdateNotice() {
 	}
 	select {
 	case <-check.done:
-	default:
+	case <-time.After(updateNoticeWait):
 		return
 	}
 	if check.info == nil || !check.info.Available {

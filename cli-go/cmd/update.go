@@ -53,13 +53,14 @@ update asks "Update now? [Y/n]" in a terminal. --yes skips the question; with
 --no-input or without a terminal, update fails unless --yes is given.
 
 --check only reports the current and latest versions, always asking GitHub
-(bypassing the daily cache). Use -o json for the fields current_version,
+(bypassing the daily cache) and storing the answer in that cache. Use -o json for the fields current_version,
 latest_version, update_available, release_url, and install_method (self or go).
 Read-only mode blocks update but allows update --check.
 
 In an interactive terminal, other commands check GitHub for a new release at
 most once a day and print a notice on stderr after their output, at most once a
-day per release. There is no check when stderr is not a terminal, when CI is
+day per release. On the run that checks, the command waits at most 1 second for
+GitHub, so a fast command still shows the notice. There is no check when stderr is not a terminal, when CI is
 set, with --quiet or CUBEAPM_QUIET, or when CUBEAPM_NO_UPDATE_NOTIFIER or
 NO_UPDATE_NOTIFIER is set.
 
@@ -85,8 +86,9 @@ func runUpdate(cmd *cobra.Command, checkOnly, yes bool) error {
 		return fmt.Errorf("cannot check for updates: %q is a development build; install a release with the install script or from https://github.com/%s/releases", Version, updateRepo)
 	}
 
-	configDir := config.ConfigDir()
-	info, err := update.FetchLatest(cmd.Context(), Version, updateRepo, configDir, update.CommandTimeout)
+	// FetchLatest stores the answer in the notifier's cache, so a later notice
+	// agrees with this check (and, after an install, stays quiet).
+	info, err := update.FetchLatest(cmd.Context(), Version, updateRepo, config.ConfigDir(), update.CommandTimeout)
 	if err != nil {
 		return fmt.Errorf("checking for updates: %w", err)
 	}
@@ -136,7 +138,6 @@ func runUpdate(cmd *cobra.Command, checkOnly, yes bool) error {
 	if err := update.Install(cmd.Context(), updateRepo, info.LatestVersion, execPath, progress); err != nil {
 		return fmt.Errorf("update failed, cubeapm v%s is still installed: %w", info.CurrentVersion, err)
 	}
-	_ = update.ClearCache(configDir)
 	fmt.Fprintf(out, "Updated cubeapm v%s -> v%s\nRelease notes: %s\n", info.CurrentVersion, info.LatestVersion, info.ReleaseURL)
 	return nil
 }
