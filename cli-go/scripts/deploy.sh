@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Local release wrapper for grafana-cli. Wraps goreleaser.
+# Local release wrapper for cubeapm-cli. Wraps goreleaser.
 #
 # Usage:
 #   bash scripts/deploy.sh production    # full release; requires a vN.N.N tag at HEAD

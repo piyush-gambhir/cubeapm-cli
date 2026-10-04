@@ -1,6 +1,9 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "cubeapm-cli-web",
+  // The piyushgambhir account, which owns the piyushgambhir.com zone; pinned so
+  // deploys never stop to ask which account to use.
+  "account_id": "1c71d91506bdd1e235054da4b545c10b",
   "compatibility_date": "2026-07-17",
   "assets": {
     "directory": "./.cloudflare/assets",
