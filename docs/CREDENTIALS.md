@@ -214,6 +214,8 @@ Settings are resolved in this order (highest priority first):
 2. **Environment variables** (`CUBEAPM_SERVER`, `CUBEAPM_EMAIL`, `CUBEAPM_PASSWORD`, etc.)
 3. **Profile configuration** (`~/.config/cubeapm-cli/config.yaml`)
 
+Read-only mode is the exception: it is only ever added, never removed. It is on when the profile has `read_only: true`, when `CUBEAPM_READ_ONLY` is a true boolean, or when `--read-only` is passed; `CUBEAPM_READ_ONLY=false` and `--read-only=false` cannot turn off a profile's `read_only: true`.
+
 ### Configuration File
 
 Location: `~/.config/cubeapm-cli/config.yaml` (or `$XDG_CONFIG_HOME/cubeapm-cli/config.yaml`)
@@ -253,7 +255,7 @@ The config file is created with `0600` permissions (owner read/write only) to pr
 | `CUBEAPM_QUERY_PORT` | Query API port (default: 3140) |
 | `CUBEAPM_INGEST_PORT` | Ingest API port (default: 3130) |
 | `CUBEAPM_ADMIN_PORT` | Admin API port (default: 3199) |
-| `CUBEAPM_READ_ONLY` | Block ingest and log deletion start/stop (`true`/`1`); `false`/`0` overrides a profile's `read_only: true` |
+| `CUBEAPM_READ_ONLY` | Block every write command (`true`/`1`); `false`/`0` never turns off a profile's `read_only: true` |
 | `CUBEAPM_NO_INPUT` | Disable interactive prompts (exactly `true` or `1`) |
 | `CUBEAPM_QUIET` | Suppress informational output (exactly `true` or `1`; ignored if `--quiet` is passed) |
 
@@ -269,7 +271,7 @@ The config file is created with `0600` permissions (owner read/write only) to pr
 | `--admin-port <port>` | Admin port (default: 3199) |
 | `--profile <name>` | Use a specific connection profile |
 | `--verbose` | Enable verbose HTTP request logging |
-| `--read-only` | Block write/delete operations |
+| `--read-only` | Block every write command (ingest, log deletion run/stop, `config set`, `config profiles use`/`delete`, `update`); `--read-only=false` cannot turn it off |
 
 ---
 

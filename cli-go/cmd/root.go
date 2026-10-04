@@ -79,6 +79,7 @@ Global flags (apply to all commands):
   --admin-port <port>     Override admin port (default: 3199)
   --no-color              Disable colored output
   --verbose               Enable verbose HTTP request logging
+  --read-only             Block write commands (cannot be turned off once set)
   --no-input              Disable all interactive prompts (for CI/agent use)
   -q, --quiet             Suppress informational output
 
@@ -122,18 +123,22 @@ Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubea
 		}
 
 		// Skip client setup for commands that don't need it
-		if cmdName == "version" || cmdName == "help" || cmdName == "update" {
+		if cmdName == "version" || cmdName == "help" {
 			return nil
 		}
-		// Config commands don't need a client
-		if parentName == "config" {
-			return loadConfigOnly()
-		}
-		if parentName == "profiles" {
-			return loadConfigOnly()
-		}
-
-		if err := setupClient(cmd); err != nil {
+		// Config commands and update don't need a client, but they still load
+		// the profile so its read_only setting applies to them.
+		if cmdName == "update" || parentName == "config" || parentName == "profiles" {
+			if err := loadConfigOnly(); err != nil {
+				return err
+			}
+			// Config writes change the active profile whatever --profile
+			// names, and update has no profile target, so --profile must not
+			// sidestep the active profile's read_only.
+			if active, ok := cmdutil.AppConfig.Profiles[cmdutil.AppConfig.CurrentProfile]; ok && active.ReadOnly {
+				cmdutil.Resolved.ReadOnly = true
+			}
+		} else if err := setupClient(cmd); err != nil {
 			return err
 		}
 
@@ -167,8 +172,8 @@ func checkPermissions(cmd *cobra.Command) error {
 	if flagReadOnly {
 		effectiveReadOnly = true
 	}
-	if effectiveReadOnly && cmd.Annotations != nil && cmd.Annotations["mutates"] == "true" {
-		return fmt.Errorf("command '%s' is blocked in read-only mode; remove read_only from the profile or disable the read-only environment setting to permit writes", cmd.CommandPath())
+	if effectiveReadOnly && isWrite(cmd) {
+		return fmt.Errorf("command '%s' is blocked in read-only mode; to permit writes, drop --read-only, unset CUBEAPM_READ_ONLY, and remove read_only from the profile", cmd.CommandPath())
 	}
 
 	// Enforce no-input mode for commands that require interactive input
@@ -177,6 +182,20 @@ func checkPermissions(cmd *cobra.Command) error {
 	}
 
 	return nil
+}
+
+// isWrite reports whether cmd is annotated as mutating. `update --check` only
+// reports whether a release exists, so read-only mode still allows it.
+func isWrite(cmd *cobra.Command) bool {
+	if cmd.Annotations["mutates"] != "true" {
+		return false
+	}
+	if cmd.CommandPath() == "cubeapm update" {
+		if check, err := cmd.Flags().GetBool("check"); err == nil && check {
+			return false
+		}
+	}
+	return true
 }
 
 func loadConfigOnly() error {

@@ -13,13 +13,14 @@ or agent harness that can run shell commands.
 - Read/query commands write requested data to stdout; errors are written to
   stderr with a non-zero exit status.
 - With `-o json`, CLI errors use `{"error":"..."}`.
-- `logs query -o json` emits a stream of JSON objects, not one array.
+- `logs query -o json` emits a stream of JSON objects, not one array; `-o yaml`
+  emits one YAML document per entry, separated by `---`.
 
 ## Safety flags
 
 | Flag | Environment | Effect |
 |---|---|---|
-| `--read-only` | `CUBEAPM_READ_ONLY=true` | Blocks protected mutating API commands |
+| `--read-only` | `CUBEAPM_READ_ONLY=true` | Blocks every write command |
 | `--no-input` | `CUBEAPM_NO_INPUT=true` | Disables interactive login and update confirmation |
 | `--quiet`, `-q` | `CUBEAPM_QUIET=true` | Suppresses informational output where supported |
 
@@ -30,19 +31,22 @@ CUBEAPM_QUIET=true \
 cubeapm traces search --service api-gateway --last 1h -o json
 ```
 
-Read-only mode blocks telemetry ingestion and starting or stopping log deletion.
-Listing deletion tasks and all query commands remain available.
-`--read-only=false` cannot turn read-only off. `CUBEAPM_READ_ONLY`, when set,
-replaces the profile's `read_only` value, so `CUBEAPM_READ_ONLY=false` disables
-it. `CUBEAPM_NO_INPUT` and `CUBEAPM_QUIET` take effect only for `1` or `true`;
+Read-only mode blocks every write command: telemetry ingestion, starting or
+stopping log deletion, `config set`, `config profiles use` and `delete`, and
+`update` (`update --check` still runs). Listing deletion tasks, reading config,
+and all query commands remain available.
+
+Read-only is only ever added, never removed. A profile's `read_only: true`,
+`CUBEAPM_READ_ONLY=true`, or `--read-only` turns it on, and neither
+`CUBEAPM_READ_ONLY=false` nor `--read-only=false` turns it off.
+`CUBEAPM_NO_INPUT` and `CUBEAPM_QUIET` take effect only for `1` or `true`;
 `--quiet=false` overrides `CUBEAPM_QUIET`, but `--no-input=false` does not
 override `CUBEAPM_NO_INPUT`.
 
 <Callout type="warn">
-  The current command setup bypasses read-only enforcement for `login`, config
-  changes, profile switching/deletion, and `update`. It is not a general
-  filesystem sandbox. Pair it with `--no-input`, and use an external sandbox if
-  those local or update operations must also be prevented.
+  Read-only mode does not cover `login`, which is interactive; `--no-input`
+  blocks it. It is not a general filesystem sandbox, so use an external sandbox
+  if local file writes must also be prevented.
 </Callout>
 
 ## Non-interactive connection

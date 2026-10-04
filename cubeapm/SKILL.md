@@ -35,7 +35,7 @@ export CUBEAPM_PASSWORD=your-password
 cubeapm --server cubeapm.example.com --email user@example.com --password secret traces services
 ```
 
-**Config priority:** CLI flags > environment variables > profile config (`~/.config/cubeapm-cli/config.yaml`).
+**Config priority:** CLI flags > environment variables > profile config (`~/.config/cubeapm-cli/config.yaml`). Read-only is the exception: a profile's `read_only: true`, `CUBEAPM_READ_ONLY=true`, or `--read-only` turns it on, and nothing turns it off (`CUBEAPM_READ_ONLY=false` and `--read-only=false` are ignored). It blocks every write command: ingest, `logs delete run`/`stop`, `config set`, `config profiles use`/`delete`, and `update` (`update --check` still runs).
 
 ### Multi-Port Architecture
 

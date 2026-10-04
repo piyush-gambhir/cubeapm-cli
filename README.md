@@ -105,6 +105,8 @@ Settings are resolved in this order (highest priority first):
 2. Environment variables (`CUBEAPM_SERVER`, `CUBEAPM_EMAIL`, `CUBEAPM_PASSWORD`, etc.)
 3. Profile configuration (`~/.config/cubeapm-cli/config.yaml`)
 
+Read-only mode is the exception: it is only ever added, never removed. A profile's `read_only: true`, `CUBEAPM_READ_ONLY=true`, or `--read-only` turns it on, and neither `CUBEAPM_READ_ONLY=false` nor `--read-only=false` turns it off. It blocks every write command: `ingest metrics`/`logs`, `logs delete run`/`stop`, `config set`, `config profiles use`/`delete`, and `update` (`update --check` still runs). For the `config` write commands and `update`, the active profile's `read_only` applies even when `--profile` names another profile, because they change the active profile (or the binary).
+
 ## Time Ranges
 
 These commands accept `--from`, `--to`, and `--last`: `traces search`, `get`, `services` (only with `--env`), `dependencies`, `callers` (only the end time is used; the rate window is `--window`); `metrics query-range`, `labels`, `label-values`, `series`; and `logs query`, `hits`, `stats`, `streams`, `field-names`, `field-values`. `metrics query` takes a single `--time`, and `logs status` takes `--lookback <days>`. `--last` wins over `--from`/`--to`.
@@ -133,7 +135,7 @@ These commands accept `--from`, `--to`, and `--last`: `traces search`, `get`, `s
 
 ## Output Formats
 
-The `traces`, `metrics`, and `logs` read commands support three output formats via the `-o` / `--output` flag. Table-backed commands emit an array of objects keyed by the table headers (`TRACE_ID`, `SERVICE`, ...); `metrics query`/`query-range` return the raw Prometheus response; `logs query` streams one object per entry. `-o` has no effect on `config view` (always YAML), `config get`, `config profiles list`, `version`, `login`, `update`, `ingest`, `logs delete run`/`stop`, or `traces dependencies --dot`.
+The `traces`, `metrics`, and `logs` read commands support three output formats via the `-o` / `--output` flag. Table-backed commands emit an array of objects keyed by the table headers (`TRACE_ID`, `SERVICE`, ...); `metrics query`/`query-range` return the raw Prometheus response; `logs query` streams one object per entry (YAML separates the entries with `---`). `-o` has no effect on `config view` (always YAML), `config get`, `config profiles list`, `version`, `login`, `update`, `ingest`, `logs delete run`/`stop`, or `traces dependencies --dot`.
 
 ```bash
 # Table format (default) - human-readable columns
@@ -194,6 +196,9 @@ These flags apply to all commands:
 | `--admin-port` | | int | `3199` | Override admin API port |
 | `--no-color` | | bool | `false` | Disable colored output |
 | `--verbose` | | bool | `false` | Enable verbose HTTP request logging |
+| `--read-only` | | bool | `false` | Block every write command; `--read-only=false` cannot turn it off (see [Configuration priority](#configuration-priority)) |
+| `--no-input` | | bool | `false` | Disable all interactive prompts (for CI/agent use) |
+| `--quiet` | `-q` | bool | `false` | Suppress informational output |
 
 ---
 
@@ -221,6 +226,7 @@ cubeapm traces search [flags]
 | `--max-duration` | string | | Maximum trace duration (e.g., `5s`, `10s`) |
 | `--tags` | string[] | | Filter by span tag key=value (repeatable) |
 | `--span-kind` | string | `server` | Filter by span kind: `client`, `server`, `producer`, `consumer`, `internal` |
+| `--index` | string | `cube:latency` | CubeAPM trace index to query (e.g., `cube:latency`, `cube:error`) |
 | `--limit` | int | `20` | Maximum number of traces to return |
 | `--from` | string | | Start time (RFC3339, Unix, or relative) |
 | `--to` | string | | End time (RFC3339, Unix, or relative) |
@@ -249,6 +255,9 @@ cubeapm traces search --service auth --from 2024-01-15T00:00:00Z --to 2024-01-15
 
 # Return more results
 cubeapm traces search --service api-gateway --limit 100
+
+# Search the error index
+cubeapm traces search --index cube:error --service payments --env PROD --last 30m
 
 # Output as JSON
 cubeapm traces search --service api-gateway -o json
@@ -364,6 +373,38 @@ cubeapm traces dependencies --last 24h --dot | dot -Tpng -o deps.png
 
 # Output as JSON
 cubeapm traces dependencies --last 24h -o json
+```
+
+#### `traces callers`
+
+Rank the services making outbound HTTP calls to a host, by call rate.
+
+```
+cubeapm traces callers [flags]
+```
+
+Runs one instant PromQL query, `topk(<topk>, sum by (service) (rate(cube_apm_latency_count{group_name="HTTP <host>",span_kind="client"}[<window>])))`, at the end of the time range (`--to`, else now). The rate covers only `--window` before that point; `--from` and the length of `--last` have no effect. At least one of `--host` or `--service` is required.
+
+**Flags:**
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--host` | string | | Target host, matched against the `group_name` label (`HTTP ` is prepended if missing). If omitted, the host defaults to the hardcoded `api.spyne.ai` |
+| `--service` | string | | Keep only client spans whose `span_name` contains this service name |
+| `--window` | string | `2m` | PromQL rate window |
+| `--topk` | int | `10` | Maximum number of callers to return |
+| `--from` | string | | Accepted, but has no effect |
+| `--to` | string | now | Evaluation time of the instant query |
+| `--last` | string | | Evaluation time is now |
+
+**Examples:**
+
+```bash
+# Who is calling a host right now?
+cubeapm traces callers --host api.example.com
+
+# Top 20 callers at the end of an incident, 5-minute rate window
+cubeapm traces callers --host api.example.com --to 2026-04-19T13:50:00Z --window 5m --topk 20 -o json
 ```
 
 ---
@@ -659,6 +700,33 @@ cubeapm logs hits --query 'service:api-gateway' --last 6h --step 15m
 cubeapm logs hits --query 'error' --last 24h --step 1h -o json
 ```
 
+#### `logs status`
+
+Probe the effective log retention. Samples 24-hour hit buckets over the last `--lookback` days and reports the oldest and newest non-empty buckets.
+
+```
+cubeapm logs status [flags]
+```
+
+**Flags:**
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--query` | string | `*` | LogsQL query to probe (e.g., `'service.name:api-gateway'`) |
+| `--lookback` | int | `30` | Lookback window in days |
+
+JSON output is one object: `query`, `lookbackDays`, `hasLogs`, `nonEmptyDays`, and when present `earliestNonZeroBucket`, `latestNonZeroBucket`, `retentionHours`, `note`.
+
+**Examples:**
+
+```bash
+# How far back do logs go?
+cubeapm logs status
+
+# Retention for one service, looking back 60 days
+cubeapm logs status --query 'service.name:api-gateway' --lookback 60 -o json
+```
+
 #### `logs stats`
 
 Execute a LogsQL stats/aggregation query.
@@ -919,7 +987,7 @@ cubeapm config view
 
 #### `config set`
 
-Set a configuration value in the current profile.
+Set a configuration value in the current profile. Blocked in read-only mode.
 
 ```
 cubeapm config set <key> <value>
@@ -966,7 +1034,7 @@ Alias: `cubeapm config profiles ls`
 
 #### `config profiles use`
 
-Set the active profile.
+Set the active profile. Blocked in read-only mode.
 
 ```
 cubeapm config profiles use <profile>
@@ -981,7 +1049,7 @@ cubeapm config profiles use staging
 
 #### `config profiles delete`
 
-Delete a profile.
+Delete a profile. Blocked in read-only mode.
 
 ```
 cubeapm config profiles delete <profile>
@@ -1021,7 +1089,8 @@ cubeapm update --check   # Only check, do not install
 ```
 
 On Windows, `update` cannot install: run `cubeapm update --check`, then download
-the release and replace `cubeapm.exe`.
+the release and replace `cubeapm.exe`. Read-only mode blocks `update` but allows
+`update --check`.
 
 ---
 

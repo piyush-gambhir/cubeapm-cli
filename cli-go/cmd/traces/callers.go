@@ -38,8 +38,8 @@ func newCallersCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "callers",
 		Short: "Rank the services making outbound HTTP calls to a host",
-		Long: `List the services making outbound HTTP calls to a given host (or reaching a given service)
-over the specified time window, aggregated by call rate.
+		Long: `List the services making outbound HTTP calls to a given host, ranked by
+call rate.
 
 This is a convenience over the raw PromQL query:
 
@@ -48,30 +48,27 @@ This is a convenience over the raw PromQL query:
       span_kind="client"
   }[<window>])))
 
-Specify the target host either explicitly with --host (matches the
-group_name label, typically "api.spyne.ai", "internal.corp", etc.) or
-via --service to target a specific service's inbound traffic. When
---service is given without --host, the host is inferred as "HTTP " +
-a conventional domain, if your setup differs, use --host explicitly.
+The query runs once, at the end of the time range (now by default), so the
+rate covers only the --window (default 2m) before that point. --to (or now)
+sets that point; --from and the length of --last have no effect.
 
-Time ranges can be specified as:
-  - Relative:   --last 1h
-  - RFC3339:    --from 2024-01-15T10:00:00Z --to 2024-01-15T11:00:00Z
-  - Default:    last 1 hour if no time flags are provided
+--host matches the group_name label ("HTTP " is prepended if missing). Without
+--host the host is not inferred: it defaults to the hardcoded api.spyne.ai, so
+pass --host for any other deployment. --service keeps only client spans whose
+span_name contains the service name.
 
 Examples:
-  # Who's calling api.spyne.ai in the last hour?
-  cubeapm traces callers --host api.spyne.ai --last 1h
+  # Who's calling api.spyne.ai right now (rate over the last 2 minutes)?
+  cubeapm traces callers --host api.spyne.ai
 
-  # Find the biggest outbound callers during an incident window
-  cubeapm traces callers --host api.spyne.ai \
-    --from 2026-04-19T13:20:00Z --to 2026-04-19T13:50:00Z
+  # Biggest outbound callers at the end of an incident window
+  cubeapm traces callers --host api.spyne.ai --to 2026-04-19T13:50:00Z
 
   # Top 20 callers with a 5-minute rate window
-  cubeapm traces callers --host api.spyne.ai --last 1h --window 5m --topk 20
+  cubeapm traces callers --host api.spyne.ai --window 5m --topk 20
 
-  # Find callers of a specific service (host inferred)
-  cubeapm traces callers --service MEDIA-SERVICE --last 30m`,
+  # Callers of a specific service (host defaults to api.spyne.ai)
+  cubeapm traces callers --service MEDIA-SERVICE`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if host == "" && service == "" {
@@ -79,8 +76,8 @@ Examples:
 			}
 			groupName := host
 			if groupName == "" {
-				// Best-effort inference. Users with different conventions
-				// should set --host explicitly.
+				// Hardcoded default, not inferred. Other deployments must
+				// pass --host.
 				groupName = "api.spyne.ai"
 			}
 			if !strings.HasPrefix(groupName, "HTTP ") {

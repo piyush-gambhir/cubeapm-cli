@@ -196,3 +196,27 @@ func TestResolveAuth_CustomPorts(t *testing.T) {
 		t.Errorf("AdminPort = %d, want %d", resolved.AdminPort, 8082)
 	}
 }
+
+// CUBEAPM_READ_ONLY can turn read-only on but never off.
+func TestResolveAuth_ReadOnlyEnvOnlyAdds(t *testing.T) {
+	tests := []struct {
+		profile bool
+		env     string
+		want    bool
+	}{
+		{profile: true, env: "false", want: true},
+		{profile: true, env: "0", want: true},
+		{profile: true, env: "", want: true},
+		{profile: false, env: "true", want: true},
+		{profile: false, env: "1", want: true},
+		{profile: false, env: "false", want: false},
+		{profile: false, env: "not-a-bool", want: false},
+	}
+	for _, tt := range tests {
+		t.Setenv("CUBEAPM_READ_ONLY", tt.env)
+		cfg := &Config{CurrentProfile: "p", Profiles: map[string]Profile{"p": {ReadOnly: tt.profile}}}
+		if got := ResolveAuth(cfg, FlagOverrides{}).ReadOnly; got != tt.want {
+			t.Errorf("profile read_only=%t, CUBEAPM_READ_ONLY=%q: ReadOnly = %t, want %t", tt.profile, tt.env, got, tt.want)
+		}
+	}
+}
