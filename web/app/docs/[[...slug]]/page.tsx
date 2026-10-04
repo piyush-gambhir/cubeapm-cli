@@ -81,8 +81,8 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
   if (!page) notFound();
 
   const MDX = page.data.body;
-  // Absolute, because Fumadocs' page actions do not add Next's basePath to relative URLs.
-  const markdownUrl = `${siteUrl}${getPageMarkdownUrl(page).url}`;
+  // Fumadocs' page actions do not add Next's basePath, so include it here.
+  const markdownUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}${getPageMarkdownUrl(page).url}`;
   const slug = page.slugs.join('/');
   const pageUrl = `${siteUrl}${page.url}`;
   const description = withProjectIndependence(page.data.description);
