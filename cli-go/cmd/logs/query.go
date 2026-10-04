@@ -2,6 +2,7 @@ package logs
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -49,8 +50,10 @@ func newQueryCmd() *cobra.Command {
 		Long: `Query logs using LogsQL syntax (VictoriaLogs-compatible).
 
 Executes a LogsQL query and returns matching log entries. In table mode,
-results are collected and displayed as a table. In JSON/YAML mode, results
-are streamed line-by-line (newline-delimited).
+results are collected and displayed as a table. In JSON/YAML mode, entries
+are streamed one object at a time instead of one array: -o json emits a
+sequence of JSON objects, and -o yaml emits one YAML document per entry,
+separated by "---".
 
 The <logsql> argument is a LogsQL expression. Common LogsQL syntax includes:
   - Keyword search:    'error'
@@ -166,9 +169,18 @@ Examples:
 				return output.PrintTable(cmdutil.Resolved.NoColor, table)
 			}
 
-			// For JSON/YAML, stream output
+			// For JSON/YAML, stream one object per entry. YAML entries are
+			// separate documents, so "---" goes between them.
+			out := cmd.OutOrStdout()
 			formatter := output.NewFormatter(cmdutil.OutputFormat, cmdutil.Resolved.NoColor)
+			first := true
 			return cmdutil.APIClient.QueryLogsStream(logsql, start, end, limit, func(entry types.LogEntry) error {
+				if cmdutil.OutputFormat == output.FormatYAML && !first {
+					if _, err := io.WriteString(out, "---\n"); err != nil {
+						return err
+					}
+				}
+				first = false
 				data := make(map[string]interface{})
 				data["_time"] = entry.Time
 				data["_stream"] = entry.Stream
@@ -178,7 +190,7 @@ Examples:
 						data[k] = v
 					}
 				}
-				return formatter.Format(os.Stdout, data)
+				return formatter.Format(out, data)
 			})
 		},
 	}

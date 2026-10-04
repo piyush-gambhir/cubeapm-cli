@@ -112,9 +112,11 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 			resolved.AdminPort = port
 		}
 	}
+	// The environment can only add read-only mode: CUBEAPM_READ_ONLY=false
+	// must not lift a profile's read_only: true.
 	if v := os.Getenv("CUBEAPM_READ_ONLY"); v != "" {
-		if b, err := strconv.ParseBool(v); err == nil {
-			resolved.ReadOnly = b
+		if b, err := strconv.ParseBool(v); err == nil && b {
+			resolved.ReadOnly = true
 		}
 	}
 	if v := os.Getenv("CUBEAPM_EMAIL"); v != "" {

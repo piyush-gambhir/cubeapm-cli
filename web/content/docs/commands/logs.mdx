@@ -14,7 +14,7 @@ cubeapm logs stats 'error | stats by (service) count() as c' --last 24h -o json
 
 `logs query` accepts `--service`, `--level`, and `--stream` convenience filters,
 plus `--last`, `--from`, and `--to`. JSON/YAML query results stream one entry at
-a time. Without `--step`, `logs hits` uses the time range divided by 60
+a time (YAML as `---`-separated documents). Without `--step`, `logs hits` uses the time range divided by 60
 (minimum `1s`) as its bucket size.
 
 ## Retention and schema discovery

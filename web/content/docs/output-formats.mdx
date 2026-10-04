@@ -40,7 +40,8 @@ Jaeger-format trace outside table mode. With no results, `logs hits`,
 `logs stats`, and `logs delete list` print a plain message instead of `[]`.
 
 `logs query` is intentionally streamed: JSON and YAML are emitted one entry at
-a time instead of being buffered into one array. Process JSON output as a stream:
+a time instead of being buffered into one array. YAML output is one document per
+entry, separated by `---`. Process JSON output as a stream:
 
 ```bash
 cubeapm logs query 'error' --last 30m -o json | jq -c '{time: ._time, message: ._msg}'

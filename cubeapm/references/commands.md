@@ -20,7 +20,7 @@ These flags apply to all commands:
 | `--admin-port` | | int | `3199` | Override admin API port |
 | `--no-color` | | bool | `false` | Disable colored output |
 | `--verbose` | | bool | `false` | Enable verbose HTTP request logging (written to stdout) |
-| `--read-only` | | bool | `false` | Block mutating API commands (see [Safety settings](#safety-settings)) |
+| `--read-only` | | bool | `false` | Block every write command (see [Safety settings](#safety-settings)) |
 | `--no-input` | | bool | `false` | Disable all interactive prompts (`login` and the `update` confirmation fail instead) |
 | `--quiet` | `-q` | bool | `false` | Suppress informational output |
 
@@ -53,7 +53,7 @@ cubeapm update           # Check and install
 cubeapm update --check   # Only check, do not install
 ```
 
-On Windows, `update` cannot install: use `--check`, then download the release and replace `cubeapm.exe`.
+On Windows, `update` cannot install: use `--check`, then download the release and replace `cubeapm.exe`. Read-only mode blocks `update` but allows `update --check`.
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
@@ -448,7 +448,7 @@ Query and manage logs using LogsQL syntax (VictoriaLogs-compatible). Query comma
 
 ### `logs query`
 
-Query logs using LogsQL syntax.
+Query logs using LogsQL syntax. With `-o json` or `-o yaml`, entries stream one object at a time, not as an array: JSON is a sequence of objects, YAML is one document per entry separated by `---`.
 
 ```
 cubeapm logs query <logsql> [flags]
@@ -820,7 +820,7 @@ cubeapm config view
 
 ### `config set`
 
-Set a configuration value in the current profile.
+Set a configuration value in the current profile. Blocked in read-only mode.
 
 ```
 cubeapm config set <key> <value>
@@ -867,7 +867,7 @@ Alias: `cubeapm config profiles ls`
 
 ### `config profiles use`
 
-Set the active profile.
+Set the active profile. Blocked in read-only mode.
 
 ```
 cubeapm config profiles use <profile>
@@ -882,7 +882,7 @@ cubeapm config profiles use staging
 
 ### `config profiles delete`
 
-Delete a profile.
+Delete a profile. Blocked in read-only mode.
 
 ```
 cubeapm config profiles delete <profile>
@@ -940,13 +940,13 @@ Timestamps without a zone (`2024-01-15T10:00:00`) are local time. Default: if no
 | `CUBEAPM_QUERY_PORT` | Query port (default: 3140) |
 | `CUBEAPM_INGEST_PORT` | Ingest port (default: 3130) |
 | `CUBEAPM_ADMIN_PORT` | Admin port (default: 3199) |
-| `CUBEAPM_READ_ONLY` | Read-only mode: any Go boolean (`true`, `1`, `false`, `0`, ...); overrides the profile's `read_only` |
+| `CUBEAPM_READ_ONLY` | A true Go boolean (`true`, `1`, ...) turns read-only mode on; `false`/`0` never turns off a profile's `read_only: true` |
 | `CUBEAPM_NO_INPUT` | `1` or `true` disables interactive prompts |
 | `CUBEAPM_QUIET` | `1` or `true` suppresses informational output |
 | `XDG_CONFIG_HOME` | Relocates the config file to `$XDG_CONFIG_HOME/cubeapm-cli/config.yaml` |
 
 ## Safety settings
 
-- **Read-only** is on when `CUBEAPM_READ_ONLY` is true, or when it is unset (or not a valid boolean) and the profile has `read_only: true`, or when `--read-only` is passed. `--read-only=false` never turns it off. It blocks `ingest metrics`, `ingest logs`, `logs delete run`, and `logs delete stop`; `logs delete list` and all queries still run. It is not enforced for `login`, `config set`, `config profiles use`/`delete`, or `update`.
+- **Read-only** is only ever added, never removed: it is on when the profile has `read_only: true`, when `CUBEAPM_READ_ONLY` is a true Go boolean, or when `--read-only` is passed. `CUBEAPM_READ_ONLY=false` and `--read-only=false` cannot turn off a profile's `read_only: true`. It blocks `ingest metrics`, `ingest logs`, `logs delete run`, `logs delete stop`, `config set`, `config profiles use`, `config profiles delete`, and `update` (`update --check` still runs); all queries, `logs delete list`, `config view`/`get`, and `config profiles list` still run. `login` is not covered; it is interactive, so `--no-input` blocks it. For the `config` write commands and `update`, the active profile's `read_only` applies even when `--profile` names another profile, because they change the active profile (or the binary).
 - **No-input** is on when `--no-input` is passed or `CUBEAPM_NO_INPUT` is `1`/`true`; `--no-input=false` does not override the environment.
 - **Quiet** follows `--quiet` when the flag is given (including `--quiet=false`), otherwise `CUBEAPM_QUIET`.

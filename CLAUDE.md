@@ -5,7 +5,7 @@
 - **Binary:** `cubeapm`
 - **Config file:** `~/.config/cubeapm-cli/config.yaml`
 - **Env vars:** `CUBEAPM_SERVER`, `CUBEAPM_EMAIL`, `CUBEAPM_PASSWORD`, `CUBEAPM_QUERY_PORT`, `CUBEAPM_INGEST_PORT`, `CUBEAPM_ADMIN_PORT`
-- **Config priority:** CLI flags > environment variables > profile config
+- **Config priority:** CLI flags > environment variables > profile config. Read-only is the exception: the profile's `read_only`, `CUBEAPM_READ_ONLY=true`, or `--read-only` turns it on, and nothing turns it off (`CUBEAPM_READ_ONLY=false` and `--read-only=false` cannot override a profile's `read_only: true`)
 - **Query language:** PromQL (metrics), LogsQL (logs), Jaeger format (traces)
 
 ## Multi-Port Architecture
@@ -40,7 +40,7 @@ The `traces`, `metrics`, and `logs` read commands (including `logs status` and `
 - `-o json` -- JSON, ideal for programmatic parsing with jq
 - `-o yaml` -- YAML, useful for config management
 
-Table-backed commands emit an array of objects keyed by the uppercase table headers (`TRACE_ID`, `SERVICE`, ...). `metrics query`/`query-range` return the raw Prometheus response, `traces get` the full trace, and `logs query` a stream of one object per entry. `-o` has no effect on `config view` (always YAML), `config get`, `config profiles list`, `version`, `login`, `update`, `ingest`, `logs delete run`/`stop`, or `traces dependencies --dot`. With no results, `logs hits`, `logs stats`, and `logs delete list` print a plain message instead of `[]`, even with `-o json`.
+Table-backed commands emit an array of objects keyed by the uppercase table headers (`TRACE_ID`, `SERVICE`, ...). `metrics query`/`query-range` return the raw Prometheus response, `traces get` the full trace, and `logs query` a stream of one object per entry (YAML separates the entries with `---`). `-o` has no effect on `config view` (always YAML), `config get`, `config profiles list`, `version`, `login`, `update`, `ingest`, `logs delete run`/`stop`, or `traces dependencies --dot`. With no results, `logs hits`, `logs stats`, and `logs delete list` print a plain message instead of `[]`, even with `-o json`.
 
 **For agents:** Always use `-o json` when you need to parse or process output programmatically.
 
@@ -445,6 +445,6 @@ PromQL is the query language for metrics (Prometheus-compatible):
 | `--admin-port <port>` | Admin port override (default: 3199) |
 | `--no-color` | Disable colored output |
 | `--verbose` | Enable verbose HTTP request logging |
-| `--read-only` | Block ingest and `logs delete run`/`stop` (cannot be turned off by `--read-only=false`) |
+| `--read-only` | Block every write command: ingest, `logs delete run`/`stop`, `config set`, `config profiles use`/`delete`, `update` (`update --check` still runs). Cannot be turned off by `--read-only=false` or `CUBEAPM_READ_ONLY=false` |
 | `--no-input` | Disable all interactive prompts (for CI/agent use) |
 | `-q, --quiet` | Suppress informational output |

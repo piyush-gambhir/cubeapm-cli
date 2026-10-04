@@ -146,7 +146,7 @@ The safety settings (`--read-only`, `--no-input`, `--quiet`) follow different ru
 | `CUBEAPM_QUERY_PORT` | Query API port (default `3140`) |
 | `CUBEAPM_INGEST_PORT` | Ingest API port (default `3130`) |
 | `CUBEAPM_ADMIN_PORT` | Admin API port (default `3199`) |
-| `CUBEAPM_READ_ONLY` | Read-only mode; any Go boolean (`true`/`1` on, `false`/`0` off), and it overrides the profile's `read_only` |
+| `CUBEAPM_READ_ONLY` | Turns read-only mode on when set to a true Go boolean (`true`, `1`, ...); `false`/`0` never turns off a profile's `read_only: true` |
 | `CUBEAPM_NO_INPUT` | Disable all interactive prompts when exactly `true` or `1` |
 | `CUBEAPM_QUIET` | Suppress informational output when exactly `true` or `1` (ignored if `--quiet` is passed) |
 | `XDG_CONFIG_HOME` | Relocate the config directory |
@@ -169,7 +169,7 @@ These persistent flags apply to every command:
 | `--admin-port` | | int | `3199` | Admin API port override |
 | `--no-color` | | bool | `false` | Disable colored/bold output |
 | `--verbose` | | bool | `false` | Log the full HTTP request/response cycle (auth headers redacted) |
-| `--read-only` | | bool | `false` | Block write/delete operations (safety mode for agents) |
+| `--read-only` | | bool | `false` | Block every write command (safety mode for agents); `--read-only=false` cannot turn it off |
 | `--no-input` | | bool | `false` | Disable all interactive prompts (CI/agent use) |
 | `--quiet` | `-q` | bool | `false` | Suppress informational (non-data) output |
 
@@ -197,7 +197,7 @@ The `metrics query` command uses a single `--time` flag (same accepted formats) 
 
 ### Safety settings
 
-- **Read-only:** the base value is `CUBEAPM_READ_ONLY` when it is set to a valid Go boolean (so `CUBEAPM_READ_ONLY=false` turns off a profile's `read_only: true`), otherwise the profile's `read_only`. `--read-only` can only turn it on; `--read-only=false` never turns it off. When on, exactly four commands are blocked with an error: `ingest metrics`, `ingest logs`, `logs delete run`, `logs delete stop`. Everything else runs, including `logs delete list` and all queries. Read-only is not enforced for `login`, `config set`, `config profiles use`/`delete`, or `update`.
+- **Read-only:** only ever added, never removed. It is on when the profile has `read_only: true`, when `CUBEAPM_READ_ONLY` is a true Go boolean (`true`, `1`, ...), or when `--read-only` is passed. `CUBEAPM_READ_ONLY=false` and `--read-only=false` cannot turn off a profile's `read_only: true`. When on, every write command is blocked with an error: `ingest metrics`, `ingest logs`, `logs delete run`, `logs delete stop`, `config set`, `config profiles use`, `config profiles delete`, and `update` (`update --check` still runs). All queries, `logs delete list`, `config view`, `config get`, `config profiles list`, and `version` still run. `login` is not covered; it is interactive, so `--no-input` blocks it. For the `config` write commands and `update`, the active profile's `read_only` applies even when `--profile` names another profile, because they change the active profile (or the binary).
 - **No-input:** on if `--no-input` is passed or `CUBEAPM_NO_INPUT` is `1`/`true`; `--no-input=false` does not override the environment. `login` and the `update` install confirmation fail instead of prompting.
 - **Quiet:** `--quiet` wins when passed (including `--quiet=false`); otherwise `CUBEAPM_QUIET` (`1`/`true`) applies.
 
@@ -329,18 +329,18 @@ Rank the services making outbound HTTP calls to a host (or reaching a target ser
 
 Flags:
 - `--host <host>`, target host, matched against the `group_name` label (e.g. `api.spyne.ai`). Either `--host` or `--service` is required.
-- `--service <name>`, restrict to callers of this target service (host is inferred if `--host` is omitted)
+- `--service <name>`, keep only client spans whose `span_name` contains this service name. Without `--host`, the host is not inferred: it defaults to the hardcoded `api.spyne.ai`, so pass `--host` for any other deployment
 - `--window <dur>`, rate window (default `2m`; shorter = more responsive but noisier)
 - `--topk <n>`, max callers to return (default `10`)
-- `--from` / `--to` / `--last`, time range; the query evaluates instantly at the end of the window (default last 1h)
+- `--from` / `--to` / `--last`, the query evaluates once at the end of the range (`--to`, else now), so the rate covers only `--window` before that point; `--from` and the length of `--last` have no effect
 
 ```bash
 # Who's calling api.spyne.ai right now?
 cubeapm traces callers --host api.spyne.ai --last 1h
 
-# Biggest callers during an incident window, top 20, 5m rate window
+# Biggest callers at the end of an incident window, top 20, 5m rate window
 cubeapm traces callers --host api.spyne.ai --window 5m --topk 20 \
-  --from 2026-04-19T13:20:00Z --to 2026-04-19T13:50:00Z
+  --to 2026-04-19T13:50:00Z
 ```
 
 ---
@@ -450,7 +450,7 @@ LogsQL quick reference: `*` (all), `error` (keyword), `service:api` (field), `er
 cubeapm logs query <logsql> [flags]
 ```
 
-Run a LogsQL query and return matching entries. Table columns: `TIMESTAMP`, `STREAM`, `MESSAGE` (truncated). In JSON/YAML, entries are streamed newline-delimited, each with `_time`, `_stream`, `_msg`, and non-underscore fields.
+Run a LogsQL query and return matching entries. Table columns: `TIMESTAMP`, `STREAM`, `MESSAGE` (truncated). In JSON/YAML, entries are streamed one object at a time, not as an array: `-o json` emits a sequence of pretty-printed JSON objects (`jq` reads it as a stream), and `-o yaml` emits one YAML document per entry separated by `---`. Each entry has `_time`, `_stream`, `_msg`, and non-underscore fields.
 
 The `--service`, `--level`, and `--stream` flags are convenience prefixes AND-joined in front of your query (`--service api` → `service:api AND (<your query>)`).
 
@@ -698,7 +698,7 @@ Print the config file path and its full contents as YAML, with `password` and `s
 cubeapm config set <key> <value>
 ```
 
-Set a value in the current profile (creating a `default` profile if none is active) and save. Valid keys: `server`, `email`, `password`, `auth_method` (`kratos`|`none`), `query_port`, `ingest_port`, `admin_port`, `output` (`table`|`json`|`yaml`).
+Set a value in the current profile (creating a `default` profile if none is active) and save. Blocked in read-only mode. Valid keys: `server`, `email`, `password`, `auth_method` (`kratos`|`none`), `query_port`, `ingest_port`, `admin_port`, `output` (`table`|`json`|`yaml`).
 
 ```bash
 cubeapm config set server cube.example.com
@@ -728,6 +728,8 @@ cubeapm config profiles <list|use|delete>
 - `config profiles list` (alias `ls`), list all profiles; the active one is marked `*`.
 - `config profiles use <name>`, set the active profile.
 - `config profiles delete <name>` (alias `rm`), delete a profile; clears `current_profile` if it was active.
+
+`use` and `delete` are blocked in read-only mode.
 
 ```bash
 cubeapm config profiles list
@@ -759,7 +761,7 @@ Print the CLI version, commit hash, and build date. (A build without version met
 cubeapm update [--check]
 ```
 
-Check for and install the latest release. `--check` only reports availability without installing; without it, prompts for confirmation before replacing the binary. Fails on a `dev` build, and `--check`-less updates fail under `--no-input` (use `--check`). On Windows only `--check` works; installing returns an error with the release page URL (download the release and replace `cubeapm.exe`).
+Check for and install the latest release. `--check` only reports availability without installing; without it, prompts for confirmation before replacing the binary. Fails on a `dev` build, and `--check`-less updates fail under `--no-input` (use `--check`). On Windows only `--check` works; installing returns an error with the release page URL (download the release and replace `cubeapm.exe`). Read-only mode blocks `update` but allows `update --check`.
 
 ## Output formats
 
@@ -820,7 +822,7 @@ CubeAPM uses an environment label to segment telemetry by deployment stage (prod
 
 Key facts:
 - Environment values are UPPER-CASE: `PROD`, `UAT`, `STAGING`, etc.
-- The label name is inconsistent across metric families: some use `env`, others use `cube.environment`. `traces services --env` and `metrics label-values --match` account for both automatically.
+- The label name is inconsistent across metric families: some use `env`, others use `cube.environment`. `traces services --env` queries both automatically. `metrics label-values --match` sends your selector unchanged, so you choose the label name; to cover both, run it once with `{env="PROD"}` and once with `{cube.environment="PROD"}`.
 - `traces search` requires both `--service` and `--env` on most CubeAPM deployments (the server returns a clear error if either is missing).
 - `traces operations` and `traces dependencies` are not exposed by all CubeAPM deployments. When unavailable, the server returns an "unsupported path" error. Use `traces search` and read the OPERATION column to discover operations instead.
 - To list services in an environment, use `cubeapm traces services --env PROD` (metrics-derived, may miss trace-only services) or `cubeapm metrics label-values service.name --match '{env="PROD"}'` (avoids the 30k-cardinality series limit).

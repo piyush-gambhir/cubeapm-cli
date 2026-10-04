@@ -6,6 +6,8 @@ description: Ory Kratos sessions, unauthenticated access, ports, and named profi
 CubeAPM CLI supports two connection modes: email/password authentication through
 Ory Kratos, and direct access to instances with authentication disabled.
 Configuration priority is **CLI flags > environment variables > profile config**.
+Read-only mode is the exception: the profile, `CUBEAPM_READ_ONLY=true`, or
+`--read-only` can turn it on, and none of them can turn it off.
 
 ## Interactive login
 

@@ -25,6 +25,9 @@ Settings can also be overridden via environment variables:
 Or via global CLI flags: --server, --email, --password, --query-port, --ingest-port, --admin-port.
 
 Priority (highest to lowest): CLI flags > environment variables > profile config.
+Read-only mode is the exception: a profile's read_only, CUBEAPM_READ_ONLY=true,
+or --read-only turns it on, and none of them can turn it off. In read-only mode,
+set and profiles use/delete are blocked.
 
 Subcommands:
   view      Show the full resolved configuration

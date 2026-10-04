@@ -31,7 +31,7 @@ patterns, identifying spikes, or visualizing error rates.
 
 The --query flag accepts a LogsQL expression (default: '*' to match all logs).
 The --step flag controls the time bucket size (e.g., 5m, 1h). If not set,
-the server auto-selects an appropriate bucket size.
+the CLI uses the time range divided by 60 (minimum 1s).
 
 Time ranges can be specified as:
   - Relative:   --last 1h  (also: 30m, 2d)
@@ -93,7 +93,7 @@ Examples:
 	}
 
 	cmd.Flags().StringVar(&query, "query", "", "LogsQL query (default: *)")
-	cmd.Flags().StringVar(&step, "step", "", "Time bucket step (e.g., 5m, 1h)")
+	cmd.Flags().StringVar(&step, "step", "", "Time bucket step (e.g., 5m, 1h); default: the time range divided by 60")
 	timeflag.AddTimeFlags(cmd, &from, &to, &last)
 
 	return cmd

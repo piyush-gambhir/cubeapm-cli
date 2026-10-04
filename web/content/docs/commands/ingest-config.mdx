@@ -57,7 +57,7 @@ confirmation before replacing a release binary and cannot proceed with
 download the release and replace `cubeapm.exe`.
 
 <Callout type="warn">
-  `--read-only` blocks ingestion, but the current command setup does not enforce
-  it for config changes, profile switching/deletion, `login`, or `update`. Use
-  `--no-input` and an external sandbox if those operations must also be blocked.
+  `--read-only` blocks ingestion, `config set`, `config profiles use` and
+  `delete`, and `update` (`update --check` still runs). It does not cover the
+  interactive `login`, which `--no-input` blocks.
 </Callout>
