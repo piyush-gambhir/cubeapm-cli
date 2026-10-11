@@ -6,7 +6,7 @@ Checked 2026-09-06. These are documentation and local-test baselines, not certif
 
 - Go 1.26 or later; this checkout selects Go 1.27.1 using `toolchain` in `cli-go/go.mod`.
 - Go 1.27 builds for macOS require macOS 13 or later. See the [Go 1.27 release notes](https://go.dev/doc/go1.27).
-- Docs: Node.js 24 or later and pnpm 11.25.0. Install with `pnpm install --frozen-lockfile` in `web/`.
+- Docs: Node 24 (24.21.0 or newer) and pnpm 12.11.2. Install with `pnpm install --frozen-lockfile` in `web/`.
 - YAML uses the maintained [YAML organization v3 implementation](https://github.com/yaml/go-yaml), preserving the v3 configuration API.
 
 ## Upstream API baseline

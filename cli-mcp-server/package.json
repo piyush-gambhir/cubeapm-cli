@@ -10,6 +10,9 @@
     "test": "node --check index.js"
   },
   "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.0",
     "zod": "^4.6.5"

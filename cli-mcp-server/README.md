@@ -6,7 +6,7 @@ Exposes the `cubeapm` CLI to any [MCP](https://modelcontextprotocol.io)-compatib
 
 ## Requirements
 
-- Node.js 18+
+- Node 24 (24.21.0 or newer)
 - `cubeapm` CLI installed and on your `PATH` (see [root README](../README.md#installation)), authenticated via `cubeapm login`
 
 ## Install
