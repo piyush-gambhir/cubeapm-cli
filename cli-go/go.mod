@@ -1,6 +1,6 @@
 module github.com/piyush-gambhir/cubeapm-cli/cli-go
 
-go 1.26.0
+go 1.27
 
 toolchain go1.27.2
 
