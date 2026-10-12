@@ -14,6 +14,7 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -25,16 +26,16 @@ jobs:
           go-version-file: cli-go/go.mod
           cache-dependency-path: cli-go/go.sum
       - name: Scan vulnerabilities
-        run: cd cli-go && go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...
+        run: cd cli-go && go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
       - name: Install Syft
         uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
         with:
-          syft-version: v1.54.0
+          syft-version: v1.54.1
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser
-          version: "v2.18.2"
+          version: "v2.18.3"
           args: release --clean
           workdir: cli-go
         env:

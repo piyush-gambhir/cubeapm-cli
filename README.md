@@ -42,7 +42,7 @@ You can also download a prebuilt archive directly from the [releases page](https
 
 ### Build from source
 
-Requires Go 1.26 or later; Go 1.27.1 is recommended.
+Requires Go 1.27 or later; Go 1.27.2 is recommended.
 
 ```bash
 git clone https://github.com/piyush-gambhir/cubeapm-cli.git
