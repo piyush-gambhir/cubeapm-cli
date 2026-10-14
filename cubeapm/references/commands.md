@@ -4,6 +4,17 @@ Complete reference for all `cubeapm` commands, flags, and options.
 
 ---
 
+## Offline command resolution
+
+`cubeapm commands resolve -- <arguments>` always emits JSON describing what the real Cobra parser would run, without executing the target, reading configuration or credentials, or accessing the network.
+
+```bash
+cubeapm commands resolve -- traces services
+cubeapm commands resolve -- -o json ingest logs --file logs.jsonl
+```
+
+The result contains `command` (canonical command path), `effect` (`read`, `remote_write`, or `local_write`), `conditional`, `interactive`, `secret_output`, `flags` (only explicitly set flags), and `args` (positional arguments). Effects follow the command annotations; existing `mutates=true` commands, including config writes and update, resolve as `remote_write`. Unknown commands, command groups, and invalid flags return an error with exit status 1.
+
 ## Global Flags
 
 These flags apply to all commands:
