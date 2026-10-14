@@ -66,14 +66,10 @@ var (
 	noticeOutput     io.Writer = os.Stderr
 )
 
-var rootCmd = newRootCmd()
-
-// newRootCmd constructs an independent command tree without loading configuration.
-func newRootCmd() *cobra.Command {
-	root := &cobra.Command{
-		Use:   "cubeapm",
-		Short: "CubeAPM CLI - Interact with CubeAPM observability platform",
-		Long: `CubeAPM CLI provides a command-line interface for querying traces, metrics,
+var rootCmd = &cobra.Command{
+	Use:   "cubeapm",
+	Short: "CubeAPM CLI - Interact with CubeAPM observability platform",
+	Long: `CubeAPM CLI provides a command-line interface for querying traces, metrics,
 and logs from CubeAPM. It supports Jaeger-compatible traces, Prometheus-compatible
 metrics (PromQL), and VictoriaLogs-compatible logs (LogsQL) APIs.
 
@@ -82,7 +78,6 @@ Command groups:
   metrics  Query and explore Prometheus-compatible metrics (PromQL)
   logs     Query and manage logs (VictoriaLogs / LogsQL)
   ingest   Push metrics and log data to CubeAPM
-  commands Resolve command arguments offline for agents
   config   Manage CLI configuration and connection profiles
   login    Interactively set up a connection profile
   version  Print CLI version information
@@ -113,78 +108,60 @@ Quick start:
 
 Full command reference (for agents/LLMs): https://github.com/piyush-gambhir/cubeapm-cli/blob/main/docs/llms.txt
 Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubeapm/SKILL.md`,
-		SilenceUsage:  true,
-		SilenceErrors: true,
-		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			update.RemoveOldExecutable()
-			flagOutput, _ = cmd.Flags().GetString("output")
-			flagProfile, _ = cmd.Flags().GetString("profile")
-			flagServer, _ = cmd.Flags().GetString("server")
-			flagEmail, _ = cmd.Flags().GetString("email")
-			flagPassword, _ = cmd.Flags().GetString("password")
-			flagQueryPort, _ = cmd.Flags().GetInt("query-port")
-			flagIngestPort, _ = cmd.Flags().GetInt("ingest-port")
-			flagAdminPort, _ = cmd.Flags().GetInt("admin-port")
-			flagNoColor, _ = cmd.Flags().GetBool("no-color")
-			flagVerbose, _ = cmd.Flags().GetBool("verbose")
-			flagReadOnly, _ = cmd.Flags().GetBool("read-only")
-			flagNoInput, _ = cmd.Flags().GetBool("no-input")
-			flagQuiet, _ = cmd.Flags().GetBool("quiet")
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		// Agent-safety environment settings are sticky: an explicit false flag
+		// must not silently re-enable prompts in automation.
+		if v := os.Getenv("CUBEAPM_NO_INPUT"); v == "1" || v == "true" {
+			flagNoInput = true
+		}
+		cmdutil.NoInput = flagNoInput
 
-			// Agent-safety environment settings are sticky: an explicit false flag
-			// must not silently re-enable prompts in automation.
-			if v := os.Getenv("CUBEAPM_NO_INPUT"); v == "1" || v == "true" {
-				flagNoInput = true
+		// Resolve --quiet: flag > env var
+		if !cmd.Flags().Changed("quiet") {
+			if v := os.Getenv("CUBEAPM_QUIET"); v == "1" || v == "true" {
+				flagQuiet = true
 			}
-			cmdutil.NoInput = flagNoInput
+		}
+		cmdutil.Quiet = flagQuiet
 
-			// Resolve --quiet: flag > env var
-			if !cmd.Flags().Changed("quiet") {
-				if v := os.Getenv("CUBEAPM_QUIET"); v == "1" || v == "true" {
-					flagQuiet = true
-				}
-			}
-			cmdutil.Quiet = flagQuiet
+		if updateNotifierEnabled(cmd) {
+			startUpdateCheck()
+		}
 
-			if updateNotifierEnabled(cmd) {
-				startUpdateCheck()
-			}
+		cmdName := cmd.Name()
+		parentName := ""
+		if cmd.Parent() != nil {
+			parentName = cmd.Parent().Name()
+		}
 
-			cmdName := cmd.Name()
-			parentName := ""
-			if cmd.Parent() != nil {
-				parentName = cmd.Parent().Name()
-			}
-
-			// Skip client setup for commands that don't need it
-			if cmdName == "version" || cmdName == "help" {
-				return nil
-			}
-			// Config commands and update don't need a client, but they still load
-			// the profile so its read_only setting applies to them.
-			if cmdName == "update" || parentName == "config" || parentName == "profiles" {
-				if err := loadConfigOnly(); err != nil {
-					return err
-				}
-				// Config writes change the active profile whatever --profile
-				// names, and update has no profile target, so --profile must not
-				// sidestep the active profile's read_only.
-				if active, ok := cmdutil.AppConfig.Profiles[cmdutil.AppConfig.CurrentProfile]; ok && active.ReadOnly {
-					cmdutil.Resolved.ReadOnly = true
-				}
-			} else if err := setupClient(cmd); err != nil {
+		// Skip client setup for commands that don't need it
+		if cmdName == "version" || cmdName == "help" {
+			return nil
+		}
+		// Config commands and update don't need a client, but they still load
+		// the profile so its read_only setting applies to them.
+		if cmdName == "update" || parentName == "config" || parentName == "profiles" {
+			if err := loadConfigOnly(); err != nil {
 				return err
 			}
+			// Config writes change the active profile whatever --profile
+			// names, and update has no profile target, so --profile must not
+			// sidestep the active profile's read_only.
+			if active, ok := cmdutil.AppConfig.Profiles[cmdutil.AppConfig.CurrentProfile]; ok && active.ReadOnly {
+				cmdutil.Resolved.ReadOnly = true
+			}
+		} else if err := setupClient(cmd); err != nil {
+			return err
+		}
 
-			return checkPermissions(cmd)
-		},
-		PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
-			showUpdateNotice()
-			return nil
-		},
-	}
-	registerCommands(root)
-	return root
+		return checkPermissions(cmd)
+	},
+	PersistentPostRunE: func(cmd *cobra.Command, args []string) error {
+		showUpdateNotice()
+		return nil
+	},
 }
 
 // checkPermissions enforces read-only mode and no-input constraints on the
@@ -382,35 +359,36 @@ func showUpdateNotice() {
 	update.Notify(noticeOutput, config.ConfigDir(), check.info, update.UpdateCommand(method), time.Now())
 }
 
-func registerCommands(root *cobra.Command) {
-	root.PersistentFlags().StringP("output", "o", "", "Output format: table, json, yaml")
-	root.PersistentFlags().String("profile", "", "Config profile to use")
-	root.PersistentFlags().String("server", "", "CubeAPM server address")
-	root.PersistentFlags().String("email", "", "Login email")
-	root.PersistentFlags().String("password", "", "Login password")
-	root.PersistentFlags().Int("query-port", 0, "Query port (default 3140)")
-	root.PersistentFlags().Int("ingest-port", 0, "Ingest port (default 3130)")
-	root.PersistentFlags().Int("admin-port", 0, "Admin port (default 3199)")
-	root.PersistentFlags().Bool("no-color", false, "Disable color output")
-	root.PersistentFlags().Bool("verbose", false, "Enable verbose output")
-	root.PersistentFlags().Bool("read-only", false, "Block write operations (safety mode for agents)")
-	root.PersistentFlags().Bool("no-input", false, "Disable all interactive prompts (for CI/agent use)")
-	root.PersistentFlags().BoolP("quiet", "q", false, "Suppress informational output")
+func init() {
+	rootCmd.PersistentFlags().StringVarP(&flagOutput, "output", "o", "", "Output format: table, json, yaml")
+	rootCmd.PersistentFlags().StringVar(&flagProfile, "profile", "", "Config profile to use")
+	rootCmd.PersistentFlags().StringVar(&flagServer, "server", "", "CubeAPM server address")
+	rootCmd.PersistentFlags().StringVar(&flagEmail, "email", "", "Login email")
+	rootCmd.PersistentFlags().StringVar(&flagPassword, "password", "", "Login password")
+	rootCmd.PersistentFlags().IntVar(&flagQueryPort, "query-port", 0, "Query port (default 3140)")
+	rootCmd.PersistentFlags().IntVar(&flagIngestPort, "ingest-port", 0, "Ingest port (default 3130)")
+	rootCmd.PersistentFlags().IntVar(&flagAdminPort, "admin-port", 0, "Admin port (default 3199)")
+	rootCmd.PersistentFlags().BoolVar(&flagNoColor, "no-color", false, "Disable color output")
+	rootCmd.PersistentFlags().BoolVar(&flagVerbose, "verbose", false, "Enable verbose output")
+	rootCmd.PersistentFlags().BoolVar(&flagReadOnly, "read-only", false, "Block write operations (safety mode for agents)")
+	rootCmd.PersistentFlags().BoolVar(&flagNoInput, "no-input", false, "Disable all interactive prompts (for CI/agent use)")
+	rootCmd.PersistentFlags().BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress informational output")
 
 	// Register subcommands
-	root.AddCommand(newCommandsCmd())
-	root.AddCommand(newVersionCmd())
-	root.AddCommand(newLoginCmd())
-	root.AddCommand(newUpdateCmd())
-	root.AddCommand(cmdconfig.NewConfigCmd())
-	root.AddCommand(cmdtraces.NewTracesCmd())
-	root.AddCommand(cmdmetrics.NewMetricsCmd())
-	root.AddCommand(cmdlogs.NewLogsCmd())
-	root.AddCommand(cmdingest.NewIngestCmd())
+	rootCmd.AddCommand(newCommandsCmd())
+	rootCmd.AddCommand(newVersionCmd())
+	rootCmd.AddCommand(newLoginCmd())
+	rootCmd.AddCommand(newUpdateCmd())
+	rootCmd.AddCommand(cmdconfig.NewConfigCmd())
+	rootCmd.AddCommand(cmdtraces.NewTracesCmd())
+	rootCmd.AddCommand(cmdmetrics.NewMetricsCmd())
+	rootCmd.AddCommand(cmdlogs.NewLogsCmd())
+	rootCmd.AddCommand(cmdingest.NewIngestCmd())
 }
 
 // Execute runs the root command.
 func Execute() error {
+	update.RemoveOldExecutable()
 	if err := rootCmd.Execute(); err != nil {
 		output.WriteError(os.Stderr, string(cmdutil.OutputFormat), err, 0)
 		return err

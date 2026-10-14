@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"io"
-	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -43,10 +41,7 @@ func newCommandsCmd() *cobra.Command {
 					break
 				}
 			}
-			probe := newRootCmd()
-			probe.SetIn(strings.NewReader(""))
-			probe.SetOut(io.Discard)
-			probe.SetErr(io.Discard)
+			probe := cmd.Root() // nothing executes and the process exits after answering
 			target, rest, err := probe.Find(args)
 			if err != nil || target == probe || !target.Runnable() {
 				return fmt.Errorf("arguments do not name a runnable cubeapm command")
@@ -69,12 +64,12 @@ func resolveCommand(target *cobra.Command) resolution {
 	ann := target.Annotations
 	flagSet := func(name string) bool { return name != "" && target.Flags().Changed(name) }
 	switch {
-	case ann["mutates"] == "true" || ann["mutates"] == "conditional":
-		res.Effect, res.Conditional = "remote_write", ann["mutates"] == "conditional"
 	case ann["mutates-when-flag"] != "":
 		if flagSet(ann["mutates-when-flag"]) {
 			res.Effect = "remote_write"
 		}
+	case ann["mutates"] == "true" || ann["mutates"] == "conditional":
+		res.Effect, res.Conditional = "remote_write", ann["mutates"] == "conditional"
 	case ann["writes-local"] == "true" || ann["writes-local"] == "conditional" || ann["self-update"] != "" || flagSet(ann["writes-local-when-flag"]):
 		res.Effect, res.Conditional = "local_write", ann["writes-local"] == "conditional"
 	}
