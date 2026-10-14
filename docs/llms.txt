@@ -22,6 +22,17 @@ This is an **independent, unofficial** tool. It is not affiliated with, endorsed
 - Contact: https://projects.piyushgambhir.com/cubeapm-cli/contact
 - Skill (Claude Code agent skill): https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubeapm/SKILL.md
 
+## Offline command resolution
+
+`cubeapm commands resolve -- <arguments>` always emits JSON describing what the real Cobra parser would run, without executing the target, reading configuration or credentials, or accessing the network.
+
+```bash
+cubeapm commands resolve -- traces services
+cubeapm commands resolve -- -o json ingest logs --file logs.jsonl
+```
+
+The result contains `command` (canonical command path), `effect` (`read`, `remote_write`, or `local_write`), `conditional`, `interactive`, `secret_output`, `flags` (only explicitly set flags), and `args` (positional arguments). Effects follow the command annotations; existing `mutates=true` commands, including config writes and update, resolve as `remote_write`. Unknown commands, command groups, and invalid flags return an error with exit status 1.
+
 ## Skill (Claude Code / agents)
 
 A ready-made Claude Code skill ships in the repo: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubeapm/SKILL.md . Point your agent at that file, or install it as a skill (copy the `cubeapm/` directory, including `references/`, to `~/.claude/skills/cubeapm/`, or load it via your agent's skill mechanism) to teach an agent how to drive `cubeapm`.
