@@ -4,6 +4,8 @@ A command-line interface for querying traces, metrics, and logs from [CubeAPM](h
 
 Designed to be used both interactively and programmatically by scripts and coding agents (LLMs).
 
+`cubeapm commands resolve -- <arguments>` uses the real command parser offline and always returns JSON describing the command, effect, flags, and positional arguments without running it.
+
 [![Go Version](https://img.shields.io/github/go-mod/go-version/piyush-gambhir/cubeapm-cli)](https://go.dev/)
 [![Release](https://img.shields.io/github/v/release/piyush-gambhir/cubeapm-cli)](https://github.com/piyush-gambhir/cubeapm-cli/releases)
 [![License](https://img.shields.io/github/license/piyush-gambhir/cubeapm-cli)](LICENSE)

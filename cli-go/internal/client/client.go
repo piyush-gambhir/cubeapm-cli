@@ -186,20 +186,30 @@ func (c *Client) reAuthenticate() error {
 	return nil
 }
 
-// cloneRequest creates a copy of the request. If the original request had a body,
-// it is read into a buffer and both the original and clone get a fresh reader.
+// cloneRequest copies a request for a retry with a fresh body. http.NewRequest
+// records GetBody for in-memory bodies (bytes.Reader, strings.Reader); its Body is a
+// non-seekable wrapper, so seeking it would resend an empty body.
 func cloneRequest(req *http.Request) (*http.Request, error) {
 	clone := req.Clone(req.Context())
-	if req.Body != nil && req.Body != http.NoBody {
-		if seeker, ok := req.Body.(io.ReadSeeker); ok {
-			seeker.Seek(0, io.SeekStart)
-			clone.Body = io.NopCloser(seeker)
-		}
-		// If body was already consumed and not seekable, it will be empty.
-		// This is acceptable for the retry case since GET requests have no body,
-		// and POST requests in this CLI use bytes.NewReader which is seekable.
+	if req.Body == nil || req.Body == http.NoBody {
+		return clone, nil
 	}
-	return clone, nil
+	if req.GetBody != nil {
+		body, err := req.GetBody()
+		if err != nil {
+			return nil, err
+		}
+		clone.Body = body
+		return clone, nil
+	}
+	if seeker, ok := req.Body.(io.ReadSeeker); ok {
+		if _, err := seeker.Seek(0, io.SeekStart); err != nil {
+			return nil, err
+		}
+		clone.Body = io.NopCloser(seeker)
+		return clone, nil
+	}
+	return nil, fmt.Errorf("cannot retry %s %s: its body cannot be replayed", req.Method, req.URL.Path)
 }
 
 // redactAuthHeaders returns a redacted value for sensitive headers
