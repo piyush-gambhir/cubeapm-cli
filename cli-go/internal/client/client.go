@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -63,10 +64,7 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 	scheme := u.Scheme
 
 	// serverBaseURL is the original server URL (for Kratos auth flows)
-	serverBaseURL := fmt.Sprintf("%s://%s", scheme, host)
-	if u.Port() != "" {
-		serverBaseURL = fmt.Sprintf("%s://%s:%s", scheme, host, u.Port())
-	}
+	serverBaseURL := (&url.URL{Scheme: scheme, Host: u.Host}).String()
 
 	transport := &http.Transport{
 		DialContext: (&net.Dialer{
@@ -90,9 +88,9 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 	}
 
 	return &Client{
-		queryBaseURL:  fmt.Sprintf("%s://%s:%d", scheme, host, cfg.QueryPort),
-		ingestBaseURL: fmt.Sprintf("%s://%s:%d", scheme, host, cfg.IngestPort),
-		adminBaseURL:  fmt.Sprintf("%s://%s:%d", scheme, host, cfg.AdminPort),
+		queryBaseURL:  (&url.URL{Scheme: scheme, Host: net.JoinHostPort(host, strconv.Itoa(cfg.QueryPort))}).String(),
+		ingestBaseURL: (&url.URL{Scheme: scheme, Host: net.JoinHostPort(host, strconv.Itoa(cfg.IngestPort))}).String(),
+		adminBaseURL:  (&url.URL{Scheme: scheme, Host: net.JoinHostPort(host, strconv.Itoa(cfg.AdminPort))}).String(),
 		serverBaseURL: serverBaseURL,
 		httpClient: &http.Client{
 			Timeout:   60 * time.Second,

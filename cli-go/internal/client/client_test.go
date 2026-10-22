@@ -390,3 +390,24 @@ func TestErrorHandling_500(t *testing.T) {
 		t.Errorf("expected error to contain response body, got: %v", err)
 	}
 }
+
+func TestNewClient_IPv6BaseURLs(t *testing.T) {
+	for _, server := range []string{"http://[::1]", "http://[::1]:8080"} {
+		t.Run(server, func(t *testing.T) {
+			c, err := NewClient(config.ResolvedConfig{Server: server, QueryPort: 3140, IngestPort: 3130, AdminPort: 3199})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for name, pair := range map[string][2]string{
+				"query":  {c.queryBaseURL, "http://[::1]:3140"},
+				"ingest": {c.ingestBaseURL, "http://[::1]:3130"},
+				"admin":  {c.adminBaseURL, "http://[::1]:3199"},
+				"auth":   {c.serverBaseURL, server},
+			} {
+				if pair[0] != pair[1] {
+					t.Errorf("%s URL = %q, want %q", name, pair[0], pair[1])
+				}
+			}
+		})
+	}
+}
