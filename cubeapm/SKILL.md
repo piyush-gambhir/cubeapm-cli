@@ -13,7 +13,7 @@ description: "Expert guide for using the cubeapm CLI to query distributed traces
 # Install script (macOS and Linux, no Go required)
 curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
 
-# Build from source (Go 1.27+, Go 1.27.2 recommended)
+# Build from source (Go 1.27+, Go 1.27.3 recommended)
 git clone https://github.com/piyush-gambhir/cubeapm-cli.git
 cd cubeapm-cli/cli-go
 make build

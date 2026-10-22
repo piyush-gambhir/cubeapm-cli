@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This guide will help you get starte
 
 ### Prerequisites
 
-- Go 1.27 or later (Go 1.27.2 recommended)
+- Go 1.27 or later (Go 1.27.3 recommended)
 - Make
 - Git
 

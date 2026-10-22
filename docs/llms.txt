@@ -61,7 +61,7 @@ curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/ins
 
 The script requires `curl` and `tar`. If the install directory is not writable it falls back to `sudo`.
 
-### Build from source (Go 1.27+, Go 1.27.2 recommended)
+### Build from source (Go 1.27+, Go 1.27.3 recommended)
 
 ```bash
 git clone https://github.com/piyush-gambhir/cubeapm-cli.git
