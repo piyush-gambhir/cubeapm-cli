@@ -2,11 +2,24 @@
 
 Checked 2026-09-06. These are documentation and local-test baselines, not certification against every server deployment.
 
+## Node tooling verification (26 October 2026)
+
+Node 26.12.1 checks pass for the docs and the separate npm-managed MCP bridge.
+The docs use pnpm 12.15.0 and matching Fumadocs core/UI 16.17.8 with MDX 15.4.10.
+Standalone TypeScript 7 checks, the 48-page Cloudflare static build, installation
+search, and Worker packaging dry run pass. Full and production audits report
+zero advisories for both packages; no direct dependency updates remain.
+
+The MCP bridge also passes a real stdio client session with five tool schemas,
+a disposable CLI fixture, JSON/read-only/no-input argument checks, prompt
+roundtrip and missing-binary handling. No authenticated CubeAPM call was made.
+The Go source, dependency files and binary release contract are unchanged.
+
 ## Build requirements
 
 - Go 1.27 or later; this checkout selects Go 1.27.3 using `toolchain` in `cli-go/go.mod`.
 - Go 1.27 builds for macOS require macOS 13 or later. See the [Go 1.27 release notes](https://go.dev/doc/go1.27).
-- Docs: Node 24 (24.21.0 or newer) and pnpm 12.11.2. Install with `pnpm install --frozen-lockfile` in `web/`.
+- Docs: Node.js 26.12.1 and pnpm 12.15.0. Install with `pnpm install --frozen-lockfile` in `web/`.
 - YAML uses the maintained [YAML organization v3 implementation](https://github.com/yaml/go-yaml), preserving the v3 configuration API.
 
 ## Upstream API baseline
