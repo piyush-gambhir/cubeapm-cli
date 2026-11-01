@@ -7,7 +7,7 @@
     "build:cloudflare": "next build --webpack && node scripts/prepare-cloudflare-assets.mjs cubeapm-cli",
     "deploy:cloudflare": "wrangler deploy",
     "dev": "next dev",
-    "start": "serve out",
+    "start": "http-server out -p 3000",
     "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
     "test:search": "node scripts/check-search.mjs",
     "bundle:analyze": "next analyze --output",
@@ -44,10 +44,10 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "postcss": "^8.5.31",
-    "serve": "^14.2.6",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
-    "wrangler": "4.152.0"
+    "wrangler": "4.152.0",
+    "http-server": "14.1.1"
   },
   "packageManager": "pnpm@12.15.0",
   "engines": {
