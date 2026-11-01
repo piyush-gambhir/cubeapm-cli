@@ -7,7 +7,7 @@
     "build:cloudflare": "next build --webpack && node scripts/prepare-cloudflare-assets.mjs cubeapm-cli",
     "deploy:cloudflare": "wrangler deploy",
     "dev": "next dev",
-    "start": "http-server out -p 3000",
+    "start": "node scripts/prepare-cloudflare-assets.mjs cubeapm-cli && http-server .cloudflare/assets -p 3000",
     "types:check": "fumadocs-mdx && next typegen && tsc --noEmit",
     "test:search": "node scripts/check-search.mjs",
     "bundle:analyze": "next analyze --output",
