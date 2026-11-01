@@ -1,0 +1,670 @@
+{
+  "date": "2026-10-29",
+  "repository": "piyush-gambhir/cubeapm-cli",
+  "base": "main",
+  "base_sha": "55b9aebc09fb85b4db3623efaeb9e1b83ac2c3dd",
+  "mode": "audit",
+  "publication_blocker": null,
+  "apps": [
+    {
+      "path": "web",
+      "declared_next": "16.4.3",
+      "installed_next": "16.4.3",
+      "snapshot": "audit-20261029-baseline",
+      "graph_sha256": "9fc590b0d18666f2c3aa4ce65c647f75b4b85b4057977613882fd508d3bc7f53",
+      "error": null,
+      "analysis": {
+        "meta": {
+          "type": "meta",
+          "schema_version": 1,
+          "snapshot_name": "audit-20261029-baseline",
+          "module_index_hash": "2a470faceb269268",
+          "route_count": 14,
+          "selected_routes": 14
+        },
+        "record_counts": {
+          "meta": 1,
+          "module": 2511,
+          "route": 14,
+          "output": 629,
+          "part": 8786,
+          "group": 222
+        },
+        "metric": "Sum of attributed compressed bytes for JavaScript outputs with [client-fs] provenance; includes deferred outputs and is not measured transfer or initial-load size.",
+        "unique_client_js_compressed_attribution": 509831,
+        "route_stats": [
+          {
+            "route": "/docs/[[...slug]]",
+            "client_js_compressed_attribution": 437036,
+            "bootstrap_js_compressed_attribution": 164947,
+            "client_js_files": 22,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/",
+            "client_js_compressed_attribution": 430543,
+            "bootstrap_js_compressed_attribution": 164947,
+            "client_js_files": 22,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/contact",
+            "client_js_compressed_attribution": 378076,
+            "bootstrap_js_compressed_attribution": 164947,
+            "client_js_files": 20,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/privacy",
+            "client_js_compressed_attribution": 378076,
+            "bootstrap_js_compressed_attribution": 164947,
+            "client_js_files": 20,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/terms",
+            "client_js_compressed_attribution": 378076,
+            "bootstrap_js_compressed_attribution": 164947,
+            "client_js_files": 20,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/_not-found",
+            "client_js_compressed_attribution": 362542,
+            "bootstrap_js_compressed_attribution": 164947,
+            "client_js_files": 18,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/llms.mdx/docs/[[...slug]]",
+            "client_js_compressed_attribution": 0,
+            "bootstrap_js_compressed_attribution": 0,
+            "client_js_files": 0,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/og/docs/[...slug]",
+            "client_js_compressed_attribution": 0,
+            "bootstrap_js_compressed_attribution": 0,
+            "client_js_files": 0,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/api/search",
+            "client_js_compressed_attribution": 0,
+            "bootstrap_js_compressed_attribution": 0,
+            "client_js_files": 0,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/llms-full.txt",
+            "client_js_compressed_attribution": 0,
+            "bootstrap_js_compressed_attribution": 0,
+            "client_js_files": 0,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/llms.txt",
+            "client_js_compressed_attribution": 0,
+            "bootstrap_js_compressed_attribution": 0,
+            "client_js_files": 0,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/og/home/image.png",
+            "client_js_compressed_attribution": 0,
+            "bootstrap_js_compressed_attribution": 0,
+            "client_js_files": 0,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/robots.txt",
+            "client_js_compressed_attribution": 0,
+            "bootstrap_js_compressed_attribution": 0,
+            "client_js_files": 0,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          },
+          {
+            "route": "/sitemap.xml",
+            "client_js_compressed_attribution": 0,
+            "bootstrap_js_compressed_attribution": 0,
+            "client_js_files": 0,
+            "entries_coverage": "exact",
+            "groups_coverage": "exact"
+          }
+        ],
+        "top_sources": [
+          {
+            "source": "node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.production.js",
+            "compressed_attribution": 63927,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/next/dist/build/polyfills/polyfill-nomodule.js",
+            "compressed_attribution": 39434,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/gsap/gsap-core.js",
+            "compressed_attribution": 19539,
+            "routes": ["/"]
+          },
+          {
+            "source": "node_modules/gsap/ScrollTrigger.js",
+            "compressed_attribution": 14117,
+            "routes": ["/"]
+          },
+          {
+            "source": "node_modules/tailwind-merge/dist/bundle-mjs.mjs",
+            "compressed_attribution": 8417,
+            "routes": ["/", "/contact", "/privacy", "/terms"]
+          },
+          {
+            "source": "node_modules/gsap/CSSPlugin.js",
+            "compressed_attribution": 7813,
+            "routes": ["/"]
+          },
+          {
+            "source": "node_modules/next/dist/compiled/react-server-dom-turbopack/cjs/react-server-dom-turbopack-client.browser.production.js",
+            "compressed_attribution": 7780,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/next/dist/client/components/segment-cache/cache.js",
+            "compressed_attribution": 6518,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/fumadocs-core/dist/utils/hast-to-jsx.js",
+            "compressed_attribution": 5916,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/cn/dist/engine.js",
+            "compressed_attribution": 5716,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/lenis/dist/lenis.mjs",
+            "compressed_attribution": 5345,
+            "routes": ["/"]
+          },
+          {
+            "source": "node_modules/cn/dist/tables.js",
+            "compressed_attribution": 4861,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/@fumadocs/base-ui/dist/components/dialog/search.js",
+            "compressed_attribution": 4046,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/@fumadocs/base-ui/dist/layouts/shared/page-actions.js",
+            "compressed_attribution": 4037,
+            "routes": ["/docs/[[...slug]]"]
+          },
+          {
+            "source": "node_modules/next/dist/client/components/render-tree.js",
+            "compressed_attribution": 3996,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/next/dist/client/components/segment-cache/scheduler.js",
+            "compressed_attribution": 3970,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/zbsearch/dist/browser/components/index.js",
+            "compressed_attribution": 3940,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          },
+          {
+            "source": "node_modules/gsap/Observer.js",
+            "compressed_attribution": 3839,
+            "routes": ["/"]
+          },
+          {
+            "source": "components/floating-header.tsx",
+            "compressed_attribution": 3729,
+            "routes": ["/", "/contact", "/privacy", "/terms"]
+          },
+          {
+            "source": "node_modules/property-information/lib/svg.js",
+            "compressed_attribution": 3235,
+            "routes": [
+              "/",
+              "/_not-found",
+              "/contact",
+              "/docs/[[...slug]]",
+              "/privacy",
+              "/terms"
+            ]
+          }
+        ],
+        "top_packages": [
+          ["next", 217088],
+          ["@base-ui/react", 59594],
+          ["gsap", 45360],
+          ["@fumadocs/base-ui", 36847],
+          ["zbsearch", 29535],
+          ["fumadocs-core", 17090],
+          ["(application)", 16497],
+          ["cn", 10663],
+          ["micromark-core-commonmark", 9882],
+          ["tailwind-merge", 8417],
+          ["lucide-react", 8171],
+          ["@base-ui/utils", 7896],
+          ["property-information", 6988],
+          ["micromark", 6585],
+          ["lenis", 5345]
+        ],
+        "duplicate_browser_versions": {},
+        "graph": {
+          "emitted_members": 311,
+          "sync_edges": 918,
+          "async_edges": 3,
+          "communities": 11,
+          "parameters": "NetworkX Louvain, resolution=1, weight=1 per distinct directed edge/kind before symmetrization, seed=0; seed=1 stability comparison.",
+          "stable_partition_across_seeds": false,
+          "ranked_communities": [
+            {
+              "community": 6,
+              "modules": 60,
+              "unambiguous_compressed_attribution": 93747,
+              "largest_packages": [
+                ["next", 87369],
+                ["@base-ui/react", 5286],
+                ["@base-ui/utils", 1092]
+              ]
+            },
+            {
+              "community": 9,
+              "modules": 55,
+              "unambiguous_compressed_attribution": 50189,
+              "largest_packages": [["next", 50189]]
+            },
+            {
+              "community": 8,
+              "modules": 66,
+              "unambiguous_compressed_attribution": 37557,
+              "largest_packages": [
+                ["@fumadocs/base-ui", 11614],
+                ["(application)", 9573],
+                ["fumadocs-core", 6208],
+                ["next", 3087]
+              ]
+            },
+            {
+              "community": 10,
+              "modules": 50,
+              "unambiguous_compressed_attribution": 22122,
+              "largest_packages": [
+                ["@base-ui/react", 16535],
+                ["@base-ui/utils", 4671],
+                ["@floating-ui/utils", 1110]
+              ]
+            },
+            {
+              "community": 0,
+              "modules": 32,
+              "unambiguous_compressed_attribution": 17011,
+              "largest_packages": [
+                ["next", 16691],
+                ["@swc/helpers", 320]
+              ]
+            },
+            {
+              "community": 2,
+              "modules": 32,
+              "unambiguous_compressed_attribution": 16108,
+              "largest_packages": [
+                ["next", 16032],
+                ["@swc/helpers", 76]
+              ]
+            },
+            {
+              "community": 5,
+              "modules": 12,
+              "unambiguous_compressed_attribution": 4286,
+              "largest_packages": [["next", 4286]]
+            },
+            {
+              "community": 4,
+              "modules": 1,
+              "unambiguous_compressed_attribution": 662,
+              "largest_packages": [["@fumadocs/base-ui", 662]]
+            }
+          ],
+          "unmapped_or_ambiguous_compressed_attribution": 267892
+        },
+        "candidates": [
+          {
+            "package": "@base-ui/react",
+            "unique_compressed_attribution": 59594,
+            "route": "/docs/[[...slug]]",
+            "roots": [
+              "[project]/components/provider.tsx [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/codeblock.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/heading.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/docs/client.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/docs/page/index.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/shared/client.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/framework/index.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/link.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/lucide-react@1.61.0_@types+react@19.3.0_react@19.3.1/node_modules/lucide-react/dist/esm/Icon.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/app-dir/link.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/app-next-turbopack.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/builtin/global-error.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/client-page.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/client-segment.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/http-access-fallback/error-boundary.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/layout-router.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/render-from-template-context.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/lib/framework/boundary-components.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/lib/metadata/generate/icon-mark.js [app-client] (ecmascript)"
+            ],
+            "targets": [
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/dialog/backdrop/DialogBackdrop.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/dialog/index.parts.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/dialog/popup/DialogPopup.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/dialog/portal/DialogPortal.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/dialog/portal/DialogPortalContext.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/dialog/root/DialogRoot.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/dialog/root/DialogRootContext.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/dialog/root/useDialogRoot.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/dialog/store/DialogStore.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/components/FloatingFocusManager.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/components/FloatingPortal.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/components/FloatingTree.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/hooks/useClick.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/hooks/useDismiss.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/hooks/useSyncedFloatingRootContext.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/utils/composite.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/utils/constants.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/utils/element.mjs [app-client] (ecmascript) <locals>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/utils/enqueueFocus.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/utils/nodes.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/floating-ui-react/utils/tabbable.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/TransitionStatusDataAttributes.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/composite/composite.mjs [app-client] (ecmascript) <locals>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/composite/root/CompositeRootContext.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/constants.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/createBaseUIEventDetails.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/direction-context/DirectionContext.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/getStateAttributesProps.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/reason-parts.mjs [app-client] (ecmascript) <export * as REASONS .escapeKey>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/reason-parts.mjs [app-client] (ecmascript) <export * as REASONS .focusOut>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/reason-parts.mjs [app-client] (ecmascript) <export * as REASONS .imperativeAction>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/reason-parts.mjs [app-client] (ecmascript) <export * as REASONS .none>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/reason-parts.mjs [app-client] (ecmascript) <export * as REASONS .outsidePress>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/reason-parts.mjs [app-client] (ecmascript) <export * as REASONS .triggerHover>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/reason-parts.mjs [app-client] (ecmascript) <export * as REASONS .triggerPress>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/stateAttributesMapping.mjs [app-client] (ecmascript) <locals>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/use-button/useButton.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/useBaseUiId.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/useOpenChangeComplete.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/useRenderElement.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/internals/useTransitionStatus.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/merge-props/mergeProps.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/CommonPopupDataAttributes.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/CommonTriggerDataAttributes.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/FocusGuard.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/InternalBackdrop.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/NullStore.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/popupStateMapping.mjs [app-client] (ecmascript) <locals>",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/popups/popupStoreUtils.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/popups/store.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/popups/usePopupHandleStore.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/resolveRef.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@base-ui+react@1.9.0_@types+react@19.3.0_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/@base-ui/react/utils/useOpenInteractionType.mjs [app-client] (ecmascript)"
+            ],
+            "missing_roots": 0,
+            "status": "provisional; render optionality and browser timing are unverified",
+            "cut": [],
+            "cut_status": "No synchronous root-to-target path in the known emitted subgraph; inspect async or render-dependent triggers."
+          },
+          {
+            "package": "gsap",
+            "unique_compressed_attribution": 45360,
+            "route": null,
+            "roots": [],
+            "targets": [],
+            "missing_roots": 0,
+            "status": "attribution-only investigation; exact emitted identity membership is unavailable",
+            "cut": [],
+            "cut_status": "A directed cut cannot be established for this attributed contributor because no exact emitted module membership joins to it."
+          },
+          {
+            "package": "@fumadocs/base-ui",
+            "unique_compressed_attribution": 36847,
+            "route": "/docs/[[...slug]]",
+            "roots": [
+              "[project]/components/provider.tsx [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/codeblock.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/heading.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/docs/client.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/docs/page/index.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/shared/client.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/framework/index.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/link.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/lucide-react@1.61.0_@types+react@19.3.0_react@19.3.1/node_modules/lucide-react/dist/esm/Icon.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/app-dir/link.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/app-next-turbopack.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/builtin/global-error.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/client-page.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/client-segment.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/http-access-fallback/error-boundary.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/layout-router.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/render-from-template-context.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/lib/framework/boundary-components.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/lib/metadata/generate/icon-mark.js [app-client] (ecmascript)"
+            ],
+            "targets": [
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/_virtual/_rolldown/runtime.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/codeblock.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/dialog/search-default.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/dialog/search.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/heading.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/ui/button.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/ui/collapsible.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/contexts/i18n.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/contexts/search.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/contexts/tree.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/docs/client.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/docs/page/index.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/shared/client.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/utils/merge-refs.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/utils/use-copy-button.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/utils/use-is-scroll-top.js [app-client] (ecmascript)"
+            ],
+            "missing_roots": 0,
+            "status": "provisional; render optionality and browser timing are unverified",
+            "cut": [],
+            "cut_capacity": 9435,
+            "cut_status": "No editable cut with bootstrap, client-reference roots, layouts and dependency internals protected."
+          },
+          {
+            "package": "zbsearch",
+            "unique_compressed_attribution": 29535,
+            "route": null,
+            "roots": [],
+            "targets": [],
+            "missing_roots": 0,
+            "status": "attribution-only investigation; exact emitted identity membership is unavailable",
+            "cut": [],
+            "cut_status": "A directed cut cannot be established for this attributed contributor because no exact emitted module membership joins to it."
+          },
+          {
+            "package": "fumadocs-core",
+            "unique_compressed_attribution": 17090,
+            "route": "/docs/[[...slug]]",
+            "roots": [
+              "[project]/components/provider.tsx [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/codeblock.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/components/heading.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/docs/client.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/docs/page/index.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/@fumadocs+base-ui@16.17.8_@types+mdx@2.0.14_@types+react@19.3.0_fumadocs-core@16.17.8_@_eebf1061348eb0dfcab7741cb23f2393/node_modules/@fumadocs/base-ui/dist/layouts/shared/client.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/framework/index.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/link.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/lucide-react@1.61.0_@types+react@19.3.0_react@19.3.1/node_modules/lucide-react/dist/esm/Icon.mjs [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/app-dir/link.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/app-next-turbopack.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/builtin/global-error.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/client-page.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/client-segment.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/http-access-fallback/error-boundary.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/layout-router.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/client/components/render-from-template-context.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/lib/framework/boundary-components.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/next@16.4.3_@types+node@26.6.5_react-dom@19.3.1_react@19.3.1__react@19.3.1/node_modules/next/dist/lib/metadata/generate/icon-mark.js [app-client] (ecmascript)"
+            ],
+            "targets": [
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/framework/index.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/link.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/parse-BU3fTLtO.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/remove-undefined-CzMSKybq.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/search/client/algolia.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/search/client/fetch.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/search/client/mixedbread.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/search/client/orama-cloud-legacy.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/search/client/orama-cloud.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/search/client/orama-static.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/url-BVHvi3_K.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/use-search-Dy8lBrbN.js [app-client] (ecmascript)",
+              "[project]/node_modules/.pnpm/fumadocs-core@16.17.8_@mdx-js+mdx@3.1.1_supports-color@10.2.2__@types+estree-jsx@1.0.5__d9f3b5023a51bee573c5643c7d307e45/node_modules/fumadocs-core/dist/utils/use-on-change.js [app-client] (ecmascript)"
+            ],
+            "missing_roots": 0,
+            "status": "provisional; render optionality and browser timing are unverified",
+            "cut": [],
+            "cut_capacity": 3774,
+            "cut_status": "No editable cut with bootstrap, client-reference roots, layouts and dependency internals protected."
+          }
+        ],
+        "client_dependency_scan": [],
+        "possible_server_only_leaks": [],
+        "suppressed_matches": [],
+        "coverage": {
+          "unsupported_client_js_outputs": [],
+          "unknown_route_entries": [],
+          "unknown_route_groups": [],
+          "groups_without_joined_trigger": 0,
+          "sync_dependencies_absent_from_emitted_subgraph": 98,
+          "attribution_conflicts": 0,
+          "action_like_identities_requiring_source_mapping": 2,
+          "limits": [
+            "All minimum cuts are provisional; optionality, module side effects and actual mount/preload timing have not been behavior-tested.",
+            "Source-to-output attribution is distinct from exact module identity; ambiguous community bytes are excluded from community ranking.",
+            "No production browser requests, cold-navigation timing, interaction timing, Web Vitals or emitted implementation contents were inspected.",
+            "Potential Server Action stubs and ownership matches remain unverified until source-to-reference mapping and emitted contents are inspected."
+          ]
+        }
+      }
+    }
+  ],
+  "verification": [
+    {
+      "app": "web",
+      "command": "pnpm run types:check",
+      "exit_code": 0,
+      "seconds": 1.1
+    },
+    {
+      "app": "(repository)",
+      "command": "git diff --check",
+      "exit_code": 0,
+      "seconds": 0.0
+    }
+  ]
+}

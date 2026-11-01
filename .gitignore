@@ -17,3 +17,6 @@ dist/
 
 # dependencies
 node_modules/
+
+# Local bundle graph exports
+/.bundle-analysis/
