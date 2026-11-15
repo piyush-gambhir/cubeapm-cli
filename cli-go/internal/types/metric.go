@@ -6,7 +6,6 @@ import (
 	"strconv"
 )
 
-// MetricsResult represents a Prometheus API response.
 type MetricsResult struct {
 	Status    string      `json:"status"`
 	Data      MetricsData `json:"data"`
@@ -15,34 +14,27 @@ type MetricsResult struct {
 	Warnings  []string    `json:"warnings,omitempty"`
 }
 
-// MetricsData contains the result type and actual data.
 type MetricsData struct {
-	ResultType string          `json:"resultType"` // vector, matrix, scalar, string
+	ResultType string          `json:"resultType"`
 	Result     json.RawMessage `json:"result"`
 }
 
-// VectorResult is a list of instant-query samples.
 type VectorResult []Sample
 
-// MatrixResult is a list of range-query series.
 type MatrixResult []Series
 
-// Sample represents a single instant vector sample.
 type Sample struct {
 	Metric map[string]string `json:"metric"`
 	Value  SamplePair        `json:"value"`
 }
 
-// Series represents a range vector result.
 type Series struct {
 	Metric map[string]string `json:"metric"`
 	Values []SamplePair      `json:"values"`
 }
 
-// SamplePair is a [timestamp, value] pair from Prometheus.
 type SamplePair [2]interface{}
 
-// Timestamp returns the Unix timestamp from the sample pair.
 func (s SamplePair) Timestamp() float64 {
 	switch v := s[0].(type) {
 	case float64:
@@ -55,7 +47,6 @@ func (s SamplePair) Timestamp() float64 {
 	}
 }
 
-// Value returns the string value from the sample pair.
 func (s SamplePair) Value() string {
 	switch v := s[1].(type) {
 	case string:
@@ -67,19 +58,16 @@ func (s SamplePair) Value() string {
 	}
 }
 
-// PromLabelsResponse wraps /api/v1/labels response.
 type PromLabelsResponse struct {
 	Status string   `json:"status"`
 	Data   []string `json:"data"`
 }
 
-// PromLabelValuesResponse wraps /api/v1/label/{label}/values response.
 type PromLabelValuesResponse struct {
 	Status string   `json:"status"`
 	Data   []string `json:"data"`
 }
 
-// PromSeriesResponse wraps /api/v1/series response.
 type PromSeriesResponse struct {
 	Status string              `json:"status"`
 	Data   []map[string]string `json:"data"`

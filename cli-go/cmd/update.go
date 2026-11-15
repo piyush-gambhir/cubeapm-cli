@@ -18,10 +18,8 @@ import (
 
 const updateRepo = "piyush-gambhir/cubeapm-cli"
 
-// stdinIsTerminal decides whether update may prompt. Tests replace it.
 var stdinIsTerminal = func() bool { return term.IsTerminal(int(os.Stdin.Fd())) }
 
-// updateCheckResult is the `update --check -o json|yaml` document.
 type updateCheckResult struct {
 	CurrentVersion  string `json:"current_version" yaml:"current_version"`
 	LatestVersion   string `json:"latest_version" yaml:"latest_version"`
@@ -86,8 +84,6 @@ func runUpdate(cmd *cobra.Command, checkOnly, yes bool) error {
 		return fmt.Errorf("cannot check for updates: %q is a development build; install a release with the install script or from https://github.com/%s/releases", Version, updateRepo)
 	}
 
-	// FetchLatest stores the answer in the notifier's cache, so a later notice
-	// agrees with this check (and, after an install, stays quiet).
 	info, err := update.FetchLatest(cmd.Context(), Version, updateRepo, config.ConfigDir(), update.CommandTimeout)
 	if err != nil {
 		return fmt.Errorf("checking for updates: %w", err)
@@ -168,7 +164,6 @@ func printUpdateCheck(out io.Writer, info *update.UpdateInfo, method string) err
 	return nil
 }
 
-// confirmUpdate asks "Update now? [Y/n]"; an empty answer means yes.
 func confirmUpdate(in io.Reader, out io.Writer) bool {
 	fmt.Fprint(out, "Update now? [Y/n] ")
 	line, err := bufio.NewReader(in).ReadString('\n')

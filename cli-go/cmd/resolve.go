@@ -10,7 +10,6 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/output"
 )
 
-// resolution describes arguments using the real parser without running a command.
 type resolution struct {
 	Command     string            `json:"command"`
 	Effect      string            `json:"effect"`
@@ -28,7 +27,6 @@ func newCommandsCmd() *cobra.Command {
 		Short:              "Show the command, effect and flags that arguments would run, without running them",
 		Example:            "  cubeapm commands resolve -- traces services\n  cubeapm commands resolve -- -o json ingest logs --file logs.jsonl",
 		DisableFlagParsing: true,
-		// Override root hooks to avoid config, credentials, and update checks.
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			cmdutil.OutputFormat = output.FormatJSON
 			return nil
@@ -41,7 +39,7 @@ func newCommandsCmd() *cobra.Command {
 					break
 				}
 			}
-			probe := cmd.Root() // nothing executes and the process exits after answering
+			probe := cmd.Root()
 			target, rest, err := probe.Find(args)
 			if err != nil || target == probe || !target.Runnable() {
 				return fmt.Errorf("arguments do not name a runnable cubeapm command")

@@ -54,7 +54,6 @@ func TestWriteError_JSON_NoStatusCode(t *testing.T) {
 		t.Errorf("resp.Error = %q, want %q", resp.Error, "generic error")
 	}
 
-	// status_code should be omitted (zero value with omitempty)
 	raw := buf.String()
 	if strings.Contains(raw, "status_code") {
 		t.Errorf("JSON output should omit status_code when 0, got: %s", raw)

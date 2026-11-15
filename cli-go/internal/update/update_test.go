@@ -22,9 +22,6 @@ func setGOOS(t *testing.T, osName, arch string) {
 	t.Cleanup(func() { goos, goarch = origOS, origArch })
 }
 
-// latestServer answers releases/latest like github.com: a 302 to the tag page
-// (or status when non-zero). It counts lookups and requests to the tag page,
-// which a correct client never makes.
 func latestServer(t *testing.T, tag string, status int) (lookups, followed *atomic.Int32) {
 	t.Helper()
 	return redirectServer(t, status, func(base string) string {
@@ -32,8 +29,6 @@ func latestServer(t *testing.T, tag string, status int) (lookups, followed *atom
 	})
 }
 
-// redirectServer serves releases/latest with a 302 to location(serverURL), or
-// with status when non-zero. An empty location sends no Location header.
 func redirectServer(t *testing.T, status int, location func(base string) string) (lookups, followed *atomic.Int32) {
 	t.Helper()
 	lookups, followed = new(atomic.Int32), new(atomic.Int32)
@@ -90,8 +85,6 @@ func TestFetchLatestCachesSuccessAndFailure(t *testing.T) {
 		t.Fatal("cache older than 24h should be stale")
 	}
 
-	// A failed lookup is cached as well, so the next command does not retry;
-	// the last known release survives the failure.
 	hits, _ := latestServer(t, "", http.StatusForbidden)
 	if _, err := FetchLatest(context.Background(), "0.2.9", testRepo, dir, time.Second); err == nil {
 		t.Fatal("expected an error from a failing GitHub")
@@ -152,7 +145,6 @@ func TestFetchLatestRejectsBadRedirects(t *testing.T) {
 			if followed.Load() != 0 {
 				t.Fatal("the client followed the redirect")
 			}
-			// The background check caches the failure.
 			if info, ok := CachedCheck("0.2.9", testRepo, dir, time.Now()); !ok || info != nil {
 				t.Fatalf("CachedCheck after a bad redirect = %+v, %v; want a cached failure", info, ok)
 			}
@@ -174,8 +166,6 @@ func TestRecordCheckAttempt(t *testing.T) {
 	if err := RecordCheckAttempt(dir, now); err != nil {
 		t.Fatal(err)
 	}
-	// Until the answer arrives the attempt counts as a check that kept the last
-	// known release, so the next command does not ask GitHub again.
 	info, ok := CachedCheck("0.2.9", testRepo, dir, now.Add(time.Minute))
 	if !ok || info == nil || info.LatestVersion != "0.2.10" {
 		t.Fatalf("CachedCheck after an attempt = %+v, %v", info, ok)
@@ -278,7 +268,6 @@ func TestCachedUpdateInfo(t *testing.T) {
 	if info := CachedUpdateInfo("0.2.9", testRepo, dir); info == nil || !info.Available || info.LatestVersion != "0.2.10" {
 		t.Fatalf("CachedUpdateInfo = %+v", info)
 	}
-	// After a manual upgrade the cached release is older than this binary.
 	if info := CachedUpdateInfo("0.2.11", testRepo, dir); info != nil {
 		t.Fatalf("stale cache reported %+v", info)
 	}

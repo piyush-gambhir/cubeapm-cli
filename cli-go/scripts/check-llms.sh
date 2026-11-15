@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Guard: every top-level command the CLI exposes must be documented in docs/llms.txt,
-# so the agent-facing manual stays in sync as commands change. Run via `make llms-check`
-# (and optionally in CI). Exits non-zero if a command is missing from docs/llms.txt.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 bin="$(mktemp)"; trap 'rm -f "$bin"' EXIT

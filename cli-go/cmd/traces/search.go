@@ -90,7 +90,6 @@ Examples:
 				return err
 			}
 
-			// Build tags JSON from --tags and --status flags
 			tagsMap := make(map[string]string)
 			if env != "" {
 				tagsMap["environment"] = env
@@ -128,7 +127,6 @@ Examples:
 				if len(trace.Spans) == 0 {
 					continue
 				}
-				// Find the root span (no parent reference or first span)
 				rootSpan := trace.Spans[0]
 				for _, span := range trace.Spans {
 					if len(span.References) == 0 {
@@ -137,10 +135,6 @@ Examples:
 					}
 				}
 
-				// Resolve the service name from the process map, falling back to
-				// a service.name span tag or the --service filter. CubeAPM's native
-				// search response omits the process map, so without this fallback the
-				// SERVICE column would always be blank.
 				serviceName := ""
 				if proc, ok := trace.Processes[rootSpan.ProcessID]; ok {
 					serviceName = proc.ServiceName
@@ -157,7 +151,6 @@ Examples:
 					serviceName = service
 				}
 
-				// Get status from tags
 				spanStatus := "OK"
 				for _, tag := range rootSpan.Tags {
 					if tag.Key == "otel.status_code" || tag.Key == "status.code" {

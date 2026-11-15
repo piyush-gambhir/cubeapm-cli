@@ -6,16 +6,13 @@ import (
 	"strings"
 )
 
-// TableFormatter outputs data as an aligned text table.
 type TableFormatter struct {
 	NoColor bool
 }
 
-// Format writes a TableDef as an aligned text table.
 func (f *TableFormatter) Format(w io.Writer, data interface{}) error {
 	td, ok := data.(TableDef)
 	if !ok {
-		// Fall back to JSON for non-table data
 		jf := &JSONFormatter{}
 		return jf.Format(w, data)
 	}
@@ -24,7 +21,6 @@ func (f *TableFormatter) Format(w io.Writer, data interface{}) error {
 		return nil
 	}
 
-	// Calculate column widths
 	widths := make([]int, len(td.Headers))
 	for i, h := range td.Headers {
 		widths[i] = len(h)
@@ -37,7 +33,6 @@ func (f *TableFormatter) Format(w io.Writer, data interface{}) error {
 		}
 	}
 
-	// Print header
 	header := make([]string, len(td.Headers))
 	for i, h := range td.Headers {
 		header[i] = padRight(h, widths[i])
@@ -49,7 +44,6 @@ func (f *TableFormatter) Format(w io.Writer, data interface{}) error {
 		fmt.Fprintln(w, headerLine)
 	}
 
-	// Print rows
 	for _, row := range td.Rows {
 		cells := make([]string, len(td.Headers))
 		for i := range td.Headers {

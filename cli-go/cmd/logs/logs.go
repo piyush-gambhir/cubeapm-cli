@@ -6,7 +6,6 @@ import (
 	logsdelete "github.com/piyush-gambhir/cubeapm-cli/cli-go/cmd/logs/delete"
 )
 
-// NewLogsCmd creates the "logs" parent command.
 func NewLogsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "logs",

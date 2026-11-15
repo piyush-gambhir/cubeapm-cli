@@ -16,8 +16,6 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/update"
 )
 
-// updateEnv runs the real root command as release 0.2.9 against a fake
-// GitHub, with stderr and stdin treated as terminals and every opt-out unset.
 type updateEnv struct {
 	t            *testing.T
 	configDir    string
@@ -67,7 +65,6 @@ func newUpdateEnv(t *testing.T, latestTag string, block <-chan struct{}) *update
 		"CUBEAPM_NO_INPUT", "CUBEAPM_READ_ONLY", "CUBEAPM_SERVER", "GOBIN"} {
 		t.Setenv(name, "")
 	}
-	// Keep the test binary out of any Go bin directory unless a test opts in.
 	t.Setenv("GOPATH", t.TempDir())
 	t.Setenv("HOME", t.TempDir())
 
@@ -90,7 +87,6 @@ func (e *updateEnv) run(args ...string) error {
 	return rootCmd.Execute()
 }
 
-// seedCache records a fresh check that found latest.
 func (e *updateEnv) seedCache(latest string) {
 	e.t.Helper()
 	data := fmt.Sprintf(`{"last_checked":%q,"latest_version":%q}`, time.Now().UTC().Format(time.RFC3339), latest)
@@ -99,7 +95,6 @@ func (e *updateEnv) seedCache(latest string) {
 	}
 }
 
-// useGoBin makes the running test binary look like a make install build.
 func (e *updateEnv) useGoBin() {
 	e.t.Helper()
 	exe, err := update.ExecutablePath()
@@ -117,7 +112,7 @@ func TestUpdateNotifierSuppressed(t *testing.T) {
 		version string
 		noTTY   bool
 		args    []string
-		lookups int32 // update --check queries GitHub itself
+		lookups int32
 	}{
 		{name: "stderr not a terminal", noTTY: true, args: configGet},
 		{name: "CI", env: map[string]string{"CI": "true"}, args: configGet},
@@ -147,7 +142,7 @@ func TestUpdateNotifierSuppressed(t *testing.T) {
 				t.Setenv(k, v)
 			}
 			if tc.name == "update command" {
-				env.seedCache("0.2.9") // nothing new, so update --check prints no notice either
+				env.seedCache("0.2.9")
 			}
 
 			if err := env.run(tc.args...); err != nil {
@@ -226,7 +221,6 @@ func TestUpdateNoticeWaitsAtMostOneSecond(t *testing.T) {
 	err := env.run("config", "get", "server")
 	elapsed := time.Since(start)
 	check := pendingUpdateCheck
-	// Let the background request finish before the temp dirs go away.
 	t.Cleanup(func() {
 		close(block)
 		if check != nil {
@@ -249,8 +243,6 @@ func TestUpdateNoticeWaitsForSlowCheck(t *testing.T) {
 	env := newUpdateEnv(t, "v0.2.10", block)
 	time.AfterFunc(200*time.Millisecond, func() { close(block) })
 
-	// config get finishes long before GitHub answers; the day's only check
-	// must still produce the notice on this run.
 	if err := env.run("config", "get", "server"); err != nil {
 		t.Fatal(err)
 	}
@@ -284,7 +276,6 @@ func TestUpdateCheckCountsWhenCommandExitsFirst(t *testing.T) {
 	}
 	first := pendingUpdateCheck
 	var second *updateCheck
-	// Let the background requests finish before the temp dirs go away.
 	t.Cleanup(func() {
 		close(block)
 		for _, check := range []*updateCheck{first, second} {
@@ -297,8 +288,6 @@ func TestUpdateCheckCountsWhenCommandExitsFirst(t *testing.T) {
 		t.Fatal("no update check started")
 	}
 
-	// The first command finished while GitHub had not answered. The next one
-	// must answer from the recorded attempt instead of asking again.
 	if err := env.run("config", "get", "server"); err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +301,7 @@ func TestUpdateCheckCountsWhenCommandExitsFirst(t *testing.T) {
 
 func TestUpdateCheckJSON(t *testing.T) {
 	env := newUpdateEnv(t, "v0.2.10", nil)
-	env.seedCache("0.2.9") // --check must bypass the cache
+	env.seedCache("0.2.9")
 	if err := env.run("update", "--check", "-o", "json"); err != nil {
 		t.Fatal(err)
 	}

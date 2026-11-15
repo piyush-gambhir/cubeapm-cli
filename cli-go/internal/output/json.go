@@ -5,12 +5,9 @@ import (
 	"io"
 )
 
-// JSONFormatter outputs data as indented JSON.
 type JSONFormatter struct{}
 
-// Format writes data as pretty-printed JSON.
 func (f *JSONFormatter) Format(w io.Writer, data interface{}) error {
-	// If it's a TableDef, convert to a list of maps for JSON output
 	if td, ok := data.(TableDef); ok {
 		data = tableDefToMaps(td)
 	}

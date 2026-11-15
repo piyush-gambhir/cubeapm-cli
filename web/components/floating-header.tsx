@@ -94,7 +94,6 @@ export function FloatingHeader() {
     const onScroll = () => {
       const y = window.scrollY;
       const delta = y - lastY;
-      // Small deltas are ignored so momentum jitter doesn't flicker the bar.
       if (Math.abs(delta) < 8) return;
       setHidden(y > 120 && delta > 0);
       lastY = y;

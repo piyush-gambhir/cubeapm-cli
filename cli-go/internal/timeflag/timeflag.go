@@ -9,28 +9,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ParseTime parses a time string in various formats:
-//   - RFC3339 (2024-01-15T10:30:00Z)
-//   - Unix timestamp (1705312200)
-//   - Relative time (now, -1h, now-30m, -2d)
 func ParseTime(input string) (time.Time, error) {
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return time.Time{}, fmt.Errorf("empty time string")
 	}
 
-	// Handle "now"
 	if strings.EqualFold(input, "now") {
 		return time.Now(), nil
 	}
 
-	// Handle relative time: -1h, -30m, now-1h, etc.
 	if strings.HasPrefix(input, "-") || strings.HasPrefix(strings.ToLower(input), "now-") {
 		durStr := input
 		if strings.HasPrefix(strings.ToLower(durStr), "now") {
-			durStr = durStr[3:] // strip "now", leaving "-1h"
+			durStr = durStr[3:]
 		}
-		// durStr is now like "-1h", "-30m", "-2d"
 		d, err := ParseDuration(strings.TrimPrefix(durStr, "-"))
 		if err != nil {
 			return time.Time{}, fmt.Errorf("parsing relative time %q: %w", input, err)
@@ -38,42 +31,29 @@ func ParseTime(input string) (time.Time, error) {
 		return time.Now().Add(-d), nil
 	}
 
-	// Try RFC3339
 	if t, err := time.Parse(time.RFC3339, input); err == nil {
 		return t, nil
 	}
 
-	// Try RFC3339Nano
 	if t, err := time.Parse(time.RFC3339Nano, input); err == nil {
 		return t, nil
 	}
 
-	// Try date only. Timezone-less inputs are interpreted as local time:
-	// users typing wall-clock timestamps (e.g. from an incident timeline)
-	// mean their own timezone. Parsing them as UTC silently shifts the
-	// window by the UTC offset, which made narrow --from/--to ranges miss
-	// all data.
 	if t, err := time.ParseInLocation("2006-01-02", input, time.Local); err == nil {
 		return t, nil
 	}
 
-	// Try date+time without timezone (local time, see above)
 	if t, err := time.ParseInLocation("2006-01-02T15:04:05", input, time.Local); err == nil {
 		return t, nil
 	}
 
-	// Try Unix timestamp
-	// Values < 1e12 are treated as seconds (covers dates up to year ~33658).
-	// Values >= 1e12 are treated as milliseconds.
 	if ts, err := strconv.ParseInt(input, 10, 64); err == nil {
 		if ts >= int64(1e12) {
-			// milliseconds
 			return time.UnixMilli(ts), nil
 		}
 		return time.Unix(ts, 0), nil
 	}
 
-	// Try Unix float timestamp
 	if ts, err := strconv.ParseFloat(input, 64); err == nil {
 		sec := int64(ts)
 		nsec := int64((ts - float64(sec)) * 1e9)
@@ -83,28 +63,20 @@ func ParseTime(input string) (time.Time, error) {
 	return time.Time{}, fmt.Errorf("unable to parse time %q: use RFC3339, Unix timestamp, or relative format (-1h, now-30m)", input)
 }
 
-// ParseDuration parses a duration string that supports d/h/m/s suffixes.
-// Go's time.ParseDuration does not support 'd' (days), so we handle that.
-// Examples: "1h", "30m", "2d", "1d12h", "90s", "1h30m"
 func ParseDuration(input string) (time.Duration, error) {
 	input = strings.TrimSpace(input)
 	if input == "" {
 		return 0, fmt.Errorf("empty duration string")
 	}
 
-	// Validate the format: must be a sequence of <number><unit> pairs where
-	// unit is one of d, h, m, s, ms, us, or ns. Reject strings with invalid
-	// characters that might be silently ignored.
 	if err := validateDurationFormat(input); err != nil {
 		return 0, err
 	}
 
-	// Check if it contains 'd' for days
 	if strings.Contains(input, "d") {
 		return parseDurationWithDays(input)
 	}
 
-	// Fall back to Go's built-in parser
 	d, err := time.ParseDuration(input)
 	if err != nil {
 		return 0, fmt.Errorf("parsing duration %q: %w", input, err)
@@ -112,14 +84,10 @@ func ParseDuration(input string) (time.Duration, error) {
 	return d, nil
 }
 
-// validateDurationFormat checks that the input is a valid sequence of
-// <number><unit> tokens. Returns an error if extra or invalid characters
-// are present (e.g., "1x2h" or "abc").
 func validateDurationFormat(input string) error {
 	remaining := input
 	found := false
 	for remaining != "" {
-		// Skip leading number (digits and optional decimal point).
 		i := 0
 		for i < len(remaining) && (remaining[i] >= '0' && remaining[i] <= '9' || remaining[i] == '.') {
 			i++
@@ -131,7 +99,6 @@ func validateDurationFormat(input string) error {
 			return fmt.Errorf("invalid duration %q: missing unit suffix", input)
 		}
 
-		// Match unit suffix.
 		rest := remaining[i:]
 		matched := false
 		for _, unit := range []string{"ms", "us", "ns", "d", "h", "m", "s"} {
@@ -157,7 +124,6 @@ func parseDurationWithDays(input string) (time.Duration, error) {
 	remaining := input
 
 	for remaining != "" {
-		// Find the next number
 		i := 0
 		for i < len(remaining) && (remaining[i] >= '0' && remaining[i] <= '9' || remaining[i] == '.') {
 			i++
@@ -195,12 +161,9 @@ func parseDurationWithDays(input string) (time.Duration, error) {
 	return total, nil
 }
 
-// ResolveTimeRange resolves --from, --to, and --last flags into a concrete
-// time range. If none are provided, defaults to --last 1h.
 func ResolveTimeRange(from, to, last string) (start, end time.Time, err error) {
 	now := time.Now()
 
-	// If --last is specified, it takes precedence as a convenience flag
 	if last != "" {
 		d, err := ParseDuration(last)
 		if err != nil {
@@ -209,7 +172,6 @@ func ResolveTimeRange(from, to, last string) (start, end time.Time, err error) {
 		return now.Add(-d), now, nil
 	}
 
-	// If both --from and --to are set
 	if from != "" && to != "" {
 		start, err = ParseTime(from)
 		if err != nil {
@@ -222,7 +184,6 @@ func ResolveTimeRange(from, to, last string) (start, end time.Time, err error) {
 		return start, end, nil
 	}
 
-	// If only --from, default --to to now
 	if from != "" {
 		start, err = ParseTime(from)
 		if err != nil {
@@ -231,7 +192,6 @@ func ResolveTimeRange(from, to, last string) (start, end time.Time, err error) {
 		return start, now, nil
 	}
 
-	// If only --to, default --from to 1h before --to
 	if to != "" {
 		end, err = ParseTime(to)
 		if err != nil {
@@ -240,11 +200,9 @@ func ResolveTimeRange(from, to, last string) (start, end time.Time, err error) {
 		return end.Add(-1 * time.Hour), end, nil
 	}
 
-	// Default: last 1 hour
 	return now.Add(-1 * time.Hour), now, nil
 }
 
-// AddTimeFlags adds --from, --to, and --last flags to a cobra command.
 func AddTimeFlags(cmd *cobra.Command, from, to, last *string) {
 	cmd.Flags().StringVar(from, "from", "", "Start time (RFC3339, Unix timestamp, or relative like -1h; timestamps without a timezone are local time)")
 	cmd.Flags().StringVar(to, "to", "", "End time (RFC3339, Unix timestamp, or relative; timestamps without a timezone are local time)")

@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewIngestCmd creates the "ingest" parent command.
 func NewIngestCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "ingest",

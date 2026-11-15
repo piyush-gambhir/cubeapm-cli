@@ -1,12 +1,4 @@
 #!/usr/bin/env bash
-# Local release wrapper for cubeapm-cli. Wraps goreleaser.
-#
-# Usage:
-#   bash scripts/deploy.sh production    # full release; requires a vN.N.N tag at HEAD
-#   bash scripts/deploy.sh development   # snapshot build, no publish
-#
-# The actual goreleaser config is in .goreleaser.yaml.
-# In CI, .github/workflows/release.yml runs the same goreleaser command on tag push.
 
 set -euo pipefail
 

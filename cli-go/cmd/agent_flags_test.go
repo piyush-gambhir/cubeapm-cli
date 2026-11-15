@@ -11,7 +11,6 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/output"
 )
 
-// TestNoInputBlocksLogin verifies that login returns an error when --no-input is set.
 func TestNoInputBlocksLogin(t *testing.T) {
 	cmdutil.NoInput = true
 	defer func() { cmdutil.NoInput = false }()
@@ -26,7 +25,6 @@ func TestNoInputBlocksLogin(t *testing.T) {
 	}
 }
 
-// TestNoInputEnvVar verifies that CUBEAPM_NO_INPUT env var is respected.
 func TestNoInputEnvVar(t *testing.T) {
 	tests := []struct {
 		envValue string
@@ -57,7 +55,6 @@ func TestNoInputEnvVar(t *testing.T) {
 	}
 }
 
-// TestQuietEnvVar verifies that CUBEAPM_QUIET env var is respected.
 func TestQuietEnvVar(t *testing.T) {
 	tests := []struct {
 		envValue string
@@ -88,7 +85,6 @@ func TestQuietEnvVar(t *testing.T) {
 	}
 }
 
-// TestStructuredJSONError verifies that WriteError produces structured JSON.
 func TestStructuredJSONError(t *testing.T) {
 	var buf bytes.Buffer
 	err := fmt.Errorf("authentication failed (HTTP 401)")
@@ -107,7 +103,6 @@ func TestStructuredJSONError(t *testing.T) {
 	}
 }
 
-// TestStructuredErrorPlainText verifies that WriteError falls back to plain text for non-JSON.
 func TestStructuredErrorPlainText(t *testing.T) {
 	var buf bytes.Buffer
 	err := fmt.Errorf("connection refused")
@@ -123,7 +118,6 @@ func TestStructuredErrorPlainText(t *testing.T) {
 	}
 }
 
-// TestRootCmdHasNoInputFlag verifies the --no-input flag is registered on root.
 func TestRootCmdHasNoInputFlag(t *testing.T) {
 	flag := rootCmd.PersistentFlags().Lookup("no-input")
 	if flag == nil {
@@ -134,7 +128,6 @@ func TestRootCmdHasNoInputFlag(t *testing.T) {
 	}
 }
 
-// TestRootCmdHasQuietFlag verifies the --quiet/-q flag is registered on root.
 func TestRootCmdHasQuietFlag(t *testing.T) {
 	flag := rootCmd.PersistentFlags().Lookup("quiet")
 	if flag == nil {

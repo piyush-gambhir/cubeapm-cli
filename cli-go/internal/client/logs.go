@@ -12,7 +12,6 @@ import (
 
 const logsSelectBasePath = "/api/logs/select/logsql"
 
-// QueryLogs queries logs using LogsQL syntax.
 func (c *Client) QueryLogs(query string, from, to time.Time, limit int) ([]types.LogEntry, error) {
 	var entries []types.LogEntry
 	err := c.QueryLogsStream(query, from, to, limit, func(entry types.LogEntry) error {
@@ -22,8 +21,6 @@ func (c *Client) QueryLogs(query string, from, to time.Time, limit int) ([]types
 	return entries, err
 }
 
-// QueryLogsStream queries logs using LogsQL syntax with streaming output.
-// It reads newline-delimited JSON and calls handler for each entry.
 func (c *Client) QueryLogsStream(query string, from, to time.Time, limit int, handler func(types.LogEntry) error) error {
 	params := url.Values{}
 	params.Set("query", query)
@@ -48,7 +45,6 @@ func (c *Client) QueryLogsStream(query string, from, to time.Time, limit int, ha
 	}
 
 	return c.streamJSON(resp, func(raw json.RawMessage) error {
-		// Parse the raw JSON into a map first to capture all fields
 		var fields map[string]interface{}
 		if err := json.Unmarshal(raw, &fields); err != nil {
 			return fmt.Errorf("parsing log entry: %w", err)
@@ -76,7 +72,6 @@ func (c *Client) QueryLogsStream(query string, from, to time.Time, limit int, ha
 	})
 }
 
-// GetLogHits returns log volume/hits data.
 func (c *Client) GetLogHits(query string, from, to time.Time, step string) (*types.LogHitsResult, error) {
 	params := url.Values{}
 	params.Set("query", query)
@@ -89,9 +84,6 @@ func (c *Client) GetLogHits(query string, from, to time.Time, step string) (*typ
 	if step != "" {
 		params.Set("step", step)
 	} else if !from.IsZero() && !to.IsZero() {
-		// Without an explicit step the server collapses the whole range into a
-		// single, mislabeled bucket. Derive ~60 buckets so the histogram and
-		// per-bucket timestamps are meaningful by default.
 		stepDur := to.Sub(from) / 60
 		if stepDur < time.Second {
 			stepDur = time.Second
@@ -117,7 +109,6 @@ func (c *Client) GetLogHits(query string, from, to time.Time, step string) (*typ
 	return &result, nil
 }
 
-// GetLogStats returns stats query results.
 func (c *Client) GetLogStats(query string, from, to time.Time) (*types.StatsResult, error) {
 	params := url.Values{}
 	params.Set("query", query)
@@ -138,10 +129,6 @@ func (c *Client) GetLogStats(query string, from, to time.Time) (*types.StatsResu
 		return nil, err
 	}
 
-	// CubeAPM returns Prometheus-style JSON for stats, not NDJSON:
-	//   {"status":"success","data":{"resultType":"vector"|"matrix",
-	//     "result":[{"metric":{labels},"value":[ts,"v"]      // vector
-	//                              ,"values":[[ts,"v"],...]}]}} // matrix
 	var promResp struct {
 		Status string `json:"status"`
 		Error  string `json:"error"`
@@ -167,8 +154,6 @@ func (c *Client) GetLogStats(query string, from, to time.Time) (*types.StatsResu
 		for k, v := range r.Metric {
 			row.Fields[k] = v
 		}
-		// The aggregated value is value[1] (vector) or the last of values[]
-		// (matrix). Don't clobber a real label/alias literally named "value".
 		if _, taken := row.Fields["value"]; !taken {
 			if len(r.Value) == 2 {
 				row.Fields["value"] = fmt.Sprintf("%v", r.Value[1])
@@ -181,11 +166,6 @@ func (c *Client) GetLogStats(query string, from, to time.Time) (*types.StatsResu
 	return result, nil
 }
 
-// GetLogStreams returns log streams.
-//
-// The server rejects empty queries with an opaque "missing query" error,
-// so default to `*` (match-all) when the caller doesn't narrow the query.
-// Callers that genuinely want no filter get what they'd expect anyway.
 func (c *Client) GetLogStreams(query string, from, to time.Time) ([]types.StreamInfo, error) {
 	params := url.Values{}
 	if query == "" {
@@ -209,8 +189,6 @@ func (c *Client) GetLogStreams(query string, from, to time.Time) ([]types.Stream
 		return nil, err
 	}
 
-	// CubeAPM returns a single JSON object {"values":[{"value":..,"hits":..},...]},
-	// not newline-delimited JSON.
 	var wrapper struct {
 		Values []types.StreamInfo `json:"values"`
 	}
@@ -220,11 +198,6 @@ func (c *Client) GetLogStreams(query string, from, to time.Time) ([]types.Stream
 	return wrapper.Values, nil
 }
 
-// GetLogFieldNames returns available log field names.
-//
-// Default to `*` when the caller doesn't specify a query, the server
-// rejects empty queries, and users generally want "all fields" when they
-// don't narrow the search.
 func (c *Client) GetLogFieldNames(query string, from, to time.Time) ([]types.FieldInfo, error) {
 	params := url.Values{}
 	if query == "" {
@@ -257,7 +230,6 @@ func (c *Client) GetLogFieldNames(query string, from, to time.Time) ([]types.Fie
 	return wrapper.Values, nil
 }
 
-// GetLogFieldValues returns values for a specific log field.
 func (c *Client) GetLogFieldValues(field, query string, from, to time.Time, limit int) ([]types.FieldValueInfo, error) {
 	params := url.Values{}
 	params.Set("field", field)

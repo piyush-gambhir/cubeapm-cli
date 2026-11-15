@@ -24,8 +24,8 @@ import (
 type archiveEntry struct {
 	name     string
 	body     string
-	typeflag byte        // tar only; 0 means a regular file
-	mode     fs.FileMode // zip only; 0 means a regular file
+	typeflag byte
+	mode     fs.FileMode
 }
 
 func tarGz(t *testing.T, entries ...archiveEntry) []byte {
@@ -93,8 +93,6 @@ func sha256Hex(data []byte) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// releaseServer serves one release's archive and checksums.txt and counts
-// download requests.
 func releaseServer(t *testing.T, version, archiveName string, archive []byte, checksums string) *atomic.Int32 {
 	t.Helper()
 	var hits atomic.Int32
@@ -209,7 +207,6 @@ func TestInstallWindowsRenamesRunningExecutableAside(t *testing.T) {
 	assertFile(t, target+".old", "old exe")
 	assertOnlyFiles(t, dir, "cubeapm.exe", "cubeapm.exe.old")
 
-	// The next start removes the leftover.
 	removeOldExecutable("windows", func() (string, error) { return target, nil })
 	assertOnlyFiles(t, dir, "cubeapm.exe")
 }
@@ -232,7 +229,7 @@ func TestReplaceExecutableWindowsRestoresOnFailure(t *testing.T) {
 	calls := 0
 	rename := func(oldpath, newpath string) error {
 		calls++
-		if calls == 2 { // moving the new binary into place
+		if calls == 2 {
 			return errors.New("simulated failure")
 		}
 		return os.Rename(oldpath, newpath)

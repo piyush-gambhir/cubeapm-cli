@@ -4,8 +4,6 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import { execFile } from "node:child_process";
 
-// Resolved via PATH by default (execFile uses execvp-style lookup for
-// bare command names). Override with CUBEAPM_BIN if it's not on PATH.
 const CUBEAPM_BIN = process.env.CUBEAPM_BIN || "cubeapm";
 
 function runCubeapm(args) {

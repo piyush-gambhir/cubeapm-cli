@@ -15,39 +15,22 @@ export interface Feature {
 }
 
 export interface SiteConfig {
-  /** Display name, e.g. "CubeAPM CLI" */
   name: string;
-  /** The binary invoked in examples, e.g. "cubeapm" */
   binary: string;
-  /** GitHub "owner/repo" */
   repo: string;
-  /** One-line hero heading */
   tagline: string;
-  /** Hero sub-paragraph */
   description: string;
-  /** Small pill above the heading */
   badge: string;
-  /** One-line install command shown in the hero */
   installCommand: string;
-  /** Feature cards */
   features: Feature[];
-  /** Title above the code block */
   exampleTitle: string;
-  /** Shell example rendered in the terminal card */
   example: string;
-  /** Optional: tech / query languages / integrations this CLI speaks (logo strip) */
   compatible?: string[];
-  /** Optional: features section heading (default: "Everything, from one binary") */
   featuresTitle?: string;
-  /** Optional: features section subheading */
   featuresSubtitle?: string;
-  /** Optional: CTA band body (default mentions installing the binary) */
   ctaBody?: string;
-  /** Optional: per-site accent expressed as an OKLCH color */
   accent?: string;
-  /** Optional: human-readable accent name */
   accentName?: string;
-  /** Optional: hex twin of the accent, for surfaces without oklch() support (OG images) */
   accentHex?: string;
 }
 

@@ -190,7 +190,6 @@ func TestSearchTraces_WithTags(t *testing.T) {
 		t.Fatalf("SearchTraces() error = %v", err)
 	}
 
-	// Verify tags is valid JSON
 	var parsed map[string]string
 	if err := json.Unmarshal([]byte(gotTags), &parsed); err != nil {
 		t.Fatalf("tags param is not valid JSON: %v", err)
@@ -379,12 +378,12 @@ func TestDecodeCubeID(t *testing.T) {
 		},
 		{
 			name: "standard base64 trace ID decodes to hex",
-			in:   "S/kvNXezTaajzpKdDg5HNg==", // 16 bytes
+			in:   "S/kvNXezTaajzpKdDg5HNg==",
 			want: "4bf92f3577b34da6a3ce929d0e0e4736",
 		},
 		{
 			name: "raw URL-safe base64 decodes to hex",
-			in:   "S_kvNXezTaajzpKdDg5HNg", // same 16 bytes, no padding
+			in:   "S_kvNXezTaajzpKdDg5HNg",
 			want: "4bf92f3577b34da6a3ce929d0e0e4736",
 		},
 		{
@@ -410,7 +409,6 @@ func TestDecodeCubeID(t *testing.T) {
 
 func TestGetTrace_NativeShape(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// CubeAPM native trace-get: {spans:[{...,process:{service_name}}], process_map:[]}
 		w.Write([]byte(`{"spans":[{"trace_id":"e6319082328509fe1e0aa6734da74b2b","span_id":"1e0aa6734da74b2b","operation_name":"GET /x","start_time":"2026-06-14T11:09:32Z","duration":1234,"process":{"service_name":"CONSOLE-BACKEND"}}],"process_map":[]}`))
 	}))
 	defer ts.Close()
@@ -442,7 +440,7 @@ func TestGetServicesByEnv(t *testing.T) {
 		if len(r.URL.Query()["match[]"]) == 0 {
 			t.Errorf("expected match[] param for %s", r.URL.Path)
 		}
-		data := []string{"A", "B"} // label "service"
+		data := []string{"A", "B"}
 		if strings.Contains(r.URL.Path, "/label/service.name/") {
 			data = []string{"B", "C"}
 		}
@@ -455,7 +453,7 @@ func TestGetServicesByEnv(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GetServicesByEnv() error = %v", err)
 	}
-	if calls != 4 { // 2 labels x 2 env matchers
+	if calls != 4 {
 		t.Errorf("got %d label-values calls, want 4", calls)
 	}
 	got := map[string]bool{}
@@ -496,8 +494,6 @@ func TestConvertCubeTagsPreservesZeroValues(t *testing.T) {
 	}
 }
 
-// The public CubeAPM trace API takes Unix seconds, independently of the
-// microsecond timestamps used internally by the Jaeger-compatible renderer.
 func TestTraceFetchDocumentedTimeRange(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/api/traces/api/v1/traces/abc123" {

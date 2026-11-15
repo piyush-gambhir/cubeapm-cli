@@ -77,7 +77,6 @@ Examples:
 				return nil
 			}
 
-			// Discover all field names from rows
 			fieldSet := make(map[string]bool)
 			for _, row := range result.Rows {
 				for k := range row.Fields {

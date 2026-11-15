@@ -13,7 +13,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   return [...new Set(routes)].map((route) => ({
-    // String concatenation on purpose: new URL('/x', siteUrl) drops the /cubeapm-cli segment.
     url: route === '/' ? siteUrl : `${siteUrl}${route}`,
     changeFrequency: route.startsWith('/docs') ? 'weekly' : 'monthly',
     priority: route === '/' ? 1 : route === '/docs' ? 0.9 : 0.6,

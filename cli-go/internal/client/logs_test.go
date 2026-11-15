@@ -18,7 +18,6 @@ func TestQueryLogs(t *testing.T) {
 		r.ParseForm()
 		gotQuery = r.FormValue("query")
 		gotLimit = r.FormValue("limit")
-		// Return newline-delimited JSON
 		fmt.Fprintln(w, `{"_msg":"error occurred","_time":"2024-01-15T10:00:00Z","_stream":"{host=\"web-1\"}"}`)
 		fmt.Fprintln(w, `{"_msg":"another error","_time":"2024-01-15T10:01:00Z","_stream":"{host=\"web-2\"}"}`)
 	}))
@@ -130,7 +129,6 @@ func TestGetStats(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
-		// CubeAPM returns Prometheus-vector JSON for stats, not NDJSON.
 		fmt.Fprintln(w, `{"status":"success","data":{"resultType":"vector","result":[{"metric":{"service":"api-gateway"},"value":[1700000000,"100"]},{"metric":{"service":"payments"},"value":[1700000000,"50"]}]}}`)
 	}))
 	defer ts.Close()
@@ -255,7 +253,6 @@ func TestGetFieldValues(t *testing.T) {
 
 func TestQueryLogs_EmptyResult(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Return empty body (no log entries)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
@@ -272,7 +269,6 @@ func TestQueryLogs_EmptyResult(t *testing.T) {
 
 func TestQueryLogs_StreamingResponse(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Return multiple newline-delimited JSON entries
 		for i := 0; i < 5; i++ {
 			fmt.Fprintf(w, `{"_msg":"log entry %d","_time":"2024-01-15T10:%02d:00Z","_stream":"{host=\"web-1\"}","level":"info"}`, i, i)
 			fmt.Fprintln(w)
@@ -290,7 +286,6 @@ func TestQueryLogs_StreamingResponse(t *testing.T) {
 		t.Fatalf("got %d entries, want 5", len(entries))
 	}
 
-	// Verify streaming parsed all entries including extra fields
 	if entries[0].Message != "log entry 0" {
 		t.Errorf("entries[0].Message = %q, want %q", entries[0].Message, "log entry 0")
 	}
