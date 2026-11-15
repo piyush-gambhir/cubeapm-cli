@@ -74,7 +74,6 @@ Examples:
 				return nil
 			}
 
-			// DOT format output
 			if outputDot {
 				return renderDOT(deps)
 			}
@@ -107,20 +106,17 @@ func renderDOT(deps []types.Dependency) error {
 	fmt.Fprintln(w, "  node [shape=box, style=rounded];")
 	fmt.Fprintln(w)
 
-	// Collect unique services
 	services := make(map[string]bool)
 	for _, d := range deps {
 		services[d.Parent] = true
 		services[d.Child] = true
 	}
 
-	// Write node definitions
 	for svc := range services {
 		fmt.Fprintf(w, "  %q;\n", svc)
 	}
 	fmt.Fprintln(w)
 
-	// Write edges
 	for _, d := range deps {
 		fmt.Fprintf(w, "  %q -> %q [label=%q];\n", d.Parent, d.Child, strconv.FormatInt(d.CallCount, 10))
 	}

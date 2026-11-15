@@ -51,7 +51,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	// Prompt for profile name
 	fmt.Print("Profile name [default]: ")
 	profileName, _ := reader.ReadString('\n')
 	profileName = strings.TrimSpace(profileName)
@@ -59,7 +58,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		profileName = "default"
 	}
 
-	// Prompt for server
 	defaultServer := cmdutil.Resolved.Server
 	if defaultServer != "" {
 		fmt.Printf("CubeAPM server [%s]: ", defaultServer)
@@ -75,7 +73,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("server address is required")
 	}
 
-	// Prompt for auth method
 	fmt.Println("\nAuthentication:")
 	fmt.Println("  1. Email/Password")
 	fmt.Println("  2. No authentication")
@@ -98,7 +95,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	case "1":
 		authMethod = "kratos"
 
-		// Prompt for email
 		fmt.Print("Email: ")
 		email, _ = reader.ReadString('\n')
 		email = strings.TrimSpace(email)
@@ -106,17 +102,15 @@ func runLogin(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("email is required for email/password authentication")
 		}
 
-		// Prompt for password (hidden input)
 		fmt.Print("Password: ")
 		if term.IsTerminal(int(os.Stdin.Fd())) {
 			pwBytes, err := term.ReadPassword(int(os.Stdin.Fd()))
-			fmt.Println() // newline after hidden input
+			fmt.Println()
 			if err != nil {
 				return fmt.Errorf("reading password: %w", err)
 			}
 			password = string(pwBytes)
 		} else {
-			// Fallback for piped input
 			password, _ = reader.ReadString('\n')
 			password = strings.TrimSpace(password)
 		}
@@ -124,12 +118,10 @@ func runLogin(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("password is required for email/password authentication")
 		}
 
-		// Test Kratos login immediately
 		if !cmdutil.Quiet {
 			fmt.Print("\nAuthenticating... ")
 		}
 
-		// Build the server base URL for Kratos
 		serverURL := server
 		if !strings.HasPrefix(serverURL, "http://") && !strings.HasPrefix(serverURL, "https://") {
 			serverURL = "https://" + serverURL
@@ -156,7 +148,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid choice %q: enter 1 or 2", authChoice)
 	}
 
-	// Prompt for query port
 	fmt.Printf("Query port [%d]: ", config.DefaultQueryPort)
 	queryPortStr, _ := reader.ReadString('\n')
 	queryPortStr = strings.TrimSpace(queryPortStr)
@@ -165,7 +156,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		fmt.Sscanf(queryPortStr, "%d", &queryPort)
 	}
 
-	// Prompt for ingest port
 	fmt.Printf("Ingest port [%d]: ", config.DefaultIngestPort)
 	ingestPortStr, _ := reader.ReadString('\n')
 	ingestPortStr = strings.TrimSpace(ingestPortStr)
@@ -174,7 +164,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		fmt.Sscanf(ingestPortStr, "%d", &ingestPort)
 	}
 
-	// Prompt for admin port
 	fmt.Printf("Admin port [%d]: ", config.DefaultAdminPort)
 	adminPortStr, _ := reader.ReadString('\n')
 	adminPortStr = strings.TrimSpace(adminPortStr)
@@ -183,7 +172,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		fmt.Sscanf(adminPortStr, "%d", &adminPort)
 	}
 
-	// Test connection with the configured auth
 	if !cmdutil.Quiet && authMethod != "kratos" {
 		fmt.Print("\nTesting connection... ")
 	}
@@ -203,10 +191,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	// Use the Prometheus-standard labels endpoint for the connection test.
-	// It validates reachability + auth against a stable API contract that
-	// every CubeAPM server exposes, without depending on optional
-	// Jaeger-compatible endpoints like /services.
 	if _, err := testClient.GetLabels(time.Time{}, time.Time{}); err != nil {
 		if !cmdutil.Quiet && authMethod != "kratos" {
 			fmt.Println("FAILED")
@@ -221,7 +205,6 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Save profile
 	profile := config.Profile{
 		Server:        server,
 		QueryPort:     queryPort,

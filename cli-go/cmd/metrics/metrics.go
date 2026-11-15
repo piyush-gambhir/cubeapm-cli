@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewMetricsCmd creates the "metrics" parent command.
 func NewMetricsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "metrics",

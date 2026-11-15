@@ -15,13 +15,11 @@ const (
 	DefaultOutput     = "table"
 )
 
-// Config represents the CLI configuration file structure.
 type Config struct {
 	CurrentProfile string             `yaml:"current_profile"`
 	Profiles       map[string]Profile `yaml:"profiles"`
 }
 
-// Profile represents a named connection profile.
 type Profile struct {
 	Server     string `yaml:"server"`
 	QueryPort  int    `yaml:"query_port,omitempty"`
@@ -30,15 +28,13 @@ type Profile struct {
 	Output     string `yaml:"output,omitempty"`
 	ReadOnly   bool   `yaml:"read_only,omitempty"`
 
-	// Kratos (email/password) authentication
-	AuthMethod    string `yaml:"auth_method,omitempty"`    // "kratos" or "none"; empty = auto-detect
-	Email         string `yaml:"email,omitempty"`          // login email for Kratos auth
-	Password      string `yaml:"password,omitempty"`       // login password for Kratos auth (stored for auto-re-auth)
-	SessionCookie string `yaml:"session_cookie,omitempty"` // cached Kratos session cookie
-	SessionExpiry string `yaml:"session_expiry,omitempty"` // RFC3339 when session expires
+	AuthMethod    string `yaml:"auth_method,omitempty"`
+	Email         string `yaml:"email,omitempty"`
+	Password      string `yaml:"password,omitempty"`
+	SessionCookie string `yaml:"session_cookie,omitempty"`
+	SessionExpiry string `yaml:"session_expiry,omitempty"`
 }
 
-// ConfigDir returns the path to the configuration directory.
 func ConfigDir() string {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
 		return filepath.Join(xdg, "cubeapm-cli")
@@ -50,13 +46,10 @@ func ConfigDir() string {
 	return filepath.Join(home, ".config", "cubeapm-cli")
 }
 
-// ConfigPath returns the full path to the configuration file.
 func ConfigPath() string {
 	return filepath.Join(ConfigDir(), "config.yaml")
 }
 
-// Load reads and parses the configuration file.
-// If the file does not exist, it returns a default empty config.
 func Load() (*Config, error) {
 	cfg := &Config{
 		Profiles: make(map[string]Profile),
@@ -81,7 +74,6 @@ func Load() (*Config, error) {
 	return cfg, nil
 }
 
-// Save writes the configuration to disk.
 func Save(cfg *Config) error {
 	dir := ConfigDir()
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -106,8 +98,6 @@ func Save(cfg *Config) error {
 	return nil
 }
 
-// GetCurrentProfile returns the currently active profile, or an empty Profile
-// with default ports if no profile is set.
 func (c *Config) GetCurrentProfile() Profile {
 	if c.CurrentProfile != "" {
 		if p, ok := c.Profiles[c.CurrentProfile]; ok {
@@ -117,8 +107,6 @@ func (c *Config) GetCurrentProfile() Profile {
 	return Profile{}
 }
 
-// WithDefaults returns a copy of the profile with default values applied
-// for any unset fields.
 func (p Profile) WithDefaults() Profile {
 	out := p
 	if out.QueryPort == 0 {

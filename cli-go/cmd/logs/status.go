@@ -11,7 +11,6 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/output"
 )
 
-// LogsStatus is the structured shape emitted by `cubeapm logs status -o json`.
 type LogsStatus struct {
 	Query                 string `json:"query"`
 	LookbackDays          int    `json:"lookbackDays"`
@@ -123,7 +122,6 @@ Examples:
 				return output.Print(cmdutil.OutputFormat, cmdutil.Resolved.NoColor, status)
 			}
 
-			// Human-readable table.
 			fmt.Println("CubeAPM logs retention probe")
 			fmt.Printf("  Query:        %s\n", status.Query)
 			fmt.Printf("  Lookback:     %d days\n", status.LookbackDays)

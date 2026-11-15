@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewDeleteCmd creates the "delete" parent command under logs.
 func NewDeleteCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",

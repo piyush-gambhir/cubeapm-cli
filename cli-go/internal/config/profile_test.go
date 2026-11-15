@@ -23,7 +23,6 @@ func TestCreateProfile(t *testing.T) {
 		t.Errorf("Server = %q, want %q", cfg.Profiles["production"].Server, "example.com")
 	}
 
-	// Creating a profile that already exists should fail
 	err = cfg.CreateProfile("production", p)
 	if err == nil {
 		t.Fatal("CreateProfile() expected error for duplicate profile, got nil")
@@ -45,7 +44,6 @@ func TestUpdateProfile(t *testing.T) {
 		t.Errorf("Email = %q, want %q", cfg.Profiles["dev"].Email, "new@dev.com")
 	}
 
-	// Updating a profile that doesn't exist should fail
 	err = cfg.UpdateProfile("nonexistent", Profile{})
 	if err == nil {
 		t.Fatal("UpdateProfile() expected error for nonexistent profile, got nil")
@@ -61,7 +59,6 @@ func TestDeleteProfile(t *testing.T) {
 		},
 	}
 
-	// Delete a non-current profile
 	err := cfg.DeleteProfile("production")
 	if err != nil {
 		t.Fatalf("DeleteProfile() error = %v", err)
@@ -73,7 +70,6 @@ func TestDeleteProfile(t *testing.T) {
 		t.Errorf("CurrentProfile = %q, should remain %q", cfg.CurrentProfile, "staging")
 	}
 
-	// Delete the current profile should clear CurrentProfile
 	err = cfg.DeleteProfile("staging")
 	if err != nil {
 		t.Fatalf("DeleteProfile() error = %v", err)
@@ -82,7 +78,6 @@ func TestDeleteProfile(t *testing.T) {
 		t.Errorf("CurrentProfile = %q, want empty after deleting current profile", cfg.CurrentProfile)
 	}
 
-	// Deleting a nonexistent profile should fail
 	err = cfg.DeleteProfile("nonexistent")
 	if err == nil {
 		t.Fatal("DeleteProfile() expected error for nonexistent profile, got nil")
@@ -105,7 +100,6 @@ func TestSetCurrentProfile(t *testing.T) {
 		t.Errorf("CurrentProfile = %q, want %q", cfg.CurrentProfile, "production")
 	}
 
-	// Switch to another profile
 	err = cfg.SetCurrentProfile("staging")
 	if err != nil {
 		t.Fatalf("SetCurrentProfile() error = %v", err)
@@ -114,7 +108,6 @@ func TestSetCurrentProfile(t *testing.T) {
 		t.Errorf("CurrentProfile = %q, want %q", cfg.CurrentProfile, "staging")
 	}
 
-	// Setting a nonexistent profile should fail
 	err = cfg.SetCurrentProfile("nonexistent")
 	if err == nil {
 		t.Fatal("SetCurrentProfile() expected error for nonexistent profile, got nil")
@@ -143,7 +136,6 @@ func TestListProfiles(t *testing.T) {
 		}
 	}
 
-	// Empty config
 	emptyCfg := &Config{Profiles: make(map[string]Profile)}
 	emptyNames := emptyCfg.ListProfiles()
 	if len(emptyNames) != 0 {

@@ -12,7 +12,6 @@ import (
 
 const metricsBasePath = "/api/metrics/api/v1"
 
-// QueryInstant performs an instant PromQL query.
 func (c *Client) QueryInstant(query string, t time.Time) (*types.MetricsResult, error) {
 	params := url.Values{}
 	params.Set("query", query)
@@ -32,7 +31,6 @@ func (c *Client) QueryInstant(query string, t time.Time) (*types.MetricsResult, 
 	return &resp, nil
 }
 
-// QueryRange performs a range PromQL query.
 func (c *Client) QueryRange(query string, from, to time.Time, step string) (*types.MetricsResult, error) {
 	params := url.Values{}
 	params.Set("query", query)
@@ -41,7 +39,6 @@ func (c *Client) QueryRange(query string, from, to time.Time, step string) (*typ
 	if step != "" {
 		params.Set("step", step)
 	} else {
-		// Auto-calculate step: aim for ~250 data points
 		duration := to.Sub(from)
 		stepDur := duration / 250
 		if stepDur < time.Second {
@@ -62,7 +59,6 @@ func (c *Client) QueryRange(query string, from, to time.Time, step string) (*typ
 	return &resp, nil
 }
 
-// GetLabels returns all label names.
 func (c *Client) GetLabels(from, to time.Time) ([]string, error) {
 	params := url.Values{}
 	if !from.IsZero() {
@@ -84,9 +80,6 @@ func (c *Client) GetLabels(from, to time.Time) ([]string, error) {
 	return resp.Data, nil
 }
 
-// GetLabelValues returns values for a specific label. The optional match
-// selectors (repeatable, e.g. {env="PROD"}) scope the returned values to
-// series matching ANY of them, CubeAPM/Prometheus support match[] here.
 func (c *Client) GetLabelValues(label string, match []string, from, to time.Time) ([]string, error) {
 	params := url.Values{}
 	for _, m := range match {
@@ -112,7 +105,6 @@ func (c *Client) GetLabelValues(label string, match []string, from, to time.Time
 	return resp.Data, nil
 }
 
-// GetSeries returns matching time series.
 func (c *Client) GetSeries(match []string, from, to time.Time, limit int) ([]map[string]string, error) {
 	params := url.Values{}
 	for _, m := range match {
@@ -140,14 +132,12 @@ func (c *Client) GetSeries(match []string, from, to time.Time, limit int) ([]map
 	return resp.Data, nil
 }
 
-// FormatMetricLabels formats a metric label set as a string like {label="value",...}.
 func FormatMetricLabels(labels map[string]string) string {
 	if len(labels) == 0 {
 		return "{}"
 	}
 
 	parts := make([]string, 0, len(labels))
-	// Put __name__ first if present
 	if name, ok := labels["__name__"]; ok {
 		parts = append(parts, name)
 	}

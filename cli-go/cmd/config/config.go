@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewConfigCmd creates the "config" parent command.
 func NewConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",

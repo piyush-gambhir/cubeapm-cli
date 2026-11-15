@@ -11,16 +11,11 @@ import (
 	"time"
 )
 
-// KratosSession holds the result of a successful Kratos login.
 type KratosSession struct {
-	Cookie    string    // full cookie header value to send on requests
-	ExpiresAt time.Time // when the session expires
+	Cookie    string
+	ExpiresAt time.Time
 }
 
-// KratosLogin performs the Ory Kratos browser login flow:
-//  1. GET /api/auth/self-service/login/browser → flow ID + CSRF token
-//  2. POST /api/auth/self-service/login?flow=<id> with credentials
-//  3. Extract session cookie from the cookie jar
 func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSession, error) {
 	jar, err := cookiejar.New(nil)
 	if err != nil {
@@ -30,7 +25,6 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 	client := &http.Client{
 		Jar:     jar,
 		Timeout: 30 * time.Second,
-		// Do not follow redirects automatically for the initial flow request
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -38,7 +32,6 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 
 	baseURL := strings.TrimRight(serverBaseURL, "/")
 
-	// Step 1: Initiate login flow
 	flowURL := baseURL + "/api/auth/self-service/login/browser"
 	if verbose {
 		fmt.Printf("> GET %s\n", flowURL)
@@ -50,8 +43,6 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 	}
 	defer resp.Body.Close()
 
-	// The browser flow returns a 303 redirect; we need the flow ID from the Location header.
-	// But we also need to fetch the flow details to get the CSRF token.
 	var flowID string
 	if resp.StatusCode == http.StatusSeeOther || resp.StatusCode == http.StatusFound {
 		loc := resp.Header.Get("Location")
@@ -62,7 +53,6 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 	}
 
 	if flowID == "" {
-		// Try parsing the response body as JSON (API might return flow directly)
 		body, _ := io.ReadAll(resp.Body)
 		var flowResp struct {
 			ID string `json:"id"`
@@ -80,8 +70,6 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 		fmt.Printf("  Flow ID: %s\n", flowID)
 	}
 
-	// Step 1b: Fetch the flow details to get the CSRF token
-	// Allow redirects for this request
 	flowClient := &http.Client{
 		Jar:     jar,
 		Timeout: 30 * time.Second,
@@ -108,7 +96,6 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 		return nil, fmt.Errorf("extracting CSRF token: %w", err)
 	}
 
-	// Step 2: Submit credentials
 	loginURL := baseURL + "/api/auth/self-service/login?flow=" + flowID
 	if verbose {
 		fmt.Printf("> POST %s\n", loginURL)
@@ -144,7 +131,6 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 	}
 
 	if resp3.StatusCode == http.StatusUnauthorized || resp3.StatusCode == http.StatusBadRequest {
-		// Parse error from Kratos
 		var errResp struct {
 			UI struct {
 				Messages []struct {
@@ -171,27 +157,24 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 		return nil, fmt.Errorf("login failed (HTTP %d): %s", resp3.StatusCode, string(loginBody))
 	}
 
-	// Extract session expiry from response
 	var sessionResp struct {
 		Session struct {
 			ExpiresAt string `json:"expires_at"`
 		} `json:"session"`
 	}
-	expiresAt := time.Now().Add(24 * time.Hour) // default
+	expiresAt := time.Now().Add(24 * time.Hour)
 	if json.Unmarshal(loginBody, &sessionResp) == nil && sessionResp.Session.ExpiresAt != "" {
 		if t, err := time.Parse(time.RFC3339, sessionResp.Session.ExpiresAt); err == nil {
 			expiresAt = t
 		}
 	}
 
-	// Extract session cookies from the jar
 	u, _ := url.Parse(baseURL)
 	cookies := jar.Cookies(u)
 	if len(cookies) == 0 {
 		return nil, fmt.Errorf("login succeeded but no session cookies were set")
 	}
 
-	// Build cookie header string
 	cookieParts := make([]string, 0, len(cookies))
 	for _, c := range cookies {
 		cookieParts = append(cookieParts, c.Name+"="+c.Value)
@@ -204,7 +187,6 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 	}, nil
 }
 
-// extractCSRFToken parses the Kratos flow JSON and finds the csrf_token value.
 func extractCSRFToken(flowBody []byte) (string, error) {
 	var flow struct {
 		UI struct {

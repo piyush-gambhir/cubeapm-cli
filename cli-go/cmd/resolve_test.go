@@ -14,7 +14,6 @@ import (
 )
 
 func TestCommandsResolve(t *testing.T) {
-	// Invalid config and a release build catch accidental use of the root hooks.
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	t.Setenv("CUBEAPM_SERVER", "invalid.example")
@@ -70,8 +69,6 @@ func TestCommandsResolve(t *testing.T) {
 			if err := json.Unmarshal(out.Bytes(), &got); err != nil {
 				t.Fatalf("expected JSON despite outer YAML flag: %v, %s", err, &out)
 			}
-			// The shared root keeps flag values between Execute calls in one test process,
-			// so compare what identifies the command and require the expected flags.
 			if got.Command != tc.command || got.Effect != tc.effect || !reflect.DeepEqual(got.Args, tc.pos) {
 				t.Fatalf("got %+v", got)
 			}

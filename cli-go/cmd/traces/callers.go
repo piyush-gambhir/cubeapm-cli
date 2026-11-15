@@ -14,16 +14,6 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/types"
 )
 
-// newCallersCmd returns the `traces callers` command.
-//
-// Finding "who is calling endpoint X on service Y" during an RCA is a
-// recurring task. The data exists in CubeAPM's cube_apm_latency_count
-// metric with span_kind="client" and group_name="HTTP <host>", but the
-// query is non-obvious and easy to get wrong (wrong group_name,
-// forgetting span_kind, using an absolute count instead of a rate).
-// This command aggregates it into one call so investigators get to the
-// "which service is suddenly talking to me a lot more?" answer in
-// seconds rather than minutes.
 func newCallersCmd() *cobra.Command {
 	var (
 		service string
@@ -76,8 +66,6 @@ Examples:
 			}
 			groupName := host
 			if groupName == "" {
-				// Hardcoded default, not inferred. Other deployments must
-				// pass --host.
 				groupName = "api.spyne.ai"
 			}
 			if !strings.HasPrefix(groupName, "HTTP ") {
@@ -88,27 +76,18 @@ Examples:
 			if err != nil {
 				return err
 			}
-			// PromQL instant query at `end` with the requested rate window.
 			selector := fmt.Sprintf(
 				`topk(%d, sum by (service) (rate(cube_apm_latency_count{group_name=%q,span_kind="client"}[%s])))`,
 				topk, groupName, window,
 			)
-			// If the caller asked to narrow to a specific called service,
-			// add that filter as well, covers deployments where a caller
-			// hits multiple hosts and you want only the traffic to the
-			// named service.
 			if service != "" {
-				// The client span's service label identifies the caller;
-				// the span_name encodes the callee. Use a regex on
-				// span_name to keep spans whose target mentions `service`.
 				selector = fmt.Sprintf(
 					`topk(%d, sum by (service) (rate(cube_apm_latency_count{group_name=%q,span_kind="client",span_name=~".*%s.*"}[%s])))`,
 					topk, groupName, regexSafe(service), window,
 				)
 			}
 
-			_ = start // `end` is what PromQL needs for instant queries;
-			// `start` is only relevant if we add a range variant later.
+			_ = start
 
 			result, err := cmdutil.APIClient.QueryInstant(selector, end)
 			if err != nil {
@@ -160,9 +139,6 @@ Examples:
 	return cmd
 }
 
-// regexSafe escapes the small set of PromQL regex metacharacters that
-// show up in real service names. We deliberately stay minimal, users
-// passing regex-intent strings can edit the query directly.
 func regexSafe(s string) string {
 	replacer := strings.NewReplacer(
 		`\`, `\\`,

@@ -75,10 +75,6 @@ Examples:
 				return err
 			}
 
-			// --like does a case-insensitive substring match. Service
-			// inventories often have case-inconsistent spellings
-			// (MEDIA-SERVICE, Media-Service, media_service), narrowing to
-			// a family is more useful than eyeballing a long sorted list.
 			if like != "" {
 				needle := strings.ToLower(like)
 				filtered := values[:0]

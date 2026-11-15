@@ -225,8 +225,6 @@ func TestErrorHandling_401(t *testing.T) {
 	}
 }
 
-// --- Multi-port URL extraction tests ---
-
 func TestNewClient_ServerWithPort_ExtractsHostname(t *testing.T) {
 	cfg := config.ResolvedConfig{
 		Server:     "https://my-server:9443",
@@ -304,7 +302,6 @@ func TestNewClient_ServerBareHostnameWithPort(t *testing.T) {
 		t.Fatalf("NewClient() error = %v", err)
 	}
 
-	// Port in the server address should be stripped; configured ports are used.
 	if c.queryBaseURL != "http://my-server:3140" {
 		t.Errorf("queryBaseURL = %q, want %q", c.queryBaseURL, "http://my-server:3140")
 	}
@@ -312,8 +309,6 @@ func TestNewClient_ServerBareHostnameWithPort(t *testing.T) {
 		t.Errorf("ingestBaseURL = %q, want %q", c.ingestBaseURL, "http://my-server:3130")
 	}
 }
-
-// --- Token redaction tests ---
 
 func TestRedactAuthHeaders(t *testing.T) {
 	tests := []struct {
@@ -354,7 +349,6 @@ func TestVerboseOutput_RedactsAuth(t *testing.T) {
 		verbose:       true,
 	}
 
-	// Just verify it doesn't panic with verbose mode on.
 	_, err := c.get(c.queryBaseURL, "/test", nil)
 	if err != nil {
 		t.Fatalf("get() error = %v", err)

@@ -4,7 +4,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewTracesCmd creates the "traces" parent command.
 func NewTracesCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "traces",

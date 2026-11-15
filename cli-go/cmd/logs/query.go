@@ -14,13 +14,6 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/types"
 )
 
-// prependFilters AND-joins convenience filters (--service/--level/--stream)
-// in front of the user's LogsQL query. The user query is parenthesized so a
-// top-level OR keeps its meaning: without parens, `service:x AND a OR b`
-// parses as `(service:x AND a) OR b` and silently matches other services.
-// Queries containing pipes are left unwrapped, LogsQL pipes are top-level
-// and cannot appear inside parentheses; AND binds before `|` anyway. The
-// match-all query `*` is also left bare since wrapping adds nothing.
 func prependFilters(filters []string, logsql string) string {
 	if len(filters) == 0 {
 		return logsql
@@ -109,7 +102,6 @@ Examples:
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logsql := args[0]
 
-			// Prepend convenience filters to the LogsQL query
 			var filters []string
 			if service != "" {
 				filters = append(filters, "service:"+service)
@@ -127,7 +119,6 @@ Examples:
 				return err
 			}
 
-			// For table format, collect all results then print
 			if cmdutil.OutputFormat == output.FormatTable {
 				entries, err := cmdutil.APIClient.QueryLogs(logsql, start, end, limit)
 				if err != nil {
@@ -136,11 +127,6 @@ Examples:
 
 				if len(entries) == 0 {
 					fmt.Println("No logs found.")
-					// When a --service filter is set, a common cause of empty
-					// results is a casing / naming mismatch on the service
-					// field, or the service simply doesn't ship logs. Give
-					// users a fast path to diagnose that rather than silently
-					// showing zero rows.
 					if service != "" {
 						fmt.Fprintf(os.Stderr, "\nHint: the --service filter narrowed by `service:%s`. If you expected results, check spelling with:\n  cubeapm logs field-values service --last 24h\n  cubeapm logs field-values service.name --last 24h\nSome services don't emit logs to CubeAPM at all, verify there.\n", service)
 					}
@@ -169,8 +155,6 @@ Examples:
 				return output.PrintTable(cmdutil.Resolved.NoColor, table)
 			}
 
-			// For JSON/YAML, stream one object per entry. YAML entries are
-			// separate documents, so "---" goes between them.
 			out := cmd.OutOrStdout()
 			formatter := output.NewFormatter(cmdutil.OutputFormat, cmdutil.Resolved.NoColor)
 			first := true
