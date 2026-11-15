@@ -21,7 +21,7 @@ const (
 	cacheFileName  = "update-check.json"
 
 	BackgroundTimeout = 3 * time.Second
-	CommandTimeout = 15 * time.Second
+	CommandTimeout    = 15 * time.Second
 
 	binName = "cubeapm"
 	project = "cubeapm-cli"

@@ -79,7 +79,7 @@ type CubeSpan struct {
 	Duration      int64         `json:"duration"`
 	Tags          []CubeSpanTag `json:"tags,omitempty"`
 	ProcessID     string        `json:"process_id,omitempty"`
-	Process *CubeProcess `json:"process,omitempty"`
+	Process       *CubeProcess  `json:"process,omitempty"`
 }
 
 type CubeProcess struct {
