@@ -31,9 +31,6 @@ func TestParseTime_RFC3339_WithTZ(t *testing.T) {
 }
 
 func TestParseTime_NaiveDateTime_IsLocal(t *testing.T) {
-	// Timestamps without a timezone must be interpreted as local wall-clock
-	// time, not UTC. Parsing them as UTC shifts the queried window by the
-	// UTC offset, which made narrow --from/--to log queries return nothing.
 	result, err := ParseTime("2024-01-15T10:00:00")
 	if err != nil {
 		t.Fatalf("ParseTime() error = %v", err)
@@ -150,12 +147,10 @@ func TestResolveTimeRange_LastFlag(t *testing.T) {
 		t.Fatalf("ResolveTimeRange() error = %v", err)
 	}
 
-	// end should be approximately now
 	if end.Before(before) || end.After(after) {
 		t.Errorf("end = %v, expected between %v and %v", end, before, after)
 	}
 
-	// start should be approximately 1 hour before now
 	expectedStart := before.Add(-1 * time.Hour)
 	diff := math.Abs(float64(start.Sub(expectedStart)))
 	if diff > float64(2*time.Second) {
@@ -193,7 +188,6 @@ func TestResolveTimeRange_OnlyFrom(t *testing.T) {
 		t.Errorf("start = %v, want %v", start, expectedStart)
 	}
 
-	// end should default to now
 	if end.Before(before) || end.After(after) {
 		t.Errorf("end = %v, expected between %v and %v", end, before, after)
 	}
@@ -210,7 +204,6 @@ func TestResolveTimeRange_OnlyTo(t *testing.T) {
 		t.Errorf("end = %v, want %v", end, expectedEnd)
 	}
 
-	// start should be 1 hour before end
 	expectedStart := expectedEnd.Add(-1 * time.Hour)
 	if !start.Equal(expectedStart) {
 		t.Errorf("start = %v, want %v", start, expectedStart)
@@ -225,12 +218,10 @@ func TestResolveTimeRange_Default(t *testing.T) {
 		t.Fatalf("ResolveTimeRange() error = %v", err)
 	}
 
-	// end should be approximately now
 	if end.Before(before) || end.After(after) {
 		t.Errorf("end = %v, expected between %v and %v", end, before, after)
 	}
 
-	// start should be approximately 1 hour before now (default)
 	expectedStart := before.Add(-1 * time.Hour)
 	diff := math.Abs(float64(start.Sub(expectedStart)))
 	if diff > float64(2*time.Second) {
@@ -238,10 +229,7 @@ func TestResolveTimeRange_Default(t *testing.T) {
 	}
 }
 
-// --- Boundary tests for seconds vs milliseconds ---
-
 func TestParseTime_BoundaryBelowE12_Seconds(t *testing.T) {
-	// 999999999999 is just below 1e12, should be treated as seconds.
 	result, err := ParseTime("999999999999")
 	if err != nil {
 		t.Fatalf("ParseTime() error = %v", err)
@@ -253,7 +241,6 @@ func TestParseTime_BoundaryBelowE12_Seconds(t *testing.T) {
 }
 
 func TestParseTime_BoundaryAtE12_Millis(t *testing.T) {
-	// 1000000000000 is exactly 1e12, should be treated as milliseconds.
 	result, err := ParseTime("1000000000000")
 	if err != nil {
 		t.Fatalf("ParseTime() error = %v", err)
@@ -265,7 +252,6 @@ func TestParseTime_BoundaryAtE12_Millis(t *testing.T) {
 }
 
 func TestParseTime_BoundaryAt1e10_Seconds(t *testing.T) {
-	// 10000000000 (1e10) should still be treated as seconds.
 	result, err := ParseTime("10000000000")
 	if err != nil {
 		t.Fatalf("ParseTime() error = %v", err)
@@ -275,8 +261,6 @@ func TestParseTime_BoundaryAt1e10_Seconds(t *testing.T) {
 		t.Errorf("ParseTime(10000000000) = %v, want %v (seconds)", result, expected)
 	}
 }
-
-// --- Duration validation tests ---
 
 func TestParseDuration_InvalidPrefix(t *testing.T) {
 	_, err := ParseDuration("1x2h")
@@ -340,7 +324,6 @@ func TestResolveTimeRange_LastOverridesFromTo(t *testing.T) {
 		t.Fatalf("ResolveTimeRange() error = %v", err)
 	}
 
-	// --last should take precedence: end = now, start = now - 30m
 	if end.Before(before) || end.After(after) {
 		t.Errorf("end = %v, expected between %v and %v (--last should override --to)", end, before, after)
 	}

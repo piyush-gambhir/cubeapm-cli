@@ -64,7 +64,6 @@ Examples:
 	return cmd
 }
 
-// isNotFoundError checks if the error indicates a 404 / not-found condition.
 func isNotFoundError(err error) bool {
 	if err == nil {
 		return false

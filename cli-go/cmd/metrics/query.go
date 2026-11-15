@@ -78,7 +78,6 @@ Examples:
 				return err
 			}
 
-			// For non-table output, return raw result
 			if cmdutil.OutputFormat != output.FormatTable {
 				return output.Print(cmdutil.OutputFormat, cmdutil.Resolved.NoColor, result)
 			}

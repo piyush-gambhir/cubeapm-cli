@@ -197,7 +197,6 @@ func TestResolveAuth_CustomPorts(t *testing.T) {
 	}
 }
 
-// CUBEAPM_READ_ONLY can turn read-only on but never off.
 func TestResolveAuth_ReadOnlyEnvOnlyAdds(t *testing.T) {
 	tests := []struct {
 		profile bool

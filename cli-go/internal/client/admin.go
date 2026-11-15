@@ -10,7 +10,6 @@ import (
 
 const logsDeleteBasePath = "/api/logs/delete"
 
-// DeleteLogsRun starts a log deletion task.
 func (c *Client) DeleteLogsRun(filter string) (string, error) {
 	params := url.Values{}
 	params.Set("filter", filter)
@@ -33,7 +32,6 @@ func (c *Client) DeleteLogsRun(filter string) (string, error) {
 	return result.TaskID, nil
 }
 
-// DeleteLogsStop stops a log deletion task.
 func (c *Client) DeleteLogsStop(taskID string) error {
 	params := url.Values{}
 	params.Set("task_id", taskID)
@@ -47,7 +45,6 @@ func (c *Client) DeleteLogsStop(taskID string) error {
 	return c.checkResponse(resp)
 }
 
-// DeleteLogsList lists active log deletion tasks.
 func (c *Client) DeleteLogsList() ([]types.DeleteTask, error) {
 	resp, err := c.get(c.adminBaseURL, logsDeleteBasePath+"/active_tasks", nil)
 	if err != nil {

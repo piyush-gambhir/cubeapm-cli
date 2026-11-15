@@ -23,14 +23,12 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/update"
 )
 
-// Build-time variables set via ldflags.
 var (
 	Version   = "dev"
 	Commit    = "unknown"
 	BuildDate = "unknown"
 )
 
-// Global flag values.
 var (
 	flagOutput     string
 	flagProfile    string
@@ -47,8 +45,6 @@ var (
 	flagQuiet      bool
 )
 
-// updateCheck is the release check started by PersistentPreRunE. done is
-// closed once info is final; info stays nil when nothing is known.
 type updateCheck struct {
 	done chan struct{}
 	info *update.UpdateInfo
@@ -57,11 +53,8 @@ type updateCheck struct {
 var (
 	pendingUpdateCheck *updateCheck
 
-	// updateNoticeWait bounds how long a command waits, at most once a day,
-	// for the release check it started.
 	updateNoticeWait = time.Second
 
-	// Test seams for the update notifier.
 	stderrIsTerminal           = func() bool { return term.IsTerminal(int(os.Stderr.Fd())) }
 	noticeOutput     io.Writer = os.Stderr
 )
@@ -111,14 +104,11 @@ Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubea
 	SilenceUsage:  true,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Agent-safety environment settings are sticky: an explicit false flag
-		// must not silently re-enable prompts in automation.
 		if v := os.Getenv("CUBEAPM_NO_INPUT"); v == "1" || v == "true" {
 			flagNoInput = true
 		}
 		cmdutil.NoInput = flagNoInput
 
-		// Resolve --quiet: flag > env var
 		if !cmd.Flags().Changed("quiet") {
 			if v := os.Getenv("CUBEAPM_QUIET"); v == "1" || v == "true" {
 				flagQuiet = true
@@ -136,19 +126,13 @@ Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubea
 			parentName = cmd.Parent().Name()
 		}
 
-		// Skip client setup for commands that don't need it
 		if cmdName == "version" || cmdName == "help" {
 			return nil
 		}
-		// Config commands and update don't need a client, but they still load
-		// the profile so its read_only setting applies to them.
 		if cmdName == "update" || parentName == "config" || parentName == "profiles" {
 			if err := loadConfigOnly(); err != nil {
 				return err
 			}
-			// Config writes change the active profile whatever --profile
-			// names, and update has no profile target, so --profile must not
-			// sidestep the active profile's read_only.
 			if active, ok := cmdutil.AppConfig.Profiles[cmdutil.AppConfig.CurrentProfile]; ok && active.ReadOnly {
 				cmdutil.Resolved.ReadOnly = true
 			}
@@ -164,11 +148,7 @@ Claude Code skill: https://github.com/piyush-gambhir/cubeapm-cli/blob/main/cubea
 	},
 }
 
-// checkPermissions enforces read-only mode and no-input constraints on the
-// current command based on resolved configuration and flag overrides.
 func checkPermissions(cmd *cobra.Command) error {
-	// A read-only profile or environment setting is sticky; the flag can only
-	// add protection, never silently remove it for one command.
 	effectiveReadOnly := cmdutil.Resolved.ReadOnly
 	if flagReadOnly {
 		effectiveReadOnly = true
@@ -177,7 +157,6 @@ func checkPermissions(cmd *cobra.Command) error {
 		return fmt.Errorf("command '%s' is blocked in read-only mode; to permit writes, drop --read-only, unset CUBEAPM_READ_ONLY, and remove read_only from the profile", cmd.CommandPath())
 	}
 
-	// Enforce no-input mode for commands that require interactive input
 	if cmdutil.NoInput && cmd.Annotations != nil && cmd.Annotations["interactive"] == "true" {
 		return fmt.Errorf("command '%s' requires interactive input but --no-input is set", cmd.CommandPath())
 	}
@@ -185,8 +164,6 @@ func checkPermissions(cmd *cobra.Command) error {
 	return nil
 }
 
-// isWrite reports whether cmd is annotated as mutating. `update --check` only
-// reports whether a release exists, so read-only mode still allows it.
 func isWrite(cmd *cobra.Command) bool {
 	if cmd.Annotations["mutates"] != "true" {
 		return false
@@ -252,7 +229,6 @@ func setupClient(cmd *cobra.Command) error {
 		return err
 	}
 
-	// Login command handles client creation itself
 	if cmd.Name() == "login" {
 		return nil
 	}
@@ -262,7 +238,6 @@ func setupClient(cmd *cobra.Command) error {
 		return err
 	}
 
-	// Wire up session refresh callback so re-auth persists the new cookie
 	cmdutil.APIClient.SetOnSessionRefresh(func(cookie, expiry string) error {
 		profileName := cmdutil.AppConfig.CurrentProfile
 		if flagProfile != "" {
@@ -286,9 +261,6 @@ func setupClient(cmd *cobra.Command) error {
 	return nil
 }
 
-// updateNotifierEnabled reports whether this run may look for a new release.
-// Scripts, CI, agents, quiet runs, and development builds never do, and
-// neither do commands that report versions or complete shell input.
 func updateNotifierEnabled(cmd *cobra.Command) bool {
 	if cmdutil.Quiet || !update.IsReleaseVersion(Version) || !stderrIsTerminal() {
 		return false
@@ -308,8 +280,6 @@ func updateNotifierEnabled(cmd *cobra.Command) bool {
 	return true
 }
 
-// startUpdateCheck answers from a fresh cache right away; otherwise it asks
-// GitHub in the background so the command never waits on the network.
 func startUpdateCheck() {
 	check := &updateCheck{done: make(chan struct{})}
 	pendingUpdateCheck = check
@@ -319,9 +289,6 @@ func startUpdateCheck() {
 		close(check.done)
 		return
 	}
-	// Record the attempt first, so a command that exits before the answer
-	// arrives does not leave the next command to ask GitHub again. Without a
-	// record there is no once-a-day limit, so skip the check.
 	if err := update.RecordCheckAttempt(configDir, time.Now()); err != nil {
 		close(check.done)
 		return
@@ -335,10 +302,6 @@ func startUpdateCheck() {
 	}()
 }
 
-// showUpdateNotice prints the notice after the command's output. A cached
-// answer is ready at once. A request this run started gets at most
-// updateNoticeWait to finish: the attempt is already recorded, so a fast
-// command that exits first would otherwise lose the day's only check.
 func showUpdateNotice() {
 	check := pendingUpdateCheck
 	if check == nil {
@@ -374,7 +337,6 @@ func init() {
 	rootCmd.PersistentFlags().BoolVar(&flagNoInput, "no-input", false, "Disable all interactive prompts (for CI/agent use)")
 	rootCmd.PersistentFlags().BoolVarP(&flagQuiet, "quiet", "q", false, "Suppress informational output")
 
-	// Register subcommands
 	rootCmd.AddCommand(newCommandsCmd())
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newLoginCmd())
@@ -386,7 +348,6 @@ func init() {
 	rootCmd.AddCommand(cmdingest.NewIngestCmd())
 }
 
-// Execute runs the root command.
 func Execute() error {
 	update.RemoveOldExecutable()
 	if err := rootCmd.Execute(); err != nil {

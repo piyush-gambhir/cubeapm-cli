@@ -25,13 +25,11 @@ func TestJSONFormatter(t *testing.T) {
 		t.Errorf("output missing 'test' value: %s", output)
 	}
 
-	// Verify it's valid JSON
 	var parsed map[string]string
 	if err := json.Unmarshal([]byte(output), &parsed); err != nil {
 		t.Errorf("output is not valid JSON: %v", err)
 	}
 
-	// Test with TableDef input -- should convert to list of maps
 	var buf2 bytes.Buffer
 	td := TableDef{
 		Headers: []string{"Name", "Value"},
@@ -110,12 +108,10 @@ func TestTableFormatter(t *testing.T) {
 		t.Errorf("output missing 'payments': %s", output)
 	}
 
-	// Verify no ANSI escape codes when NoColor=true
 	if strings.Contains(output, "\033[") {
 		t.Errorf("output contains ANSI escape codes when NoColor=true: %s", output)
 	}
 
-	// Test with color enabled
 	var buf2 bytes.Buffer
 	fColor := &TableFormatter{NoColor: false}
 	err = fColor.Format(&buf2, td)
@@ -127,7 +123,6 @@ func TestTableFormatter(t *testing.T) {
 		t.Errorf("output missing ANSI escape codes when NoColor=false: %s", colorOutput)
 	}
 
-	// Test with non-TableDef falls back to JSON
 	var buf3 bytes.Buffer
 	err = f.Format(&buf3, map[string]string{"key": "val"})
 	if err != nil {
@@ -147,7 +142,7 @@ func TestParseFormat(t *testing.T) {
 		{"json", FormatJSON, false},
 		{"yaml", FormatYAML, false},
 		{"table", FormatTable, false},
-		{"", FormatTable, false}, // empty defaults to table
+		{"", FormatTable, false},
 		{"xml", "", true},
 		{"CSV", "", true},
 	}
@@ -167,25 +162,21 @@ func TestParseFormat(t *testing.T) {
 }
 
 func TestNewFormatter_Default(t *testing.T) {
-	// Default (table) format
 	f := NewFormatter(FormatTable, false)
 	if _, ok := f.(*TableFormatter); !ok {
 		t.Errorf("NewFormatter(FormatTable) returned %T, want *TableFormatter", f)
 	}
 
-	// JSON format
 	f = NewFormatter(FormatJSON, false)
 	if _, ok := f.(*JSONFormatter); !ok {
 		t.Errorf("NewFormatter(FormatJSON) returned %T, want *JSONFormatter", f)
 	}
 
-	// YAML format
 	f = NewFormatter(FormatYAML, false)
 	if _, ok := f.(*YAMLFormatter); !ok {
 		t.Errorf("NewFormatter(FormatYAML) returned %T, want *YAMLFormatter", f)
 	}
 
-	// Unknown format defaults to table
 	f = NewFormatter("unknown", false)
 	if _, ok := f.(*TableFormatter); !ok {
 		t.Errorf("NewFormatter(unknown) returned %T, want *TableFormatter", f)

@@ -43,7 +43,6 @@ const buttonVariants = cva(
 
 type ButtonProps = ButtonPrimitive.Props &
   VariantProps<typeof buttonVariants> & {
-    /** Rolls an identical, aria-hidden label into place on hover. */
     rollLabel?: boolean
     children?: ReactNode
   }
@@ -61,9 +60,6 @@ function Button({
     <ButtonPrimitive
       data-slot="button"
       data-roll-label={rollLabel || undefined}
-      // When rendering as a custom element (e.g. a link via `render`), the
-      // underlying element is not a native <button>, so tell Base UI to drop
-      // native button semantics and avoid the accessibility warning.
       nativeButton={render === undefined}
       render={render}
       className={cn(buttonVariants({ variant, size, className }))}

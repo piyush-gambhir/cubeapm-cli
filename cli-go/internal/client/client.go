@@ -17,44 +17,36 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/config"
 )
 
-// Client is the HTTP client for CubeAPM API.
 type Client struct {
-	queryBaseURL  string // http://server:3140
-	ingestBaseURL string // http://server:3130
-	adminBaseURL  string // http://server:3199
-	serverBaseURL string // original server URL for auth flows (e.g. https://cube.spyne.ai)
+	queryBaseURL  string
+	ingestBaseURL string
+	adminBaseURL  string
+	serverBaseURL string
 	httpClient    *http.Client
 	verbose       bool
 
-	// Kratos session auth
-	authMethod    string // "kratos" or "none"
+	authMethod    string
 	sessionCookie string
 	email         string
 	password      string
 
-	// Callback to persist updated session after re-auth
 	onSessionRefresh func(cookie string, expiry string) error
 }
 
-// SetOnSessionRefresh sets a callback that is invoked when the client
-// re-authenticates and obtains a new session cookie.
 func (c *Client) SetOnSessionRefresh(fn func(cookie string, expiry string) error) {
 	c.onSessionRefresh = fn
 }
 
-// NewClient creates a new Client from a resolved configuration.
 func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 	server := strings.TrimRight(cfg.Server, "/")
 	if server == "" {
 		return nil, fmt.Errorf("server address not configured; run 'cubeapm login' or set CUBEAPM_SERVER")
 	}
 
-	// Add scheme if not present
 	if !strings.HasPrefix(server, "http://") && !strings.HasPrefix(server, "https://") {
 		server = "http://" + server
 	}
 
-	// Parse to extract host without port
 	u, err := url.Parse(server)
 	if err != nil {
 		return nil, fmt.Errorf("invalid server address %q: %w", server, err)
@@ -63,7 +55,6 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 	host := u.Hostname()
 	scheme := u.Scheme
 
-	// serverBaseURL is the original server URL (for Kratos auth flows)
 	serverBaseURL := (&url.URL{Scheme: scheme, Host: u.Host}).String()
 
 	transport := &http.Transport{
@@ -77,7 +68,6 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 		DisableKeepAlives:   true,
 	}
 
-	// Determine auth method
 	authMethod := cfg.AuthMethod
 	if authMethod == "" {
 		if cfg.Email != "" && cfg.Password != "" {
@@ -104,8 +94,6 @@ func NewClient(cfg config.ResolvedConfig) (*Client, error) {
 	}, nil
 }
 
-// doRequest executes an HTTP request with auth and error handling.
-// For Kratos auth, it auto-re-authenticates on 401 and retries once.
 func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	c.setAuthHeaders(req)
 
@@ -132,7 +120,6 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		}
 	}
 
-	// Auto re-auth on 401 for Kratos auth
 	if resp.StatusCode == http.StatusUnauthorized && c.authMethod == "kratos" && c.email != "" && c.password != "" {
 		resp.Body.Close()
 
@@ -144,7 +131,6 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 			return nil, fmt.Errorf("re-authentication failed: %w", err)
 		}
 
-		// Rebuild the request for retry (body may have been consumed)
 		retryReq, err := cloneRequest(req)
 		if err != nil {
 			return nil, fmt.Errorf("rebuilding request for retry: %w", err)
@@ -164,14 +150,12 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	return resp, nil
 }
 
-// setAuthHeaders applies the appropriate auth header/cookie to the request.
 func (c *Client) setAuthHeaders(req *http.Request) {
 	if c.authMethod == "kratos" && c.sessionCookie != "" {
 		req.Header.Set("Cookie", c.sessionCookie)
 	}
 }
 
-// reAuthenticate performs a Kratos login and updates the client's session cookie.
 func (c *Client) reAuthenticate() error {
 	session, err := auth.KratosLogin(c.serverBaseURL, c.email, c.password, c.verbose)
 	if err != nil {
@@ -184,9 +168,6 @@ func (c *Client) reAuthenticate() error {
 	return nil
 }
 
-// cloneRequest copies a request for a retry with a fresh body. http.NewRequest
-// records GetBody for in-memory bodies (bytes.Reader, strings.Reader); its Body is a
-// non-seekable wrapper, so seeking it would resend an empty body.
 func cloneRequest(req *http.Request) (*http.Request, error) {
 	clone := req.Clone(req.Context())
 	if req.Body == nil || req.Body == http.NoBody {
@@ -210,8 +191,6 @@ func cloneRequest(req *http.Request) (*http.Request, error) {
 	return nil, fmt.Errorf("cannot retry %s %s: its body cannot be replayed", req.Method, req.URL.Path)
 }
 
-// redactAuthHeaders returns a redacted value for sensitive headers
-// (Authorization, Cookie, Set-Cookie) and the original value for all others.
 func redactAuthHeaders(headerName, value string) string {
 	lower := strings.ToLower(headerName)
 	switch lower {
@@ -222,8 +201,6 @@ func redactAuthHeaders(headerName, value string) string {
 	}
 }
 
-// get performs a GET request and returns the response.
-// The caller is responsible for closing the response body.
 func (c *Client) get(baseURL, path string, params url.Values) (*http.Response, error) {
 	u := baseURL + path
 	if len(params) > 0 {
@@ -238,8 +215,6 @@ func (c *Client) get(baseURL, path string, params url.Values) (*http.Response, e
 	return c.doRequest(req)
 }
 
-// post performs a POST request with form-encoded body and returns the response.
-// The caller is responsible for closing the response body.
 func (c *Client) post(baseURL, path string, params url.Values) (*http.Response, error) {
 	u := baseURL + path
 
@@ -259,12 +234,9 @@ func (c *Client) post(baseURL, path string, params url.Values) (*http.Response, 
 	return c.doRequest(req)
 }
 
-// postRaw performs a POST request with a raw body.
-// The caller is responsible for closing the response body.
 func (c *Client) postRaw(baseURL, path, contentType string, body io.Reader) (*http.Response, error) {
 	u := baseURL + path
 
-	// Buffer the body so it can be replayed on 401 retry
 	var reqBody io.ReadSeeker
 	if body != nil {
 		data, err := readAllLimited(body)
@@ -285,7 +257,6 @@ func (c *Client) postRaw(baseURL, path, contentType string, body io.Reader) (*ht
 	return c.doRequest(req)
 }
 
-// getJSON performs a GET request and decodes the JSON response into target.
 func (c *Client) getJSON(baseURL, path string, params url.Values, target interface{}) error {
 	resp, err := c.get(baseURL, path, params)
 	if err != nil {
@@ -300,7 +271,6 @@ func (c *Client) getJSON(baseURL, path string, params url.Values, target interfa
 	return json.NewDecoder(resp.Body).Decode(target)
 }
 
-// postJSON performs a POST request and decodes the JSON response into target.
 func (c *Client) postJSON(baseURL, path string, params url.Values, target interface{}) error {
 	resp, err := c.post(baseURL, path, params)
 	if err != nil {
@@ -315,7 +285,6 @@ func (c *Client) postJSON(baseURL, path string, params url.Values, target interf
 	return json.NewDecoder(resp.Body).Decode(target)
 }
 
-// checkResponse checks the HTTP response for errors.
 func (c *Client) checkResponse(resp *http.Response) error {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return nil
@@ -341,10 +310,8 @@ func (c *Client) checkResponse(resp *http.Response) error {
 	}
 }
 
-// streamJSON reads newline-delimited JSON from the response and calls handler for each line.
 func (c *Client) streamJSON(resp *http.Response, handler func(json.RawMessage) error) error {
 	scanner := bufio.NewScanner(resp.Body)
-	// Increase max line size for large log entries
 	scanner.Buffer(make([]byte, 0, 1024*1024), 10*1024*1024)
 
 	for scanner.Scan() {
@@ -360,7 +327,6 @@ func (c *Client) streamJSON(resp *http.Response, handler func(json.RawMessage) e
 	return scanner.Err()
 }
 
-// QueryBaseURL returns the query base URL (for testing connectivity).
 func (c *Client) QueryBaseURL() string {
 	return c.queryBaseURL
 }

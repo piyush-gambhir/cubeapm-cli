@@ -35,7 +35,6 @@ Examples:
 				fmt.Printf("Config file: %s\n\n", config.ConfigPath())
 			}
 
-			// Mask sensitive fields before displaying
 			sanitized := sanitizeConfig(cfg)
 
 			data, err := yaml.Marshal(sanitized)

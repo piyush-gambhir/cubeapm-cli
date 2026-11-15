@@ -3,7 +3,6 @@ import { cn } from '@/lib/utils';
 function Line({ line }: { line: string }) {
   if (line.trim() === '') return <span>{'\n'}</span>;
 
-  // Comment line
   if (line.trimStart().startsWith('#')) {
     return <span className="hero-terminal__comment">{line}</span>;
   }
@@ -16,7 +15,6 @@ function Line({ line }: { line: string }) {
       {tokens.map((tok, i) => {
         if (/^\s+$/.test(tok)) return <span key={i}>{tok}</span>;
 
-        // first non-space token = the binary
         if (!seenBinary) {
           seenBinary = true;
           return (

@@ -14,29 +14,18 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/types"
 )
 
-// isUnsupportedPath reports whether an API error is CubeAPM's "unsupported
-// path requested" 400. Some deployments only proxy the subset of the Jaeger
-// query API the UI uses, so endpoints like operations/dependencies 400 there.
 func isUnsupportedPath(err error) bool {
 	return err != nil && strings.Contains(err.Error(), "unsupported path")
 }
 
 const tracesBasePath = "/api/traces/api/v1"
 
-// SearchTraces searches for traces matching the given criteria.
-// The index parameter selects the CubeAPM backing store (e.g. "cube:latency",
-// "cube:error"). It is required by the server; callers should pass a sensible
-// default when users don't specify one.
 func (c *Client) SearchTraces(service string, tags map[string]string, query string, from, to time.Time, limit int, spanKind, minDuration, maxDuration, index string) ([]types.TraceSearchResult, error) {
-	// Promoting environment tags must not mutate the caller's filters.
 	tags = maps.Clone(tags)
 	params := url.Values{}
 	if index != "" {
 		params.Set("index", index)
 	}
-	// CubeAPM requires an "env" query param alongside tag-based filtering.
-	// Promote tags["environment"] or tags["env"] to the top-level param so
-	// --env on the CLI (or an explicit tag) satisfies the requirement.
 	if env, ok := tags["environment"]; ok && env != "" {
 		params.Set("env", env)
 		delete(tags, "environment")
@@ -76,10 +65,6 @@ func (c *Client) SearchTraces(service string, tags map[string]string, query stri
 		params.Set("maxDuration", maxDuration)
 	}
 
-	// Some CubeAPM servers return a raw JSON array (native format) while
-	// classic Jaeger-compatible servers return {"data": [...]}. Read the
-	// body once, then try both shapes before giving up. This lets the CLI
-	// work against both deployments without a flag or probe request.
 	body, err := c.getRaw(c.queryBaseURL, tracesBasePath+"/search", params)
 	if err != nil {
 		if strings.Contains(err.Error(), "env is required") {
@@ -91,8 +76,6 @@ func (c *Client) SearchTraces(service string, tags map[string]string, query stri
 		return nil, fmt.Errorf("searching traces: %w", err)
 	}
 
-	// Dispatch on the top-level JSON shape: classic Jaeger servers return
-	// an object {data, errors, ...}; CubeAPM native returns an array.
 	trimmed := firstNonSpace(body)
 	if trimmed == '{' {
 		var jaeger types.JaegerSearchResponse
@@ -112,8 +95,6 @@ func (c *Client) SearchTraces(service string, tags map[string]string, query stri
 	return cubeToSearchResults(native), nil
 }
 
-// firstNonSpace returns the first non-whitespace byte of a JSON document
-// so we can branch between object and array shapes without full parsing.
 func firstNonSpace(b []byte) byte {
 	for _, c := range b {
 		switch c {
@@ -126,10 +107,6 @@ func firstNonSpace(b []byte) byte {
 	return 0
 }
 
-// cubeToSearchResults converts CubeAPM's native search shape into the
-// Jaeger-style TraceSearchResult the CLI consumes elsewhere. We do this
-// in the client so the command layer doesn't need to know about the
-// server-specific format.
 func cubeToSearchResults(in types.CubeSearchResultList) []types.TraceSearchResult {
 	out := make([]types.TraceSearchResult, 0, len(in))
 	for _, item := range in {
@@ -143,12 +120,6 @@ func cubeToSearchResults(in types.CubeSearchResultList) []types.TraceSearchResul
 	return out
 }
 
-// buildSpansAndProcesses converts CubeAPM native spans into Jaeger-style spans
-// plus a processes map, returning the first span's trace ID. CubeAPM commonly
-// attaches the process INLINE on each span (process_map/process_id empty), so
-// when a span carries an inline process we synthesize a process entry keyed by
-// service name and point the span's ProcessID at it, restoring the SERVICE
-// column the rest of the CLI resolves through the processes map.
 func buildSpansAndProcesses(cubeSpans []types.CubeSpan, processes map[string]types.Process) ([]types.Span, map[string]types.Process, string) {
 	procs := processes
 	if procs == nil {
@@ -190,25 +161,15 @@ func buildSpansAndProcesses(cubeSpans []types.CubeSpan, processes map[string]typ
 	return spans, procs, traceID
 }
 
-// decodeCubeID accepts a trace or span ID in either raw hex, base64, or
-// URL-safe base64 and returns the lower-case hex representation that
-// Jaeger-style tooling expects.
-//
-// Hex must be checked first: every 32-char hex trace ID (and 16-char hex
-// span ID) is *also* valid base64 (length divisible by 4, all chars in the
-// base64 alphabet), so trying base64 first silently corrupted hex IDs into
-// garbage. A genuine base64 ID being pure hex characters is astronomically
-// unlikely, so the hex-first order is safe.
 func decodeCubeID(s string) string {
 	if s == "" {
 		return ""
 	}
 	if len(s)%2 == 0 {
 		if b, err := hex.DecodeString(s); err == nil && len(b) > 0 {
-			return hex.EncodeToString(b) // normalizes to lower-case
+			return hex.EncodeToString(b)
 		}
 	}
-	// Try standard base64 then URL-safe base64 with padding tolerance.
 	for _, enc := range []*base64.Encoding{base64.StdEncoding, base64.URLEncoding, base64.RawStdEncoding, base64.RawURLEncoding} {
 		if b, err := enc.DecodeString(s); err == nil && len(b) > 0 {
 			return hex.EncodeToString(b)
@@ -217,8 +178,6 @@ func decodeCubeID(s string) string {
 	return s
 }
 
-// parseCubeStart turns CubeAPM's RFC3339-string start_time into the
-// microseconds-since-epoch int64 that Jaeger consumers expect.
 func parseCubeStart(s string) int64 {
 	if s == "" {
 		return 0
@@ -244,8 +203,6 @@ func convertCubeRefs(in []types.CubeSpanRef) []types.SpanRef {
 	return out
 }
 
-// convertCubeTags flattens CubeAPM's typed tag format (v_str/v_int/...)
-// into the generic key/value shape used by the rest of the CLI.
 func convertCubeTags(in []types.CubeSpanTag) []types.KeyValue {
 	if len(in) == 0 {
 		return nil
@@ -275,8 +232,6 @@ func convertCubeTags(in []types.CubeSpanTag) []types.KeyValue {
 	return out
 }
 
-// getRaw performs the same GET that getJSON does but returns the raw body
-// so the caller can try multiple JSON shapes.
 func (c *Client) getRaw(baseURL, path string, params url.Values) ([]byte, error) {
 	resp, err := c.get(baseURL, path, params)
 	if err != nil {
@@ -289,13 +244,6 @@ func (c *Client) getRaw(baseURL, path string, params url.Values) ([]byte, error)
 	return readAllLimited(resp.Body)
 }
 
-// GetTrace retrieves a trace by its trace ID.
-//
-// Classic Jaeger query servers return {"data":[Trace],"errors":[]} with hex
-// IDs and microsecond start times. CubeAPM returns its NATIVE shape instead:
-// {"spans":[...],"process_map":[...]} with snake_case fields, base64 IDs and
-// RFC3339 start times, the same wire format the search endpoint uses. We read
-// the raw body and handle both so `traces get` works on either deployment.
 func (c *Client) GetTrace(traceID string, from, to time.Time) (*types.Trace, error) {
 	params := url.Values{}
 	if !from.IsZero() {
@@ -326,20 +274,15 @@ func (c *Client) GetTrace(traceID string, from, to time.Time) (*types.Trace, err
 	if len(dual.Errors) > 0 {
 		return nil, fmt.Errorf("trace error: %s", dual.Errors[0].Msg)
 	}
-	// Classic Jaeger shape.
 	if len(dual.Data) > 0 {
 		return &dual.Data[0], nil
 	}
-	// CubeAPM native shape.
 	if len(dual.Spans) > 0 {
 		return cubeSpansToTrace(traceID, dual.Spans, dual.ProcessMap, dual.Processes), nil
 	}
 	return nil, fmt.Errorf("trace %s not found", traceID)
 }
 
-// cubeSpansToTrace converts CubeAPM's native trace-get payload into the
-// Jaeger-style types.Trace the CLI renders, reusing the same span/tag/id
-// converters as the search path.
 func cubeSpansToTrace(traceID string, cubeSpans []types.CubeSpan, processMapRaw json.RawMessage, processes map[string]types.Process) *types.Trace {
 	procs := processes
 	if len(procs) == 0 {
@@ -352,10 +295,6 @@ func cubeSpansToTrace(traceID string, cubeSpans []types.CubeSpan, processMapRaw 
 	return &types.Trace{TraceID: traceID, Spans: spans, Processes: procs}
 }
 
-// parseCubeProcessMap leniently decodes CubeAPM's process_map, which has been
-// seen as a JSON array of {process_id|key, process|value:{service_name|serviceName, tags}}
-// and (on classic servers) as an object {pID: {serviceName, tags}}. Best-effort:
-// spans still render even if the process map can't be resolved.
 func parseCubeProcessMap(raw json.RawMessage) map[string]types.Process {
 	if len(raw) == 0 {
 		return nil
@@ -373,7 +312,6 @@ func parseCubeProcessMap(raw json.RawMessage) map[string]types.Process {
 		return types.Process{ServiceName: sn, Tags: convertCubeTags(p.Tags)}
 	}
 	out := map[string]types.Process{}
-	// Array form.
 	var arr []struct {
 		ProcessID string `json:"process_id"`
 		Key       string `json:"key"`
@@ -399,7 +337,6 @@ func parseCubeProcessMap(raw json.RawMessage) map[string]types.Process {
 			return out
 		}
 	}
-	// Object form.
 	var obj map[string]proc
 	if err := json.Unmarshal(raw, &obj); err == nil {
 		for id, p := range obj {
@@ -409,48 +346,27 @@ func parseCubeProcessMap(raw json.RawMessage) map[string]types.Process {
 	return out
 }
 
-// GetServices returns a list of all services.
-//
-// Some CubeAPM deployments don't expose the Jaeger /services endpoint (the
-// reverse proxy only forwards the subset of paths the UI uses). When the
-// Jaeger call fails, fall back to the Prometheus-standard metrics API:
-// `label-values service` gives the same information and is a contract
-// every CubeAPM metrics backend supports.
 func (c *Client) GetServices() ([]string, error) {
 	var resp types.JaegerServicesResponse
 	jaegerErr := c.getJSON(c.queryBaseURL, tracesBasePath+"/services", nil, &resp)
 	if jaegerErr == nil {
 		if len(resp.Errors) > 0 {
-			// Fall through to metrics fallback, we still have a usable alternative.
 		} else {
 			return resp.Data, nil
 		}
 	}
 
-	// Fallback: derive the service list from metrics. Use the standard
-	// Prometheus label-values endpoint.
 	services, fbErr := c.GetLabelValues("service", nil, time.Time{}, time.Time{})
 	if fbErr == nil && len(services) > 0 {
 		return services, nil
 	}
 
-	// Both paths failed, surface the original Jaeger error since it's
-	// what the caller was actually asking for.
 	if jaegerErr != nil {
 		return nil, fmt.Errorf("getting services: %w", jaegerErr)
 	}
 	return nil, fmt.Errorf("services error: %s", resp.Errors[0].Msg)
 }
 
-// GetServicesByEnv returns the distinct service names seen in a given
-// environment. CubeAPM labels the environment as `env` on some metrics and
-// `cube.environment` on others, and the service appears under both `service`
-// and `service.name`, so we union label-values across every combination via
-// the metrics label-values match[] extension.
-//
-// Caveat: this is metrics-derived, so a service that emits only traces (no
-// metrics) in that environment may not appear. Each matcher is queried
-// independently so one unsupported label/selector degrades gracefully.
 func (c *Client) GetServicesByEnv(env string, from, to time.Time) ([]string, error) {
 	matchers := []string{
 		fmt.Sprintf(`{env=%q}`, env),
@@ -480,7 +396,6 @@ func (c *Client) GetServicesByEnv(env string, from, to time.Time) ([]string, err
 	return out, nil
 }
 
-// GetOperations returns operations for a given service.
 func (c *Client) GetOperations(service, spanKind string) ([]types.Operation, error) {
 	params := url.Values{}
 	if spanKind != "" {
@@ -503,7 +418,6 @@ func (c *Client) GetOperations(service, spanKind string) ([]types.Operation, err
 	return resp.Data, nil
 }
 
-// GetDependencies returns service dependencies.
 func (c *Client) GetDependencies(from, to time.Time) ([]types.Dependency, error) {
 	params := url.Values{}
 	if !from.IsZero() {

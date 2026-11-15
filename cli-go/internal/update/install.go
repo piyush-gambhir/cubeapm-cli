@@ -19,15 +19,11 @@ import (
 	"time"
 )
 
-// Install methods reported by `cubeapm update --check -o json`.
 const (
 	InstallSelf = "self"
 	InstallGo   = "go"
 )
 
-// Update commands shown in the notice. A binary in a Go bin directory came
-// from `make install` in a checkout: `go install` of this module would build a
-// binary named cli-go without version metadata, so it is not offered.
 const (
 	SelfUpdateCommand   = "cubeapm update"
 	SourceUpdateCommand = "git pull && make install (in your cubeapm-cli/cli-go checkout)"
@@ -35,10 +31,8 @@ const (
 
 const maxChecksumsBytes = 1 << 20
 
-// goarch is the architecture the binary runs on. Tests override it.
 var goarch = runtime.GOARCH
 
-// ExecutablePath returns the running binary's path with symlinks resolved.
 func ExecutablePath() (string, error) {
 	exe, err := os.Executable()
 	if err != nil {
@@ -51,8 +45,6 @@ func ExecutablePath() (string, error) {
 	return resolved, nil
 }
 
-// DetectInstallMethod returns InstallGo when execPath sits in a Go bin
-// directory ($GOBIN, $GOPATH/bin, or ~/go/bin) and InstallSelf otherwise.
 func DetectInstallMethod(execPath string) string {
 	dir := canonicalDir(filepath.Dir(execPath))
 	for _, goBin := range goBinDirs() {
@@ -63,7 +55,6 @@ func DetectInstallMethod(execPath string) string {
 	return InstallSelf
 }
 
-// UpdateCommand is the command the notice tells users to run.
 func UpdateCommand(installMethod string) string {
 	if installMethod == InstallGo {
 		return SourceUpdateCommand
@@ -104,8 +95,6 @@ func sameDir(a, b string) bool {
 	return a == b
 }
 
-// ArchiveName is the GoReleaser archive for an OS and architecture
-// (cli-go/.goreleaser.yaml: tar.gz, zip on Windows).
 func ArchiveName(osName, arch string) string {
 	ext := ".tar.gz"
 	if osName == "windows" {
@@ -121,9 +110,6 @@ func binaryFileName(osName string) string {
 	return binName
 }
 
-// Install downloads release version, verifies it against checksums.txt, and
-// replaces the executable at execPath. Any failure leaves execPath untouched
-// and working. progress receives one line per step.
 func Install(ctx context.Context, repo, version, execPath string, progress io.Writer) error {
 	if !IsReleaseVersion(version) {
 		return fmt.Errorf("invalid release version %q", version)
@@ -166,8 +152,6 @@ func Install(ctx context.Context, repo, version, execPath string, progress io.Wr
 	return replaceExecutable(goos, newBinary, execPath, os.Rename)
 }
 
-// checkWritable fails early, before any download, when the executable's
-// directory cannot take the new binary.
 func checkWritable(dir string) error {
 	probe, err := os.CreateTemp(dir, ".cubeapm-write-test-*")
 	if err != nil {
@@ -206,8 +190,6 @@ func downloadFile(ctx context.Context, url, dest string, limit int64) error {
 	return f.Close()
 }
 
-// verifyChecksum checks filePath against the archiveName line of a GoReleaser
-// checksums file ("<sha256>  <name>" per line). A missing entry is a failure.
 func verifyChecksum(filePath, checksumsPath, archiveName string) error {
 	data, err := os.ReadFile(checksumsPath)
 	if err != nil {
@@ -240,9 +222,6 @@ func verifyChecksum(filePath, checksumsPath, archiveName string) error {
 	return nil
 }
 
-// extractBinary writes the archive's top-level binaryName entry to
-// destDir/binaryName. Entries with absolute or parent-relative paths, and a
-// binary entry that is not a regular file, make the whole archive invalid.
 func extractBinary(archivePath, destDir, binaryName string) (string, error) {
 	outPath := filepath.Join(destDir, binaryName)
 	if strings.HasSuffix(archivePath, ".zip") {
@@ -320,8 +299,6 @@ func extractFromZip(archivePath, outPath, binaryName string) error {
 	return fmt.Errorf("%s not found in archive", binaryName)
 }
 
-// archiveEntryName returns the cleaned slash path of an archive entry and
-// rejects absolute paths, drive letters, and ".." components.
 func archiveEntryName(name string) (string, error) {
 	slashed := strings.ReplaceAll(name, `\`, "/")
 	if slashed == "" || strings.HasPrefix(slashed, "/") || (len(slashed) >= 2 && slashed[1] == ':') {
@@ -347,19 +324,12 @@ func writeNewFile(outPath string, src io.Reader) error {
 	return out.Close()
 }
 
-// replaceExecutable swaps newBinary in at target. The new file is staged in
-// target's directory so the final rename stays on one filesystem.
-//
-// On macOS and Linux the staged file is renamed over target, which is atomic.
-// Windows cannot overwrite a running .exe but can rename it, so target moves
-// aside to target.old (removed on a later start by RemoveOldExecutable) and the
-// staged file takes its place; if that fails, target.old is moved back.
 func replaceExecutable(osName, newBinary, target string, rename func(oldpath, newpath string) error) error {
 	staged, err := stageBinary(newBinary, filepath.Dir(target))
 	if err != nil {
 		return err
 	}
-	defer os.Remove(staged) // no-op once renamed into place
+	defer os.Remove(staged)
 
 	if osName != "windows" {
 		if err := rename(staged, target); err != nil {
@@ -417,8 +387,6 @@ func stageBinary(newBinary, dir string) (string, error) {
 	return tmp.Name(), nil
 }
 
-// RemoveOldExecutable deletes the cubeapm.exe.old a Windows update leaves
-// behind. It is best-effort and does nothing on other systems.
 func RemoveOldExecutable() {
 	removeOldExecutable(goos, ExecutablePath)
 }

@@ -1,21 +1,11 @@
 #!/bin/sh
-# Install latest version:
-#   curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | sh
-#
-# Install specific version:
-#   curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | VERSION=0.2.7 sh
-#
-# Install to custom directory:
-#   curl -sSfL https://raw.githubusercontent.com/piyush-gambhir/cubeapm-cli/main/install.sh | INSTALL_DIR=~/.local/bin sh
 
 set -e
 
-# Configuration
 REPO="piyush-gambhir/cubeapm-cli"
 BINARY="cubeapm"
 PROJECT="cubeapm-cli"
 
-# Colors (only if terminal)
 if [ -t 1 ]; then
     GREEN='\033[0;32m'
     BLUE='\033[0;34m'
@@ -31,11 +21,9 @@ success() { printf "${GREEN}==>${NC} %s\n" "$1"; }
 warn() { printf "${YELLOW}==>${NC} %s\n" "$1"; }
 error() { printf "${RED}error:${NC} %s\n" "$1" >&2; exit 1; }
 
-# Check dependencies
 command -v curl >/dev/null 2>&1 || error "curl is required but not installed"
 command -v tar >/dev/null 2>&1 || error "tar is required but not installed"
 
-# Detect OS
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$OS" in
     linux) ;;
@@ -43,7 +31,6 @@ case "$OS" in
     *) error "Unsupported OS: $OS" ;;
 esac
 
-# Detect architecture
 ARCH=$(uname -m)
 case "$ARCH" in
     x86_64|amd64) ARCH="amd64" ;;
@@ -51,7 +38,6 @@ case "$ARCH" in
     *) error "Unsupported architecture: $ARCH" ;;
 esac
 
-# Get version
 if [ -z "$VERSION" ]; then
     info "Fetching latest version..."
     VERSION=$(curl -sSfI "https://github.com/${REPO}/releases/latest" | tr -d '\r' | sed -n 's#^[Ll]ocation: .*/releases/tag/v\([0-9][0-9A-Za-z.-]*\)$#\1#p') || error "Failed to fetch latest version. Set VERSION env var manually."
@@ -60,24 +46,19 @@ fi
 
 info "Installing ${BINARY} v${VERSION} (${OS}/${ARCH})"
 
-# Set install directory
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
 
-# Create temp directory
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-# Download
 ARCHIVE="${PROJECT}_${OS}_${ARCH}.tar.gz"
 URL="https://github.com/${REPO}/releases/download/v${VERSION}/${ARCHIVE}"
 info "Downloading ${URL}..."
 curl -sSfL "$URL" -o "${TMP_DIR}/${ARCHIVE}" || error "Download failed. Check that version v${VERSION} exists at https://github.com/${REPO}/releases"
 
-# Extract
 info "Extracting..."
 tar -xzf "${TMP_DIR}/${ARCHIVE}" -C "$TMP_DIR"
 
-# Install
 mkdir -p "$INSTALL_DIR" 2>/dev/null || true
 if [ -w "$INSTALL_DIR" ]; then
     mv "${TMP_DIR}/${BINARY}" "${INSTALL_DIR}/${BINARY}"
@@ -88,7 +69,6 @@ else
 fi
 chmod +x "${INSTALL_DIR}/${BINARY}"
 
-# Verify
 if command -v "$BINARY" >/dev/null 2>&1; then
     success "Successfully installed ${BINARY} to ${INSTALL_DIR}/${BINARY}"
     "${INSTALL_DIR}/${BINARY}" version

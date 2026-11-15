@@ -81,7 +81,6 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
   if (!page) notFound();
 
   const MDX = page.data.body;
-  // Fumadocs' page actions do not add Next's basePath, so include it here.
   const markdownUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}${getPageMarkdownUrl(page).url}`;
   const slug = page.slugs.join('/');
   const pageUrl = `${siteUrl}${page.url}`;
@@ -158,7 +157,6 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
         <DocsBody>
           <MDX
             components={getMDXComponents({
-              // this allows you to link to other pages with relative file paths
               a: createRelativeLink(source, page),
             })}
           />

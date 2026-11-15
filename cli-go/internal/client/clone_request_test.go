@@ -7,14 +7,12 @@ import (
 	"testing"
 )
 
-// A POST retried after re-authentication must resend its body. http.NewRequest
-// wraps a bytes.Reader in a non-seekable closer, so the retry has to use GetBody.
 func TestCloneRequestResendsAConsumedBody(t *testing.T) {
 	req, err := http.NewRequest("POST", "https://cube.example/api/metrics/api/v1/query", bytes.NewReader([]byte("query=1")))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := io.ReadAll(req.Body); err != nil { // the first attempt consumed it
+	if _, err := io.ReadAll(req.Body); err != nil {
 		t.Fatal(err)
 	}
 	clone, err := cloneRequest(req)

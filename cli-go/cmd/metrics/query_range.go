@@ -81,7 +81,6 @@ Examples:
 				return err
 			}
 
-			// For non-table output, return raw result
 			if cmdutil.OutputFormat != output.FormatTable {
 				return output.Print(cmdutil.OutputFormat, cmdutil.Resolved.NoColor, result)
 			}
@@ -119,7 +118,6 @@ func renderRangeResult(result *types.MetricsResult, noColor bool) error {
 		metric := client.FormatMetricLabels(s.Metric)
 		sampleCount := fmt.Sprintf("%d", len(s.Values))
 
-		// Show first few and last few values
 		var valParts []string
 		maxShow := 5
 		if len(s.Values) <= maxShow*2 {

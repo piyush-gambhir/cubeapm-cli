@@ -10,7 +10,6 @@ import (
 
 var updateMu sync.Mutex
 
-// Update performs a cross-process locked load-modify-save transaction.
 func Update(mutator func(*Config) error) error {
 	updateMu.Lock()
 	defer updateMu.Unlock()

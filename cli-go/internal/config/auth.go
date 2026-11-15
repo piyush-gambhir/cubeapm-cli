@@ -6,8 +6,6 @@ import (
 	"strconv"
 )
 
-// ValidateSelectedProfile rejects stale or mistyped profile names before
-// environment fallbacks can silently target a different server.
 func ValidateSelectedProfile(cfg *Config, requested string) error {
 	name := requested
 	if name == "" {
@@ -22,8 +20,6 @@ func ValidateSelectedProfile(cfg *Config, requested string) error {
 	return nil
 }
 
-// ResolvedConfig holds the final resolved configuration after layering
-// flags > env vars > config profile.
 type ResolvedConfig struct {
 	Server     string
 	QueryPort  int
@@ -34,7 +30,6 @@ type ResolvedConfig struct {
 	NoColor    bool
 	ReadOnly   bool
 
-	// Auth
 	AuthMethod    string
 	Email         string
 	Password      string
@@ -42,7 +37,6 @@ type ResolvedConfig struct {
 	SessionExpiry string
 }
 
-// FlagOverrides holds values from CLI flags that may override config.
 type FlagOverrides struct {
 	Server     string
 	QueryPort  int
@@ -53,15 +47,11 @@ type FlagOverrides struct {
 	Verbose    bool
 	NoColor    bool
 
-	// Kratos auth
 	Email    string
 	Password string
 }
 
-// ResolveAuth resolves the final configuration by layering:
-// flags > environment variables > config profile.
 func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
-	// Start with config profile
 	var profileName string
 	if flags.Profile != "" {
 		profileName = flags.Profile
@@ -93,7 +83,6 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 		SessionExpiry: profile.SessionExpiry,
 	}
 
-	// Layer environment variables
 	if v := os.Getenv("CUBEAPM_SERVER"); v != "" {
 		resolved.Server = v
 	}
@@ -112,8 +101,6 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 			resolved.AdminPort = port
 		}
 	}
-	// The environment can only add read-only mode: CUBEAPM_READ_ONLY=false
-	// must not lift a profile's read_only: true.
 	if v := os.Getenv("CUBEAPM_READ_ONLY"); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil && b {
 			resolved.ReadOnly = true
@@ -126,7 +113,6 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 		resolved.Password = v
 	}
 
-	// Layer flag overrides (highest priority)
 	if flags.Server != "" {
 		resolved.Server = flags.Server
 	}
@@ -149,7 +135,6 @@ func ResolveAuth(cfg *Config, flags FlagOverrides) ResolvedConfig {
 		resolved.Output = flags.Output
 	}
 
-	// Ensure defaults
 	if resolved.QueryPort == 0 {
 		resolved.QueryPort = DefaultQueryPort
 	}

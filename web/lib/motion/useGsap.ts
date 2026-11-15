@@ -9,7 +9,6 @@ import { gsap } from './gsap';
 
 type GsapEffect = (context: gsap.Context) => void | (() => void);
 
-/** Runs a scoped GSAP effect only when motion is allowed, then reverts it. */
 export function useGsap<T extends Element>(
   effect: GsapEffect,
   dependencies: DependencyList = [],
@@ -27,7 +26,6 @@ export function useGsap<T extends Element>(
       effectCleanup?.();
       context.revert();
     };
-    // The caller controls when the animation is rebuilt, like React's effects.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies);
 }

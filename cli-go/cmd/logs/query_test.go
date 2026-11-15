@@ -19,7 +19,6 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/output"
 )
 
-// -o yaml must be a valid multi-document YAML stream, one document per entry.
 func TestQueryYAMLStreamIsValid(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, `{"_msg":"first","_time":"2024-01-15T10:00:00Z","_stream":"{}","service":"api"}`)

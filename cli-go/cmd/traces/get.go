@@ -67,12 +67,10 @@ Examples:
 				return err
 			}
 
-			// For non-table output, return the raw trace data
 			if cmdutil.OutputFormat != output.FormatTable {
 				return output.Print(cmdutil.OutputFormat, cmdutil.Resolved.NoColor, trace)
 			}
 
-			// Table mode: render waterfall
 			return renderWaterfall(os.Stdout, trace, cmdutil.Resolved.NoColor)
 		},
 	}
@@ -82,7 +80,6 @@ Examples:
 	return cmd
 }
 
-// spanNode is used to build the span tree.
 type spanNode struct {
 	span     types.Span
 	service  string
@@ -95,7 +92,6 @@ func renderWaterfall(w io.Writer, trace *types.Trace, noColor bool) error {
 		return nil
 	}
 
-	// Calculate total duration from root span
 	var totalDuration int64
 	for _, s := range trace.Spans {
 		if s.Duration > totalDuration {
@@ -103,14 +99,12 @@ func renderWaterfall(w io.Writer, trace *types.Trace, noColor bool) error {
 		}
 	}
 
-	// Print trace header
 	if !noColor {
 		fmt.Fprintf(w, "\033[1mTRACE: %s (%d spans, %s)\033[0m\n\n", trace.TraceID, len(trace.Spans), formatDuration(totalDuration))
 	} else {
 		fmt.Fprintf(w, "TRACE: %s (%d spans, %s)\n\n", trace.TraceID, len(trace.Spans), formatDuration(totalDuration))
 	}
 
-	// Build span lookup and tree
 	nodeMap := make(map[string]*spanNode, len(trace.Spans))
 	for _, s := range trace.Spans {
 		service := ""
@@ -123,7 +117,6 @@ func renderWaterfall(w io.Writer, trace *types.Trace, noColor bool) error {
 		}
 	}
 
-	// Find roots and build parent-child relationships
 	var roots []*spanNode
 	for _, s := range trace.Spans {
 		node := nodeMap[s.SpanID]
@@ -142,13 +135,11 @@ func renderWaterfall(w io.Writer, trace *types.Trace, noColor bool) error {
 		}
 	}
 
-	// Sort roots and children by start time
 	sortNodes(roots)
 	for _, node := range nodeMap {
 		sortNodes(node.children)
 	}
 
-	// Flatten tree into rows
 	type flatRow struct {
 		prefix    string
 		service   string
@@ -210,7 +201,6 @@ func renderWaterfall(w io.Writer, trace *types.Trace, noColor bool) error {
 		flatten(root, "", i == len(roots)-1, 0)
 	}
 
-	// Calculate max widths
 	maxService := len("SERVICE")
 	maxOp := len("OPERATION")
 	maxDur := len("DURATION")
@@ -228,7 +218,6 @@ func renderWaterfall(w io.Writer, trace *types.Trace, noColor bool) error {
 		}
 	}
 
-	// Print header
 	hdr := fmt.Sprintf("%-*s  %-*s  %-*s  %s",
 		maxService, "SERVICE",
 		maxOp, "OPERATION",
@@ -240,10 +229,8 @@ func renderWaterfall(w io.Writer, trace *types.Trace, noColor bool) error {
 		fmt.Fprintln(w, hdr)
 	}
 
-	// Print rows
 	for _, r := range rows {
 		svc := r.prefix + r.service
-		// Pad using display width
 		padding := maxService - displayWidth(svc)
 		if padding < 0 {
 			padding = 0
@@ -265,12 +252,9 @@ func renderWaterfall(w io.Writer, trace *types.Trace, noColor bool) error {
 	return nil
 }
 
-// displayWidth returns the visible width of a string (accounting for multi-byte
-// Unicode characters used in tree drawing).
 func displayWidth(s string) int {
 	w := 0
 	for _, r := range s {
-		// Box drawing characters are single width
 		w++
 		_ = r
 	}

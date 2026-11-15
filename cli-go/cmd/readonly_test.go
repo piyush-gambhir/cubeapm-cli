@@ -21,8 +21,6 @@ profiles:
     auth_method: none
 `
 
-// runRoot executes the real root command against an isolated config file and
-// returns the config file contents afterwards plus the command error.
 func runRoot(t *testing.T, profileReadOnly bool, env map[string]string, args ...string) (string, error) {
 	t.Helper()
 
@@ -59,14 +57,12 @@ func testConfig(profileReadOnly bool) string {
 	return strings.Replace(readOnlyTestConfig, "%READ_ONLY%", strconv.FormatBool(profileReadOnly), 1)
 }
 
-// configWriteCommands change the local config file.
 var configWriteCommands = [][]string{
 	{"config", "set", "server", "changed.example.com"},
 	{"config", "profiles", "use", "other"},
 	{"config", "profiles", "delete", "other"},
 }
 
-// writeCommands lists every command annotated mutates=true.
 var writeCommands = append(append([][]string{}, configWriteCommands...), [][]string{
 	{"update"},
 	{"ingest", "metrics"},
@@ -114,7 +110,6 @@ func TestReadOnlyLeavesConfigUntouched(t *testing.T) {
 	}
 }
 
-// A profile's read_only: true cannot be lifted by the environment or the flag.
 func TestReadOnlyProfileCannotBeDisabled(t *testing.T) {
 	env := map[string]string{"CUBEAPM_READ_ONLY": "false"}
 	_, err := runRoot(t, true, env, "--read-only=false", "config", "set", "server", "changed.example.com")
@@ -127,7 +122,6 @@ func TestReadOnlyAllowsReads(t *testing.T) {
 	if _, err := runRoot(t, true, nil, "config", "get", "server"); err != nil {
 		t.Fatalf("config get should run in read-only mode: %v", err)
 	}
-	// update --check only reports; in tests it stops at the dev-build guard.
 	_, err := runRoot(t, true, nil, "update", "--check")
 	if err == nil || strings.Contains(err.Error(), "read-only") {
 		t.Fatalf("update --check should pass the read-only check, got %v", err)
@@ -144,8 +138,6 @@ func TestWriteCommandRunsWithoutReadOnly(t *testing.T) {
 	}
 }
 
-// Config writes and update cannot escape the active profile's read_only by
-// selecting another (or a missing) profile with --profile.
 func TestReadOnlyActiveProfileAppliesDespiteProfileFlag(t *testing.T) {
 	for _, args := range [][]string{
 		{"--profile", "other", "config", "set", "server", "changed.example.com"},
@@ -164,9 +156,6 @@ func TestReadOnlyActiveProfileAppliesDespiteProfileFlag(t *testing.T) {
 	}
 }
 
-// isolateRoot resets the shared root's flags before and after a test and
-// removes the help and completion commands Execute adds, so the agent-safety
-// manifest test sees the same command graph.
 func isolateRoot(t *testing.T) {
 	t.Helper()
 	resetRootFlags()
@@ -185,7 +174,6 @@ func isolateRoot(t *testing.T) {
 	})
 }
 
-// resetRootFlags restores flag values, which cobra keeps between Execute calls.
 func resetRootFlags() {
 	for _, name := range []string{"read-only", "profile", "output", "quiet", "no-input"} {
 		f := rootCmd.PersistentFlags().Lookup(name)

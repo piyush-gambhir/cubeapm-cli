@@ -9,7 +9,6 @@ import (
 )
 
 func TestLoadConfig_NewFile(t *testing.T) {
-	// Point config dir at a temporary directory with no config file
 	tmpDir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", tmpDir)
 
@@ -35,7 +34,6 @@ func TestLoadConfig_ExistingFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", tmpDir)
 
-	// Write a config file manually
 	configDir := filepath.Join(tmpDir, "cubeapm-cli")
 	os.MkdirAll(configDir, 0700)
 	configData := Config{
@@ -95,7 +93,6 @@ func TestSaveConfig(t *testing.T) {
 		t.Fatalf("Save() error = %v", err)
 	}
 
-	// Verify the file was created
 	configPath := filepath.Join(tmpDir, "cubeapm-cli", "config.yaml")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -116,7 +113,6 @@ func TestSaveConfig(t *testing.T) {
 }
 
 func TestWithDefaults(t *testing.T) {
-	// Profile with no ports set
 	p := Profile{
 		Server: "example.com",
 		Email:  "user@example.com",
@@ -137,7 +133,6 @@ func TestWithDefaults(t *testing.T) {
 		t.Errorf("Output = %q, want %q", result.Output, DefaultOutput)
 	}
 
-	// Profile with custom ports should keep them
 	p2 := Profile{
 		Server:     "example.com",
 		QueryPort:  9090,
@@ -181,14 +176,12 @@ func TestGetCurrentProfile(t *testing.T) {
 		t.Errorf("Server = %q, want %q", p.Server, "prod.example.com")
 	}
 
-	// Test with no current profile set
 	cfg.CurrentProfile = ""
 	p = cfg.GetCurrentProfile()
 	if p.Server != "" {
 		t.Errorf("expected empty profile for no current profile, got Server = %q", p.Server)
 	}
 
-	// Test with non-existent current profile
 	cfg.CurrentProfile = "nonexistent"
 	p = cfg.GetCurrentProfile()
 	if p.Server != "" {
@@ -197,7 +190,6 @@ func TestGetCurrentProfile(t *testing.T) {
 }
 
 func TestConfigDir(t *testing.T) {
-	// Test with XDG_CONFIG_HOME set
 	tmpDir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", tmpDir)
 
