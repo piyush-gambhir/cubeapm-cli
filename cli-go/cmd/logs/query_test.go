@@ -108,10 +108,46 @@ func TestPrependFilters(t *testing.T) {
 			want:    "service:api AND *",
 		},
 		{
-			name:    "piped query is not wrapped",
+			name:    "pipe inside a subquery is not a split point",
 			filters: []string{"service:api"},
-			logsql:  "error | sort by (_time)",
-			want:    "service:api AND error | sort by (_time)",
+			logsql:  "user_id:in(_time:1h error | fields user_id)",
+			want:    "service:api AND (user_id:in(_time:1h error | fields user_id))",
+		},
+		{
+			name:    "half-open range keeps the split at depth zero",
+			filters: []string{"service:api"},
+			logsql:  "status:range[400, 500) | stats count()",
+			want:    "service:api AND (status:range[400, 500)) | stats count()",
+		},
+		{
+			name:    "comment line is skipped and the wrapper closes on a new line",
+			filters: []string{"service:api"},
+			logsql:  "_time:5m\n# per host | not a pipe\n| stats by (host) count()",
+			want:    "service:api AND (_time:5m\n# per host | not a pipe\n) | stats by (host) count()",
+		},
+		{
+			name:    "hash and pipe inside quotes are literal",
+			filters: []string{"service:api"},
+			logsql:  "\"a#b|c\" OR 'it\\'s|x' OR `raw|y` | limit 5",
+			want:    "service:api AND (\"a#b|c\" OR 'it\\'s|x' OR `raw|y`) | limit 5",
+		},
+		{
+			name:    "piped query wraps only the filter part",
+			filters: []string{"service:api"},
+			logsql:  "error OR timeout | sort by (_time)",
+			want:    "service:api AND (error OR timeout) | sort by (_time)",
+		},
+		{
+			name:    "pipe inside a quoted phrase is not a pipe",
+			filters: []string{"service:api"},
+			logsql:  `"a|b" OR timeout`,
+			want:    `service:api AND ("a|b" OR timeout)`,
+		},
+		{
+			name:    "match-all with pipes is not wrapped",
+			filters: []string{"service:api"},
+			logsql:  "* | stats count() as c",
+			want:    "service:api AND * | stats count() as c",
 		},
 	}
 

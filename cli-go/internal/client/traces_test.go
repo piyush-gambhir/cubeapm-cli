@@ -671,3 +671,40 @@ func TestSearchTraces_NativeFilterUsesRootSpan(t *testing.T) {
 		t.Errorf("max 100ms: got %d traces, want 0 (root span is 500ms, child is 5ms)", len(dropped))
 	}
 }
+
+func TestGetTrace_NativeReferencesAreChildOf(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"spans":[
+			{"trace_id":"YbZgFLQnvbZgYiyJoprv0Q==","span_id":"x9Yw4ZF4T80=","operation_name":"root","start_time":"2025-10-28T15:52:06Z","duration":2000,"process":{"service_name":"payment-service"}},
+			{"trace_id":"YbZgFLQnvbZgYiyJoprv0Q==","span_id":"3OCKrimamF0=","operation_name":"child","references":[{"trace_id":"YbZgFLQnvbZgYiyJoprv0Q==","span_id":"x9Yw4ZF4T80="}],"start_time":"2025-10-28T15:52:06.1Z","duration":1000,"process":{"service_name":"payment-service"}}
+		]}`))
+	}))
+	defer ts.Close()
+
+	tr, err := newTestClient(ts).GetTrace("61b66014b427bdb660622c89a29aefd1", time.Unix(1761666720, 0), time.Unix(1761670320, 0))
+	if err != nil {
+		t.Fatal(err)
+	}
+	refs := tr.Spans[1].References
+	if len(refs) != 1 {
+		t.Fatalf("got %d references, want 1", len(refs))
+	}
+	if refs[0].RefType != "CHILD_OF" || refs[0].SpanID != tr.Spans[0].SpanID {
+		t.Errorf("reference = %+v, want CHILD_OF %s", refs[0], tr.Spans[0].SpanID)
+	}
+}
+
+func TestGetTrace_NotFoundSuggestsWiderWindow(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"process_map":[]}`))
+	}))
+	defer ts.Close()
+
+	_, err := newTestClient(ts).GetTrace("82054ee62dba33988e7df6b94205bc80", time.Unix(1761666720, 0), time.Unix(1761670320, 0))
+	if err == nil {
+		t.Fatal("GetTrace() expected an error for an empty response")
+	}
+	if !strings.Contains(err.Error(), "--last") {
+		t.Errorf("error %q should suggest widening the window with --last", err)
+	}
+}

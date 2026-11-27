@@ -8,6 +8,7 @@ import (
 
 type MetricsResult struct {
 	Status    string      `json:"status"`
+	IsPartial bool        `json:"isPartial"`
 	Data      MetricsData `json:"data"`
 	ErrorType string      `json:"errorType,omitempty"`
 	Error     string      `json:"error,omitempty"`

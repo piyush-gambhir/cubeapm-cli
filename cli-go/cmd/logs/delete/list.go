@@ -16,10 +16,9 @@ func newListCmd() *cobra.Command {
 		Long: `List all active (in-progress) log deletion tasks.
 
 Returns a table of currently running deletion tasks, showing:
-  - TASK_ID:   unique identifier for the task
-  - FILTER:    the LogsQL filter expression used
-  - STATUS:    current status (running, completed, etc.)
-  - PROGRESS:  completion percentage or progress indicator
+  - TASK_ID:     unique identifier for the task
+  - FILTER:      the LogsQL filter expression used
+  - START_TIME:  when the task was created
 
 This command uses the admin API port (default: 3199).
 
@@ -48,14 +47,13 @@ Examples:
 			}
 
 			table := output.TableDef{
-				Headers: []string{"TASK_ID", "FILTER", "STATUS", "PROGRESS"},
+				Headers: []string{"TASK_ID", "FILTER", "START_TIME"},
 			}
 			for _, t := range tasks {
 				table.Rows = append(table.Rows, []string{
 					t.TaskID,
 					t.Filter,
-					t.Status,
-					t.Progress,
+					t.StartTime,
 				})
 			}
 

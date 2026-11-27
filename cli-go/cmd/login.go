@@ -205,19 +205,17 @@ func runLogin(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	profile := config.Profile{
-		Server:        server,
-		QueryPort:     queryPort,
-		IngestPort:    ingestPort,
-		AdminPort:     adminPort,
-		AuthMethod:    authMethod,
-		Email:         email,
-		Password:      password,
-		SessionCookie: sessionCookie,
-		SessionExpiry: sessionExpiry,
-	}
-
 	if err := config.Update(func(cfg *config.Config) error {
+		profile := cfg.Profiles[profileName]
+		profile.Server = server
+		profile.QueryPort = queryPort
+		profile.IngestPort = ingestPort
+		profile.AdminPort = adminPort
+		profile.AuthMethod = authMethod
+		profile.Email = email
+		profile.Password = password
+		profile.SessionCookie = sessionCookie
+		profile.SessionExpiry = sessionExpiry
 		cfg.SetProfile(profileName, profile)
 		if cfg.CurrentProfile == "" {
 			cfg.CurrentProfile = profileName

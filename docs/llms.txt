@@ -282,7 +282,7 @@ cubeapm traces get <trace-id> [flags]
 
 Retrieve one trace by its (hex) trace ID. In table mode renders a span waterfall tree (service / operation / duration / status, with parent-child indentation). In JSON/YAML returns the full Jaeger-format trace (all spans, tags, logs, processes).
 
-Flags: `--from` / `--to` / `--last`, optional, narrows the lookup window.
+Flags: `--from` / `--to` / `--last` set the lookup window. The window is always sent and defaults to the last 1 hour, so pass `--last 24h` (or `--from`/`--to`) for older traces.
 
 ```bash
 cubeapm traces get abc123def456789
@@ -612,10 +612,10 @@ Manage asynchronous log-deletion tasks via the admin API (port 3199). `run` and 
 cubeapm logs delete run <filter>
 ```
 
-Start a deletion task with a LogsQL filter. Deletion is **irreversible**, preview with `cubeapm logs query <same filter>` first. Returns a task ID.
+Start a deletion task with a LogsQL filter. Deletion is **irreversible**, preview with `cubeapm logs query <same filter> --last 365d` first (the task has no time window, but `logs query` defaults to the last hour). `_time:>24h` matches logs older than 24 hours; `_time:<24h` matches the last 24 hours. Returns a task ID.
 
 ```bash
-cubeapm logs delete run '_time:<24h AND service:test'
+cubeapm logs delete run '_time:>24h AND service:="test"'
 cubeapm logs delete run '_stream:{env="staging"}'
 ```
 
@@ -625,7 +625,7 @@ cubeapm logs delete run '_stream:{env="staging"}'
 cubeapm logs delete list
 ```
 
-List active deletion tasks. Alias: `ls`. Columns: `TASK_ID`, `FILTER`, `STATUS`, `PROGRESS`.
+List active deletion tasks. Alias: `ls`. Columns: `TASK_ID`, `FILTER`, `START_TIME`.
 
 ```bash
 cubeapm logs delete list -o json

@@ -38,8 +38,8 @@ The trace ID is a hex string (typically 32 characters) that uniquely
 identifies a distributed trace. You can obtain trace IDs from the
 'cubeapm traces search' command output.
 
-Time range flags are optional and help narrow the search window when the
-trace store is very large.
+The server only looks for the trace inside the time window, which defaults to
+the last hour. For older traces pass --last (e.g. --last 24h) or --from/--to.
 
 Examples:
   # Get a trace and display the waterfall view
@@ -51,7 +51,10 @@ Examples:
   # Get a trace as YAML
   cubeapm traces get abc123def456789 -o yaml
 
-  # Narrow the time range to speed up lookup
+  # Look up a trace older than the last hour
+  cubeapm traces get abc123def456789 --last 24h
+
+  # Search an explicit time range
   cubeapm traces get abc123def456789 --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

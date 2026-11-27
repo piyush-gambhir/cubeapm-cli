@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
@@ -34,7 +35,7 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 
 	flowURL := baseURL + "/api/auth/self-service/login/browser"
 	if verbose {
-		fmt.Printf("> GET %s\n", flowURL)
+		fmt.Fprintf(os.Stderr, "> GET %s\n", flowURL)
 	}
 
 	resp, err := client.Get(flowURL)
@@ -67,7 +68,7 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 	}
 
 	if verbose {
-		fmt.Printf("  Flow ID: %s\n", flowID)
+		fmt.Fprintf(os.Stderr, "  Flow ID: %s\n", flowID)
 	}
 
 	flowClient := &http.Client{
@@ -77,7 +78,7 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 
 	flowDetailURL := baseURL + "/api/auth/self-service/login/flows?id=" + flowID
 	if verbose {
-		fmt.Printf("> GET %s\n", flowDetailURL)
+		fmt.Fprintf(os.Stderr, "> GET %s\n", flowDetailURL)
 	}
 
 	resp2, err := flowClient.Get(flowDetailURL)
@@ -98,7 +99,7 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 
 	loginURL := baseURL + "/api/auth/self-service/login?flow=" + flowID
 	if verbose {
-		fmt.Printf("> POST %s\n", loginURL)
+		fmt.Fprintf(os.Stderr, "> POST %s\n", loginURL)
 	}
 
 	formData := url.Values{
@@ -127,7 +128,7 @@ func KratosLogin(serverBaseURL, email, password string, verbose bool) (*KratosSe
 	}
 
 	if verbose {
-		fmt.Printf("< %d %s\n", resp3.StatusCode, resp3.Status)
+		fmt.Fprintf(os.Stderr, "< %d %s\n", resp3.StatusCode, resp3.Status)
 	}
 
 	if resp3.StatusCode == http.StatusUnauthorized || resp3.StatusCode == http.StatusBadRequest {

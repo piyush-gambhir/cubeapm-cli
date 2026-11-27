@@ -30,7 +30,7 @@ These flags apply to all commands:
 | `--ingest-port` | | int | `3130` | Override ingest API port |
 | `--admin-port` | | int | `3199` | Override admin API port |
 | `--no-color` | | bool | `false` | Disable colored output |
-| `--verbose` | | bool | `false` | Enable verbose HTTP request logging (written to stdout) |
+| `--verbose` | | bool | `false` | Enable verbose HTTP request logging (written to stderr) |
 | `--read-only` | | bool | `false` | Block every write command (see [Safety settings](#safety-settings)) |
 | `--no-input` | | bool | `false` | Disable all interactive prompts (`login` fails instead; `update` needs `--yes`) |
 | `--quiet` | `-q` | bool | `false` | Suppress informational output |
@@ -228,7 +228,7 @@ cubeapm traces get abc123def456789
 # Get a trace as JSON (full span data)
 cubeapm traces get abc123def456789 -o json
 
-# Narrow time range for faster lookup
+# Search a specific time range (the default is the last hour)
 cubeapm traces get abc123def456789 --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z
 ```
 
@@ -706,7 +706,7 @@ cubeapm logs field-values status --last 1h -o json
 
 ### `logs delete run`
 
-Start a log deletion task. **WARNING:** Deletion is irreversible. Preview with `cubeapm logs query` first.
+Start a log deletion task. **WARNING:** Deletion is irreversible. Preview with `cubeapm logs query` first, giving it a window that reaches your oldest logs (its default is the last hour; the deletion task has no window). In LogsQL, `_time:>24h` matches logs older than 24 hours and `_time:<24h` matches the last 24 hours.
 
 Uses the admin API port (default: 3199).
 
@@ -717,14 +717,14 @@ cubeapm logs delete run <filter>
 **Examples:**
 
 ```bash
-cubeapm logs delete run '_time:<24h AND service:test'
+cubeapm logs delete run '_time:>24h AND service:="test"'
 cubeapm logs delete run '_stream:{env="staging"}'
-cubeapm logs delete run '_time:<7d AND level:debug'
+cubeapm logs delete run '_time:>7d AND level:debug'
 ```
 
 ### `logs delete list`
 
-List active deletion tasks. JSON output: array of `{"TASK_ID", "FILTER", "STATUS", "PROGRESS"}`. With no tasks it prints `No active deletion tasks.` instead. Allowed in read-only mode.
+List active deletion tasks. JSON output: array of `{"TASK_ID", "FILTER", "START_TIME"}`. With no tasks it prints `No active deletion tasks.` instead. Allowed in read-only mode.
 
 ```
 cubeapm logs delete list

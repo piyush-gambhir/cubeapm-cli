@@ -51,5 +51,5 @@ cubeapm logs query 'error' --last 30m -o json | jq -c '{time: ._time, message: .
 
 - `--no-color` disables terminal color.
 - `--quiet` / `-q` suppresses informational output on commands that emit it.
-- `--verbose` prints HTTP request diagnostics; do not combine it with a stdout
-  parser because verbose lines are written to stdout.
+- `--verbose` prints HTTP request diagnostics to stderr, so stdout stays
+  parseable with `-o json` or `-o yaml`.

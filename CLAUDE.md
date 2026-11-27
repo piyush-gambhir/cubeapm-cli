@@ -260,8 +260,8 @@ cubeapm logs streams --query 'service:api-gateway' --last 1h -o json
 ### Manage log deletion
 
 ```bash
-# Start a deletion task (uses admin port 3199)
-cubeapm logs delete run '_time:<24h AND service:test'
+# Start a deletion task (uses admin port 3199); _time:>24h means older than 24 hours
+cubeapm logs delete run '_time:>24h AND service:="test"'
 
 # List active deletion tasks
 cubeapm logs delete list -o json
@@ -327,7 +327,7 @@ LogsQL is the query language for logs (VictoriaLogs-compatible):
 | Pattern | Description |
 |---------|-------------|
 | `error` | Keyword search in log message |
-| `service:api-gateway` | Field filter (exact match) |
+| `service:api-gateway` | Field word filter: matches values containing the word (`service:api` also matches `api-gateway`); use `service:="api"` for an exact match |
 | `error AND service:api` | AND combination |
 | `error OR warning` | OR combination |
 | `NOT health_check` | Negation |

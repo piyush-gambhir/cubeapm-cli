@@ -237,8 +237,12 @@ func convertCubeRefs(in []types.CubeSpanRef) []types.SpanRef {
 	}
 	out := make([]types.SpanRef, 0, len(in))
 	for _, r := range in {
+		refType := r.RefType
+		if refType == "" {
+			refType = "CHILD_OF"
+		}
 		out = append(out, types.SpanRef{
-			RefType: r.RefType,
+			RefType: refType,
 			TraceID: decodeCubeID(r.TraceID),
 			SpanID:  decodeCubeID(r.SpanID),
 		})
@@ -323,7 +327,7 @@ func (c *Client) GetTrace(traceID string, from, to time.Time) (*types.Trace, err
 	if len(dual.Spans) > 0 {
 		return cubeSpansToTrace(traceID, dual.Spans, dual.ProcessMap, dual.Processes), nil
 	}
-	return nil, fmt.Errorf("trace %s not found", traceID)
+	return nil, fmt.Errorf("trace %s not found in the searched time range (default: the last hour); widen it with --last or --from/--to", traceID)
 }
 
 func cubeSpansToTrace(traceID string, cubeSpans []types.CubeSpan, processMapRaw json.RawMessage, processes map[string]types.Process) *types.Trace {

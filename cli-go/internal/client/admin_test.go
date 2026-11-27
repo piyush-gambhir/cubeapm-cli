@@ -77,8 +77,8 @@ func TestDeleteLogs_List(t *testing.T) {
 		gotPath = r.URL.Path
 		gotMethod = r.Method
 		json.NewEncoder(w).Encode([]map[string]string{
-			{"task_id": "task-1", "filter": "_time:<24h", "status": "running", "progress": "50%"},
-			{"task_id": "task-2", "filter": "service:test", "status": "running", "progress": "10%"},
+			{"task_id": "1738060800000000000", "filter": "_time:>24h", "start_time": "2025-01-28T10:00:00Z"},
+			{"task_id": "1738060900000000000", "filter": "service:test", "start_time": "2025-01-28T11:00:00Z"},
 		})
 	}))
 	defer ts.Close()
@@ -98,11 +98,11 @@ func TestDeleteLogs_List(t *testing.T) {
 	if len(tasks) != 2 {
 		t.Fatalf("got %d tasks, want 2", len(tasks))
 	}
-	if tasks[0].TaskID != "task-1" {
-		t.Errorf("tasks[0].TaskID = %q, want %q", tasks[0].TaskID, "task-1")
+	if tasks[0].TaskID != "1738060800000000000" {
+		t.Errorf("tasks[0].TaskID = %q, want %q", tasks[0].TaskID, "1738060800000000000")
 	}
-	if tasks[0].Status != "running" {
-		t.Errorf("tasks[0].Status = %q, want %q", tasks[0].Status, "running")
+	if tasks[0].StartTime != "2025-01-28T10:00:00Z" {
+		t.Errorf("tasks[0].StartTime = %q, want the documented start_time", tasks[0].StartTime)
 	}
 }
 

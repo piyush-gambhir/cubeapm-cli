@@ -3,6 +3,7 @@ package client
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -403,5 +404,47 @@ func TestNewClient_IPv6BaseURLs(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestVerboseOutputGoesToStderr(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{}`))
+	}))
+	defer ts.Close()
+
+	stdout, err := os.CreateTemp(t.TempDir(), "stdout")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stderr, err := os.CreateTemp(t.TempDir(), "stderr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldStdout, oldStderr := os.Stdout, os.Stderr
+	os.Stdout, os.Stderr = stdout, stderr
+	defer func() { os.Stdout, os.Stderr = oldStdout, oldStderr }()
+
+	c := &Client{queryBaseURL: ts.URL, httpClient: ts.Client(), verbose: true}
+	resp, err := c.get(c.queryBaseURL, "/test", nil)
+	if err != nil {
+		t.Fatalf("get() error = %v", err)
+	}
+	resp.Body.Close()
+	os.Stdout, os.Stderr = oldStdout, oldStderr
+
+	out, err := os.ReadFile(stdout.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	errOut, err := os.ReadFile(stderr.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out) != 0 {
+		t.Errorf("verbose output leaked to stdout: %q", out)
+	}
+	if !strings.Contains(string(errOut), "> GET "+ts.URL+"/test") {
+		t.Errorf("stderr = %q, want the request line", errOut)
 	}
 }
