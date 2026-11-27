@@ -85,6 +85,7 @@ Examples:
 				return output.Print(cmdutil.OutputFormat, cmdutil.Resolved.NoColor, result)
 			}
 
+			warnPartial(result)
 			return renderRangeResult(result, cmdutil.Resolved.NoColor)
 		},
 	}

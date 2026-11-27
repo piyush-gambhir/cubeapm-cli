@@ -282,9 +282,11 @@ In table mode (default), renders a visual waterfall/tree view showing parent-chi
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--from` | string | | Start time (narrows lookup window) |
-| `--to` | string | | End time (narrows lookup window) |
+| `--from` | string | | Start time of the lookup window |
+| `--to` | string | | End time of the lookup window |
 | `--last` | string | | Relative duration from now |
+
+The lookup window is always sent; with no time flags it is the last 1 hour, so pass `--last` or `--from`/`--to` for older traces.
 
 **Examples:**
 
@@ -295,8 +297,8 @@ cubeapm traces get abc123def456789
 # Get a trace as JSON
 cubeapm traces get abc123def456789 -o json
 
-# Narrow time range for faster lookup
-cubeapm traces get abc123def456789 --from 2024-01-15T00:00:00Z --to 2024-01-15T12:00:00Z
+# Look up a trace older than the last hour
+cubeapm traces get abc123def456789 --last 24h
 ```
 
 #### `traces services`
@@ -866,16 +868,16 @@ Start a log deletion task.
 cubeapm logs delete run <filter>
 ```
 
-**WARNING:** Deletion is irreversible. Preview with `cubeapm logs query` first.
+**WARNING:** Deletion is irreversible. Preview with `cubeapm logs query` first, giving it a window that reaches your oldest logs (its default is the last hour; the deletion task has no window). In LogsQL, `_time:>24h` matches logs older than 24 hours and `_time:<24h` matches the last 24 hours.
 
 Uses the admin API port (default: 3199).
 
 **Examples:**
 
 ```bash
-cubeapm logs delete run '_time:<24h AND service:test'
+cubeapm logs delete run '_time:>24h AND service:="test"'
 cubeapm logs delete run '_stream:{env="staging"}'
-cubeapm logs delete run '_time:<7d AND level:debug'
+cubeapm logs delete run '_time:>7d AND level:debug'
 ```
 
 ##### `logs delete list`

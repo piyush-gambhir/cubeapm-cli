@@ -329,3 +329,25 @@ func TestRangeQuery_EmptyResult(t *testing.T) {
 		t.Errorf("status = %q, want %q", result.Status, "success")
 	}
 }
+
+func TestInstantQuery_KeepsIsPartial(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"status":"success","isPartial":true,"data":{"resultType":"vector","result":[]}}`))
+	}))
+	defer ts.Close()
+
+	result, err := newTestClient(ts).QueryInstant("up", time.Time{})
+	if err != nil {
+		t.Fatalf("QueryInstant() error = %v", err)
+	}
+	if !result.IsPartial {
+		t.Error("IsPartial = false, want true")
+	}
+	out, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(out), `"isPartial":true`) {
+		t.Errorf("JSON output %s lost isPartial", out)
+	}
+}

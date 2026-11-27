@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -98,10 +99,10 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	c.setAuthHeaders(req)
 
 	if c.verbose {
-		fmt.Printf("> %s %s\n", req.Method, req.URL.String())
+		fmt.Fprintf(os.Stderr, "> %s %s\n", req.Method, req.URL.String())
 		for name, values := range req.Header {
 			for _, v := range values {
-				fmt.Printf("> %s: %s\n", name, redactAuthHeaders(name, v))
+				fmt.Fprintf(os.Stderr, "> %s: %s\n", name, redactAuthHeaders(name, v))
 			}
 		}
 	}
@@ -112,10 +113,10 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 	}
 
 	if c.verbose {
-		fmt.Printf("< %d %s\n", resp.StatusCode, resp.Status)
+		fmt.Fprintf(os.Stderr, "< %d %s\n", resp.StatusCode, resp.Status)
 		for name, values := range resp.Header {
 			for _, v := range values {
-				fmt.Printf("< %s: %s\n", name, redactAuthHeaders(name, v))
+				fmt.Fprintf(os.Stderr, "< %s: %s\n", name, redactAuthHeaders(name, v))
 			}
 		}
 	}
@@ -124,7 +125,7 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		resp.Body.Close()
 
 		if c.verbose {
-			fmt.Println("  Session expired, re-authenticating...")
+			fmt.Fprintln(os.Stderr, "  Session expired, re-authenticating...")
 		}
 
 		if err := c.reAuthenticate(); err != nil {
@@ -143,7 +144,7 @@ func (c *Client) doRequest(req *http.Request) (*http.Response, error) {
 		}
 
 		if c.verbose {
-			fmt.Printf("< %d %s (after re-auth)\n", resp.StatusCode, resp.Status)
+			fmt.Fprintf(os.Stderr, "< %d %s (after re-auth)\n", resp.StatusCode, resp.Status)
 		}
 	}
 

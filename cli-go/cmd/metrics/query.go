@@ -3,6 +3,7 @@ package metrics
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -82,6 +83,7 @@ Examples:
 				return output.Print(cmdutil.OutputFormat, cmdutil.Resolved.NoColor, result)
 			}
 
+			warnPartial(result)
 			return renderInstantResult(result, cmdutil.Resolved.NoColor)
 		},
 	}
@@ -89,6 +91,12 @@ Examples:
 	cmd.Flags().StringVar(&queryTime, "time", "", "Evaluation time (RFC3339, Unix, or relative)")
 
 	return cmd
+}
+
+func warnPartial(result *types.MetricsResult) {
+	if result.IsPartial {
+		fmt.Fprintln(os.Stderr, "Warning: the server marked this result as partial; some data was unavailable.")
+	}
 }
 
 func renderInstantResult(result *types.MetricsResult, noColor bool) error {

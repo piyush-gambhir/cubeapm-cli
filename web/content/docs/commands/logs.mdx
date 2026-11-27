@@ -34,10 +34,11 @@ the standard time-range flags.
 ## Deletion tasks
 
 ```bash
-# Preview first
-cubeapm logs query '_time:<24h AND service:test' --limit 10
+# Preview first: _time:>24h means older than 24 hours, and logs query
+# defaults to the last hour, so widen its window
+cubeapm logs query '_time:>24h AND service:="test"' --last 365d --limit 10
 
-cubeapm logs delete run '_time:<24h AND service:test'
+cubeapm logs delete run '_time:>24h AND service:="test"'
 cubeapm logs delete list -o json
 cubeapm logs delete stop <task-id>
 cubeapm logs delete stop --if-exists <task-id>

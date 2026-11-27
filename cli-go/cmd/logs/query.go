@@ -19,11 +19,52 @@ func prependFilters(filters []string, logsql string) string {
 		return logsql
 	}
 	prefix := strings.Join(filters, " AND ") + " AND "
-	trimmed := strings.TrimSpace(logsql)
-	if trimmed == "*" || strings.Contains(logsql, "|") {
-		return prefix + logsql
+	filter, pipes, comment := splitPipes(logsql)
+	filter = strings.TrimSpace(filter)
+	switch {
+	case filter == "*":
+	case comment:
+		filter = "(" + filter + "\n)"
+	default:
+		filter = "(" + filter + ")"
 	}
-	return prefix + "(" + trimmed + ")"
+	if pipes == "" {
+		return prefix + filter
+	}
+	return prefix + filter + " " + pipes
+}
+
+func splitPipes(logsql string) (string, string, bool) {
+	var quote rune
+	escaped, inComment, comment := false, false, false
+	depth := 0
+	for i, r := range logsql {
+		switch {
+		case inComment:
+			if r == '\n' {
+				inComment = false
+			}
+		case escaped:
+			escaped = false
+		case quote != 0:
+			if r == '\\' && quote != '`' {
+				escaped = true
+			} else if r == quote {
+				quote = 0
+			}
+		case r == '"' || r == '\'' || r == '`':
+			quote = r
+		case r == '#':
+			inComment, comment = true, true
+		case r == '(' || r == '[':
+			depth++
+		case (r == ')' || r == ']') && depth > 0:
+			depth--
+		case r == '|' && depth == 0:
+			return logsql[:i], logsql[i:], comment
+		}
+	}
+	return logsql, "", comment
 }
 
 func newQueryCmd() *cobra.Command {

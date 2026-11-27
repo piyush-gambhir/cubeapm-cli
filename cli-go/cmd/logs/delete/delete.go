@@ -22,7 +22,7 @@ Subcommands:
 Deletion tasks use the admin API port (default: 3199).
 
 Examples:
-  cubeapm logs delete run '_time:<24h AND service:test'
+  cubeapm logs delete run '_time:>24h AND service:="test"'
   cubeapm logs delete list
   cubeapm logs delete stop <task-id>`,
 	}

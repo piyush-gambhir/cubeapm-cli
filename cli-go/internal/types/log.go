@@ -41,10 +41,9 @@ type StatsResult struct {
 }
 
 type DeleteTask struct {
-	TaskID   string `json:"task_id"`
-	Filter   string `json:"filter"`
-	Status   string `json:"status"`
-	Progress string `json:"progress"`
+	TaskID    string `json:"task_id"`
+	Filter    string `json:"filter"`
+	StartTime string `json:"start_time"`
 }
 
 type DeleteRunResponse struct {

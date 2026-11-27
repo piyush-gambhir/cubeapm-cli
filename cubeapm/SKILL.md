@@ -340,14 +340,15 @@ cubeapm ingest logs --format otlp --file logs.pb
 ### Workflow 13: Delete old logs
 
 ```bash
-# Preview what would be deleted first
-cubeapm logs query '_time:<24h AND service:test' --limit 10
+# Preview what would be deleted first (_time:>24h means older than 24 hours;
+# logs query defaults to the last hour, so widen its window)
+cubeapm logs query '_time:>24h AND service:="test"' --last 365d --limit 10
 
 # Start a deletion task (uses admin port 3199)
-cubeapm logs delete run '_time:<24h AND service:test'
+cubeapm logs delete run '_time:>24h AND service:="test"'
 
-# Delete old debug logs
-cubeapm logs delete run '_time:<7d AND level:debug'
+# Delete debug logs older than 7 days
+cubeapm logs delete run '_time:>7d AND level:debug'
 
 # Delete logs for a staging environment
 cubeapm logs delete run '_stream:{env="staging"}'
@@ -574,7 +575,7 @@ See [references/commands.md](references/commands.md) for the full command refere
 | Pattern | Description |
 |---------|-------------|
 | `error` | Keyword search in log message |
-| `service:api-gateway` | Field filter (exact match) |
+| `service:api-gateway` | Field word filter: matches values containing the word (`service:api` also matches `api-gateway`); use `service:="api"` for an exact match |
 | `error AND service:api` | AND combination |
 | `error OR warning` | OR combination |
 | `NOT health_check` | Negation |
