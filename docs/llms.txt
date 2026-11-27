@@ -257,8 +257,8 @@ Flags:
 - `--env <env>`, filter by environment (UPPER-CASE values: `PROD`, `UAT`, etc.)
 - `--query <op>`, filter by operation name (e.g. `GET /api/users`)
 - `--status <error|ok>`, `error` matches the `error=true` tag; `ok` matches `otel.status_code=OK`
-- `--min-duration <dur>`, only traces slower than this (`500ms`, `1s`, `100us`)
-- `--max-duration <dur>`, only traces faster than this (`5s`, `10s`)
+- `--min-duration <dur>`, only traces whose root span is at least this long (`500ms`, `1s`, `100us`). The native API has no duration filter, so the CLI filters the returned traces and, for server spans, asks for the slowest first
+- `--max-duration <dur>`, only traces whose root span is at most this long (`5s`, `10s`). On the native API this filters only the `--limit` traces returned (max 100)
 - `--tags <key=value>`, span tag filter, repeatable (e.g. `--tags http.method=POST --tags http.status_code=500`)
 - `--span-kind <kind>`, `client`, `server`, `producer`, `consumer`, `internal`. **Default `server`** (some CubeAPM deployments require a non-empty value).
 - `--index <name>`, CubeAPM trace index to query (default `cube:latency`; also `cube:error`)
