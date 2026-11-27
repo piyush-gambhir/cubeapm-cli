@@ -35,3 +35,15 @@ type TraceSearchResult struct {
 	Spans     []Span             `json:"spans"`
 	Processes map[string]Process `json:"processes"`
 }
+
+func RootSpan(spans []Span) Span {
+	for _, span := range spans {
+		if len(span.References) == 0 {
+			return span
+		}
+	}
+	if len(spans) > 0 {
+		return spans[0]
+	}
+	return Span{}
+}
