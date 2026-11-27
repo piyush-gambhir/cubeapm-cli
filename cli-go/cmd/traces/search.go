@@ -10,6 +10,7 @@ import (
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/cmdutil"
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/output"
 	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/timeflag"
+	"github.com/piyush-gambhir/cubeapm-cli/cli-go/internal/types"
 )
 
 func newSearchCmd() *cobra.Command {
@@ -47,6 +48,12 @@ Filters:
   --tags          Filter by span tag key=value pairs (can be specified multiple times)
   --span-kind     Filter by span kind: client, server, producer, consumer, internal
   --limit         Maximum number of traces to return (default: 20)
+
+CubeAPM's native search API has no duration filter, so the CLI applies
+--min-duration and --max-duration to the root span of the traces the server
+returns. With only --min-duration it asks the server for the slowest traces
+first. With --max-duration, matches outside the first --limit traces are missed;
+raise --limit (the native API allows up to 100) or narrow the time range.
 
 Time ranges can be specified as:
   - Relative:   --last 1h  (also: 30m, 2d, 1d12h)
@@ -127,13 +134,7 @@ Examples:
 				if len(trace.Spans) == 0 {
 					continue
 				}
-				rootSpan := trace.Spans[0]
-				for _, span := range trace.Spans {
-					if len(span.References) == 0 {
-						rootSpan = span
-						break
-					}
-				}
+				rootSpan := types.RootSpan(trace.Spans)
 
 				serviceName := ""
 				if proc, ok := trace.Processes[rootSpan.ProcessID]; ok {

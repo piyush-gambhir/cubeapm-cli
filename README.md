@@ -227,8 +227,8 @@ cubeapm traces search [flags]
 | `--env` | string | | Filter by environment; sent unchanged (case-sensitive), CubeAPM values are usually upper-case (`PROD`, `UAT`) |
 | `--query` | string | | Filter by operation name |
 | `--status` | string | | Filter by span status: `error`, `ok` |
-| `--min-duration` | string | | Minimum trace duration (e.g., `500ms`, `1s`) |
-| `--max-duration` | string | | Maximum trace duration (e.g., `5s`, `10s`) |
+| `--min-duration` | string | | Minimum root-span duration (e.g., `500ms`, `1s`); on the native API, fetches the slowest traces first |
+| `--max-duration` | string | | Maximum root-span duration (e.g., `5s`, `10s`); on the native API, filters only the `--limit` traces returned |
 | `--tags` | string[] | | Filter by span tag key=value (repeatable) |
 | `--span-kind` | string | `server` | Filter by span kind: `client`, `server`, `producer`, `consumer`, `internal` |
 | `--index` | string | `cube:latency` | CubeAPM trace index to query (e.g., `cube:latency`, `cube:error`) |

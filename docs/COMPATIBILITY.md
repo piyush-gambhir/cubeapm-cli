@@ -24,7 +24,7 @@ The Go source, dependency files and binary release contract are unchanged.
 
 ## Upstream API baseline
 
-The native trace API uses `/api/traces/api/v1/search` with `query`, `env`, `service`, and Unix-second `start`/`end` parameters. Trace fetch uses `/api/traces/api/v1/traces/<id>` with the same time units. Responses are normalized for the CLI's existing trace output.
+The native trace API uses `/api/traces/api/v1/search` with `query`, `env`, `service`, and Unix-second `start`/`end` parameters. Trace fetch uses `/api/traces/api/v1/traces/<id>` with the same time units. Responses are normalized for the CLI's existing trace output: native span `duration` is in nanoseconds and is converted to Jaeger's microseconds. The native search has no duration filter (`minDuration`/`maxDuration` are ignored), so the CLI filters on the client and sends `sortBy=duration` (slowest first) when only `--min-duration` is set. `limit` above 100 is rejected.
 
 Reference: [CubeAPM trace API](https://docs.cubeapm.com/http-apis/traces-apis), checked 2026-09-06. CubeAPM publishes rolling documentation rather than a release-specific API manual. Optional Jaeger-derived endpoints and extra filters remain deployment-dependent; native request parameters are the default.
 

@@ -2,6 +2,7 @@ package client
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -409,7 +410,7 @@ func TestDecodeCubeID(t *testing.T) {
 
 func TestGetTrace_NativeShape(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte(`{"spans":[{"trace_id":"e6319082328509fe1e0aa6734da74b2b","span_id":"1e0aa6734da74b2b","operation_name":"GET /x","start_time":"2026-06-14T11:09:32Z","duration":1234,"process":{"service_name":"CONSOLE-BACKEND"}}],"process_map":[]}`))
+		w.Write([]byte(`{"spans":[{"trace_id":"e6319082328509fe1e0aa6734da74b2b","span_id":"1e0aa6734da74b2b","operation_name":"GET /x","start_time":"2026-06-14T11:09:32Z","duration":1234567,"process":{"service_name":"CONSOLE-BACKEND"}}],"process_map":[]}`))
 	}))
 	defer ts.Close()
 
@@ -423,6 +424,9 @@ func TestGetTrace_NativeShape(t *testing.T) {
 	}
 	if tr.Spans[0].OperationName != "GET /x" {
 		t.Errorf("operation = %q, want %q", tr.Spans[0].OperationName, "GET /x")
+	}
+	if tr.Spans[0].Duration != 1234 {
+		t.Errorf("duration = %d, want 1234 microseconds from 1234567 native nanoseconds", tr.Spans[0].Duration)
 	}
 	pid := tr.Spans[0].ProcessID
 	if pid == "" {
@@ -535,5 +539,102 @@ func TestSearchTracesPreservesEnvironmentFilters(t *testing.T) {
 	}
 	if tags["environment"] != "staging" || len(tags) != 2 {
 		t.Fatalf("mutated caller tags: %v", tags)
+	}
+}
+
+func nativeSearchBody(durationsNs ...int64) string {
+	items := make([]string, 0, len(durationsNs))
+	for i, d := range durationsNs {
+		items = append(items, fmt.Sprintf(`{"keySpanId":"%[1]d","trace":{"spans":[{"trace_id":"t%[1]d","span_id":"%[1]d","operation_name":"op%[1]d","start_time":"2026-11-27T11:57:55.237060352Z","duration":%[2]d,"process":{"service_name":"svc"}}]}}`, i, d))
+	}
+	return "[" + strings.Join(items, ",") + "]"
+}
+
+func TestSearchTraces_NativeDurationsAreMicroseconds(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(nativeSearchBody(90959364680)))
+	}))
+	defer ts.Close()
+
+	results, err := newTestClient(ts).SearchTraces("svc", nil, "", time.Time{}, time.Time{}, 0, "", "", "", "")
+	if err != nil {
+		t.Fatalf("SearchTraces() error = %v", err)
+	}
+	if len(results) != 1 || len(results[0].Spans) != 1 {
+		t.Fatalf("got %+v, want one trace with one span", results)
+	}
+	if got := results[0].Spans[0].Duration; got != 90959364 {
+		t.Errorf("duration = %d, want 90959364 microseconds", got)
+	}
+	if got := results[0].Spans[0].StartTime; got != 1795780675237060 {
+		t.Errorf("start = %d, want 1795780675237060 microseconds", got)
+	}
+}
+
+func TestSearchTraces_NativeDurationFilter(t *testing.T) {
+	tests := []struct {
+		name       string
+		min, max   string
+		wantOps    []string
+		wantSortBy string
+	}{
+		{name: "none", wantOps: []string{"op0", "op1", "op2"}},
+		{name: "min only", min: "10ms", wantOps: []string{"op1", "op2"}, wantSortBy: "duration"},
+		{name: "max only", max: "100ms", wantOps: []string{"op0", "op1"}},
+		{name: "both", min: "10ms", max: "100ms", wantOps: []string{"op1"}},
+		{name: "inclusive bounds", min: "50ms", max: "50ms", wantOps: []string{"op1"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotSortBy string
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				gotSortBy = r.URL.Query().Get("sortBy")
+				w.Write([]byte(nativeSearchBody(5e6, 50e6, 500e6)))
+			}))
+			defer ts.Close()
+
+			results, err := newTestClient(ts).SearchTraces("svc", nil, "", time.Time{}, time.Time{}, 0, "", tt.min, tt.max, "")
+			if err != nil {
+				t.Fatalf("SearchTraces() error = %v", err)
+			}
+			var ops []string
+			for _, r := range results {
+				ops = append(ops, r.Spans[0].OperationName)
+			}
+			if strings.Join(ops, ",") != strings.Join(tt.wantOps, ",") {
+				t.Errorf("operations = %v, want %v", ops, tt.wantOps)
+			}
+			if gotSortBy != tt.wantSortBy {
+				t.Errorf("sortBy = %q, want %q", gotSortBy, tt.wantSortBy)
+			}
+		})
+	}
+}
+
+func TestSearchTraces_JaegerResultsNotFilteredClientSide(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`{"data":[{"traceID":"a","spans":[{"traceID":"a","spanID":"1","operationName":"slow","duration":5000000}]}]}`))
+	}))
+	defer ts.Close()
+
+	results, err := newTestClient(ts).SearchTraces("svc", nil, "", time.Time{}, time.Time{}, 0, "", "", "1s", "")
+	if err != nil {
+		t.Fatalf("SearchTraces() error = %v", err)
+	}
+	if len(results) != 1 {
+		t.Errorf("got %d results, want the server's 1 result kept", len(results))
+	}
+}
+
+func TestSearchTraces_InvalidDurationFilter(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t.Error("request sent despite an invalid duration")
+	}))
+	defer ts.Close()
+
+	for _, bad := range [][2]string{{"fast", ""}, {"", "1d"}, {"-1s", ""}} {
+		if _, err := newTestClient(ts).SearchTraces("svc", nil, "", time.Time{}, time.Time{}, 0, "", bad[0], bad[1], ""); err == nil {
+			t.Errorf("SearchTraces(min=%q, max=%q) error = nil, want an error", bad[0], bad[1])
+		}
 	}
 }

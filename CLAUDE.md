@@ -356,7 +356,7 @@ PromQL is the query language for metrics (Prometheus-compatible):
 - Always use `-o json` when you need to parse output programmatically.
 - The typical trace investigation flow is: `services` -> `operations` -> `search` -> `get`.
 - Use `--last` for relative time ranges (most common). It is simpler than `--from`/`--to`.
-- Duration filter values use Go-style notation: `500ms`, `1s`, `100us`, `5m`.
+- Duration filter values use Go-style notation: `500ms`, `1s`, `100us`, `5m`. On CubeAPM's native search API the CLI applies the duration filters to the root span of the returned traces: `--min-duration` alone fetches the slowest traces first, and with `--max-duration` matches beyond `--limit` (max 100) are missed. Trace durations from the native API are nanoseconds; the CLI converts them to microseconds like Jaeger.
 - Trace IDs are 32-character hex strings. Get them from `traces search` output.
 - The `traces get` command shows a visual waterfall view in table mode, but `-o json` gives full span data.
 - For metrics, use `query` for current values and `query-range` for time series data.

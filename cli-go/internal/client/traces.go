@@ -21,6 +21,14 @@ func isUnsupportedPath(err error) bool {
 const tracesBasePath = "/api/traces/api/v1"
 
 func (c *Client) SearchTraces(service string, tags map[string]string, query string, from, to time.Time, limit int, spanKind, minDuration, maxDuration, index string) ([]types.TraceSearchResult, error) {
+	minDur, err := parseDurationFilter("minimum", minDuration)
+	if err != nil {
+		return nil, err
+	}
+	maxDur, err := parseDurationFilter("maximum", maxDuration)
+	if err != nil {
+		return nil, err
+	}
 	tags = maps.Clone(tags)
 	params := url.Values{}
 	if index != "" {
@@ -64,6 +72,9 @@ func (c *Client) SearchTraces(service string, tags map[string]string, query stri
 	if maxDuration != "" {
 		params.Set("maxDuration", maxDuration)
 	}
+	if minDuration != "" && maxDuration == "" {
+		params.Set("sortBy", "duration")
+	}
 
 	body, err := c.getRaw(c.queryBaseURL, tracesBasePath+"/search", params)
 	if err != nil {
@@ -92,7 +103,36 @@ func (c *Client) SearchTraces(service string, tags map[string]string, query stri
 	if err := json.Unmarshal(body, &native); err != nil {
 		return nil, fmt.Errorf("searching traces: unable to decode response: %w", err)
 	}
-	return cubeToSearchResults(native), nil
+	return filterByRootDuration(cubeToSearchResults(native), minDur, maxDur), nil
+}
+
+func parseDurationFilter(bound, value string) (time.Duration, error) {
+	if value == "" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(value)
+	if err != nil || d < 0 {
+		return 0, fmt.Errorf("invalid %s duration %q: use a Go duration such as 500ms, 2s or 1m", bound, value)
+	}
+	return d, nil
+}
+
+func filterByRootDuration(results []types.TraceSearchResult, minDur, maxDur time.Duration) []types.TraceSearchResult {
+	if minDur == 0 && maxDur == 0 {
+		return results
+	}
+	out := make([]types.TraceSearchResult, 0, len(results))
+	for _, r := range results {
+		d := time.Duration(types.RootSpan(r.Spans).Duration) * time.Microsecond
+		if minDur > 0 && d < minDur {
+			continue
+		}
+		if maxDur > 0 && d > maxDur {
+			continue
+		}
+		out = append(out, r)
+	}
+	return out
 }
 
 func firstNonSpace(b []byte) byte {
@@ -153,7 +193,7 @@ func buildSpansAndProcesses(cubeSpans []types.CubeSpan, processes map[string]typ
 			OperationName: cs.OperationName,
 			References:    convertCubeRefs(cs.References),
 			StartTime:     parseCubeStart(cs.StartTime),
-			Duration:      cs.Duration,
+			Duration:      time.Duration(cs.Duration).Microseconds(),
 			Tags:          convertCubeTags(cs.Tags),
 			ProcessID:     pid,
 		})
