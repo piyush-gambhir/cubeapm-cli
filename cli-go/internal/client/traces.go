@@ -29,6 +29,9 @@ func (c *Client) SearchTraces(service string, tags map[string]string, query stri
 	if err != nil {
 		return nil, err
 	}
+	if minDur > 0 && maxDur > 0 && minDur > maxDur {
+		return nil, fmt.Errorf("minimum duration %s is greater than maximum duration %s", minDur, maxDur)
+	}
 	tags = maps.Clone(tags)
 	params := url.Values{}
 	if index != "" {
@@ -72,7 +75,7 @@ func (c *Client) SearchTraces(service string, tags map[string]string, query stri
 	if maxDuration != "" {
 		params.Set("maxDuration", maxDuration)
 	}
-	if minDuration != "" && maxDuration == "" {
+	if minDur > 0 && maxDur == 0 && strings.EqualFold(spanKind, "server") {
 		params.Set("sortBy", "duration")
 	}
 

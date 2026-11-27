@@ -575,6 +575,7 @@ func TestSearchTraces_NativeDurationFilter(t *testing.T) {
 	tests := []struct {
 		name       string
 		min, max   string
+		spanKind   string
 		wantOps    []string
 		wantSortBy string
 	}{
@@ -583,6 +584,9 @@ func TestSearchTraces_NativeDurationFilter(t *testing.T) {
 		{name: "max only", max: "100ms", wantOps: []string{"op0", "op1"}},
 		{name: "both", min: "10ms", max: "100ms", wantOps: []string{"op1"}},
 		{name: "inclusive bounds", min: "50ms", max: "50ms", wantOps: []string{"op1"}},
+		{name: "zero max is unset", min: "10ms", max: "0", wantOps: []string{"op1", "op2"}, wantSortBy: "duration"},
+		{name: "zero min is unset", min: "0s", wantOps: []string{"op0", "op1", "op2"}},
+		{name: "client spans not sorted", min: "10ms", spanKind: "client", wantOps: []string{"op1", "op2"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -593,7 +597,11 @@ func TestSearchTraces_NativeDurationFilter(t *testing.T) {
 			}))
 			defer ts.Close()
 
-			results, err := newTestClient(ts).SearchTraces("svc", nil, "", time.Time{}, time.Time{}, 0, "", tt.min, tt.max, "")
+			spanKind := tt.spanKind
+			if spanKind == "" {
+				spanKind = "server"
+			}
+			results, err := newTestClient(ts).SearchTraces("svc", nil, "", time.Time{}, time.Time{}, 0, spanKind, tt.min, tt.max, "")
 			if err != nil {
 				t.Fatalf("SearchTraces() error = %v", err)
 			}
@@ -632,9 +640,34 @@ func TestSearchTraces_InvalidDurationFilter(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	for _, bad := range [][2]string{{"fast", ""}, {"", "1d"}, {"-1s", ""}} {
+	for _, bad := range [][2]string{{"fast", ""}, {"", "1d"}, {"-1s", ""}, {"2s", "1s"}} {
 		if _, err := newTestClient(ts).SearchTraces("svc", nil, "", time.Time{}, time.Time{}, 0, "", bad[0], bad[1], ""); err == nil {
 			t.Errorf("SearchTraces(min=%q, max=%q) error = nil, want an error", bad[0], bad[1])
 		}
+	}
+}
+
+func TestSearchTraces_NativeFilterUsesRootSpan(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(`[{"keySpanId":"root","trace":{"spans":[` +
+			`{"trace_id":"t","span_id":"child","operation_name":"child","references":[{"trace_id":"t","span_id":"root"}],"start_time":"2026-11-27T11:57:55Z","duration":5000000},` +
+			`{"trace_id":"t","span_id":"root","operation_name":"root","start_time":"2026-11-27T11:57:55Z","duration":500000000}]}}]`))
+	}))
+	defer ts.Close()
+
+	c := newTestClient(ts)
+	kept, err := c.SearchTraces("svc", nil, "", time.Time{}, time.Time{}, 0, "server", "100ms", "", "")
+	if err != nil {
+		t.Fatalf("SearchTraces() error = %v", err)
+	}
+	if len(kept) != 1 {
+		t.Errorf("min 100ms: got %d traces, want 1 (root span is 500ms)", len(kept))
+	}
+	dropped, err := c.SearchTraces("svc", nil, "", time.Time{}, time.Time{}, 0, "server", "", "100ms", "")
+	if err != nil {
+		t.Fatalf("SearchTraces() error = %v", err)
+	}
+	if len(dropped) != 0 {
+		t.Errorf("max 100ms: got %d traces, want 0 (root span is 500ms, child is 5ms)", len(dropped))
 	}
 }

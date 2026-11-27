@@ -21,7 +21,7 @@ cubeapm traces get <trace-id> --from 2026-07-14T00:00:00Z --to 2026-07-14T01:00:
 ```
 
 `search` also supports `--max-duration`; `--tags` is repeatable. Its
-`--span-kind` default is `server`. On CubeAPM's native search API the CLI applies the duration filters to the root span of the returned traces: `--min-duration` alone fetches the slowest traces first, and with `--max-duration` matches beyond `--limit` (max 100) are missed. Table output from `get` is a span waterfall;
+`--span-kind` default is `server`. On CubeAPM's native search API the CLI applies the duration filters to the root span of the returned traces: `--min-duration` alone with server spans (the default) fetches the slowest traces first; otherwise matches beyond `--limit` (max 100) are missed. Table output from `get` is a span waterfall;
 JSON and YAML return the full trace.
 
 ## Discover topology

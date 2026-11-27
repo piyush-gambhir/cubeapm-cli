@@ -43,16 +43,16 @@ Filters:
   --env           Filter by environment (values are upper-case, e.g. "PROD", "UAT")
   --query         Trace query (e.g., "GET /api/users")
   --status        Filter by span status: "error" or "ok"
-  --min-duration  Filter traces slower than this duration (e.g., "500ms", "1s", "100us")
-  --max-duration  Filter traces faster than this duration (e.g., "5s", "10s")
+  --min-duration  Only traces at least this long (e.g., "500ms", "1s", "100us")
+  --max-duration  Only traces at most this long (e.g., "5s", "10s")
   --tags          Filter by span tag key=value pairs (can be specified multiple times)
   --span-kind     Filter by span kind: client, server, producer, consumer, internal
   --limit         Maximum number of traces to return (default: 20)
 
 CubeAPM's native search API has no duration filter, so the CLI applies
 --min-duration and --max-duration to the root span of the traces the server
-returns. With only --min-duration it asks the server for the slowest traces
-first. With --max-duration, matches outside the first --limit traces are missed;
+returns. With only --min-duration and server spans (the default) it asks the
+server for the slowest traces first. Otherwise, matches outside the first --limit traces are missed;
 raise --limit (the native API allows up to 100) or narrow the time range.
 
 Time ranges can be specified as:
@@ -185,8 +185,8 @@ Examples:
 	cmd.Flags().IntVar(&limit, "limit", 20, "Maximum number of traces to return")
 	cmd.Flags().StringVar(&spanKind, "span-kind", "server", "Filter by span kind (client, server, producer, consumer, internal). Defaults to server because some CubeAPM deployments require a non-empty value.")
 	cmd.Flags().StringVar(&status, "status", "", "Filter by span status: error, ok")
-	cmd.Flags().StringVar(&minDuration, "min-duration", "", "Minimum trace duration (e.g., \"500ms\", \"1s\", \"100us\")")
-	cmd.Flags().StringVar(&maxDuration, "max-duration", "", "Maximum trace duration (e.g., \"5s\", \"10s\")")
+	cmd.Flags().StringVar(&minDuration, "min-duration", "", "Only traces at least this long (e.g., \"500ms\", \"1s\", \"100us\")")
+	cmd.Flags().StringVar(&maxDuration, "max-duration", "", "Only traces at most this long (e.g., \"5s\", \"10s\")")
 	cmd.Flags().StringArrayVar(&tags, "tags", nil, "Filter by span tag key=value (can be repeated, e.g., --tags \"http.method=POST\")")
 	cmd.Flags().StringVar(&index, "index", "cube:latency", "CubeAPM trace index to query (e.g., cube:latency, cube:error)")
 	timeflag.AddTimeFlags(cmd, &from, &to, &last)
